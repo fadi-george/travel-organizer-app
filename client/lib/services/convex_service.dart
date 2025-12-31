@@ -94,4 +94,9 @@ class ConvexService {
       onError: onError,
     );
   }
+
+  /// Delete a trip
+  Future<void> deleteTrip(String tripId) async {
+    await client.mutation(name: 'trips:remove', args: {'id': tripId});
+  }
 }

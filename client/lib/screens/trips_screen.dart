@@ -150,6 +150,7 @@ class _TripsScreenState extends State<TripsScreen> {
                             primaryCountry: trip.primaryCountry,
                             index: index,
                             onTap: () => _onTripTapped(trip),
+                            onDelete: () => _onDeleteTrip(trip),
                           );
                         }, childCount: _upcomingTrips.length),
                       ),
@@ -178,6 +179,7 @@ class _TripsScreenState extends State<TripsScreen> {
                             index: index,
                             isCompact: true,
                             onTap: () => _onTripTapped(trip),
+                            onDelete: () => _onDeleteTrip(trip),
                           );
                         }, childCount: _pastTrips.length),
                       ),
@@ -322,6 +324,55 @@ class _TripsScreenState extends State<TripsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+  }
+
+  Future<void> _onDeleteTrip(Trip trip) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Trip'),
+        content: Text('Are you sure you want to delete "${trip.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteTrip(trip.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Deleted: ${trip.name}'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete trip: $e'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _onAddTrip() {
