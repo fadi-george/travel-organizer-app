@@ -1,9 +1,7 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../models/destination.dart';
 import '../models/trip.dart';
+import '../services/convex_service.dart';
 import '../widgets/create_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 
@@ -16,52 +14,53 @@ class TripsScreen extends StatefulWidget {
 
 class _TripsScreenState extends State<TripsScreen> {
   List<Trip> _trips = [];
-  List<Destination> _destinations = [];
   bool _isLoading = true;
+  String? _error;
+  SubscriptionHandle? _subscription;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _initializeConvex();
   }
 
-  Future<void> _loadData() async {
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initializeConvex() async {
     try {
-      final results = await Future.wait([
-        http.get(Uri.parse('http://localhost:3000/api/trips')),
-        rootBundle.loadString('assets/mocks/destinations.json'),
-      ]);
+      final convexService = await ConvexService.getInstance();
 
-      final tripsResponse = results[0] as http.Response;
-      final destinationsResult = results[1] as String;
-
-      if (tripsResponse.statusCode != 200) {
-        throw Exception('Failed to load trips: ${tripsResponse.statusCode}');
-      }
-
-      final List<dynamic> tripsJson = jsonDecode(tripsResponse.body);
-      final List<dynamic> destinationsJson = jsonDecode(destinationsResult);
-
-      setState(() {
-        _trips = tripsJson.map((json) => Trip.fromJson(json)).toList();
-        _destinations = destinationsJson
-            .map((json) => Destination.fromJson(json))
-            .toList();
-        _isLoading = false;
-      });
+      // Subscribe to real-time updates
+      _subscription = await convexService.subscribeToTrips(
+        onUpdate: (tripsData) {
+          if (!mounted) return;
+          setState(() {
+            _trips = tripsData.map((json) => Trip.fromJson(json)).toList();
+            _isLoading = false;
+            _error = null;
+          });
+        },
+        onError: (message, value) {
+          if (!mounted) return;
+          setState(() {
+            _error = message;
+            _isLoading = false;
+          });
+          debugPrint('Convex subscription error: $message $value');
+        },
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
+        _error = e.toString();
         _isLoading = false;
       });
-      debugPrint('Error loading data: $e');
+      debugPrint('Error initializing Convex: $e');
     }
-  }
-
-  /// Get the first destination's country for a trip
-  String? _getPrimaryCountry(int tripId) {
-    final destination = _destinations.where((d) => d.tripId == tripId).toList()
-      ..sort((a, b) => (a.arrivalDate ?? '').compareTo(b.arrivalDate ?? ''));
-    return destination.isNotEmpty ? destination.first.country : null;
   }
 
   List<Trip> get _upcomingTrips =>
@@ -93,6 +92,8 @@ class _TripsScreenState extends State<TripsScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? _buildErrorState()
             : CustomScrollView(
                 slivers: [
                   // Header
@@ -146,7 +147,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           final trip = _upcomingTrips[index];
                           return TripCard(
                             trip: trip,
-                            primaryCountry: _getPrimaryCountry(trip.id),
+                            primaryCountry: trip.primaryCountry,
                             index: index,
                             onTap: () => _onTripTapped(trip),
                           );
@@ -173,7 +174,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           final trip = _pastTrips[index];
                           return TripCard(
                             trip: trip,
-                            primaryCountry: _getPrimaryCountry(trip.id),
+                            primaryCountry: trip.primaryCountry,
                             index: index,
                             isCompact: true,
                             onTap: () => _onTripTapped(trip),
@@ -257,6 +258,62 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cloud_off_rounded,
+                size: 48,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Connection Error',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? 'Failed to connect to the server',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _error = null;
+                });
+                _initializeConvex();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFFF7043),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _onTripTapped(Trip trip) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -274,7 +331,7 @@ class _TripsScreenState extends State<TripsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
         onTripCreated: (name, startDate, endDate, notes) {
-          _loadData();
+          // No need to reload - the subscription will automatically update
           ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(
               content: Text('Created trip: $name'),

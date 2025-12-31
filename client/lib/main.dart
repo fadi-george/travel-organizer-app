@@ -1,9 +1,22 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/trips_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables based on build mode
+  // - Release builds: .env (production)
+  // - Debug/Profile builds: .env.local (development)
+  await dotenv.load(fileName: '.env');
+  if (!kReleaseMode) {
+    await dotenv.load(fileName: '.env.local').catchError((error) {
+      debugPrint('Error loading .env.local: $error');
+    });
+  }
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

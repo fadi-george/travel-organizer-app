@@ -1,8 +1,7 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import '../services/convex_service.dart';
 
 class CreateTripSheet extends StatefulWidget {
   final void Function(
@@ -113,30 +112,23 @@ class _CreateTripSheetState extends State<CreateTripSheet>
         final name = _nameController.text.trim();
         final notes = _notesController.text.trim();
 
-        final response = await http.post(
-          Uri.parse('http://localhost:3000/api/trips'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'name': name,
-            'startDate': _startDate?.toIso8601String(),
-            'endDate': _endDate?.toIso8601String(),
-            'notes': notes.isEmpty ? null : notes,
-          }),
+        final convexService = await ConvexService.getInstance();
+        await convexService.createTrip(
+          name: name,
+          startDate: _startDate?.toIso8601String(),
+          endDate: _endDate?.toIso8601String(),
+          notes: notes.isEmpty ? null : notes,
         );
 
         if (!mounted) return;
 
-        if (response.statusCode == 201) {
-          Navigator.pop(context);
-          widget.onTripCreated?.call(
-            name,
-            _startDate,
-            _endDate,
-            notes.isEmpty ? null : notes,
-          );
-        } else {
-          throw Exception('Failed to create trip: ${response.statusCode}');
-        }
+        Navigator.pop(context);
+        widget.onTripCreated?.call(
+          name,
+          _startDate,
+          _endDate,
+          notes.isEmpty ? null : notes,
+        );
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

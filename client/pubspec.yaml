@@ -38,6 +38,8 @@ dependencies:
   intl: ^0.20.2
   model_viewer_plus: ^1.10.0
   http: ^1.6.0
+  convex_flutter: ^2.0.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +64,8 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
+    - .env.local
     - assets/mocks/
     - assets/models/
 
