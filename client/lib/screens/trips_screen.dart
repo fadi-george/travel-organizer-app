@@ -26,7 +26,9 @@ class _TripsScreenState extends State<TripsScreen> {
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
-        rootBundle.loadString('assets/mocks/trips.json'),
+        rootBundle.loadString(
+          'assets/mocks/emptyArr.json',
+        ), // TODO: switch back to trips.json
         rootBundle.loadString('assets/mocks/destinations.json'),
       ]);
 
@@ -114,19 +116,6 @@ class _TripsScreenState extends State<TripsScreen> {
                               ),
                             ],
                           ),
-                          Row(
-                            children: [
-                              _IconButton(
-                                icon: Icons.bar_chart_rounded,
-                                onTap: () {},
-                              ),
-                              const SizedBox(width: 8),
-                              _IconButton(
-                                icon: Icons.settings_rounded,
-                                onTap: () {},
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),
@@ -194,26 +183,49 @@ class _TripsScreenState extends State<TripsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.luggage_outlined,
-                              size: 80,
-                              color: Colors.grey.shade300,
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFFF7043,
+                                ).withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.flight_takeoff_rounded,
+                                size: 48,
+                                color: Color(0xFFFF7043),
+                              ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
                             Text(
                               'No trips yet',
                               style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade600,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Tap + to plan your first adventure',
+                              'Start planning your next adventure!',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 16,
                                 color: Colors.grey.shade500,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            FilledButton.icon(
+                              onPressed: _onAddTrip,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add your first trip'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF7043),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                           ],
@@ -226,13 +238,15 @@ class _TripsScreenState extends State<TripsScreen> {
                 ],
               ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onAddTrip,
-        backgroundColor: const Color(0xFFFF7043),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        child: const Icon(Icons.add, size: 28),
-      ),
+      floatingActionButton: _trips.isEmpty
+          ? null
+          : FloatingActionButton(
+              onPressed: _onAddTrip,
+              backgroundColor: const Color(0xFFFF7043),
+              foregroundColor: Colors.white,
+              elevation: 4,
+              child: const Icon(Icons.add, size: 28),
+            ),
     );
   }
 
