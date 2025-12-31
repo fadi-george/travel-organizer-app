@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/destination.dart';
@@ -27,14 +28,19 @@ class _TripsScreenState extends State<TripsScreen> {
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
-        rootBundle.loadString(
-          'assets/mocks/emptyArr.json',
-        ), // TODO: switch back to trips.json
+        http.get(Uri.parse('http://localhost:3000/api/trips')),
         rootBundle.loadString('assets/mocks/destinations.json'),
       ]);
 
-      final List<dynamic> tripsJson = jsonDecode(results[0]);
-      final List<dynamic> destinationsJson = jsonDecode(results[1]);
+      final tripsResponse = results[0] as http.Response;
+      final destinationsResult = results[1] as String;
+
+      if (tripsResponse.statusCode != 200) {
+        throw Exception('Failed to load trips: ${tripsResponse.statusCode}');
+      }
+
+      final List<dynamic> tripsJson = jsonDecode(tripsResponse.body);
+      final List<dynamic> destinationsJson = jsonDecode(destinationsResult);
 
       setState(() {
         _trips = tripsJson.map((json) => Trip.fromJson(json)).toList();
