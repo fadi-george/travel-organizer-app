@@ -274,7 +274,7 @@ class _TripsScreenState extends State<TripsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
         onTripCreated: (name, startDate, endDate, notes) {
-          // TODO: Actually create the trip and refresh list
+          _loadData();
           ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(
               content: Text('Created trip: $name'),
