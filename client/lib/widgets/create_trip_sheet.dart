@@ -17,7 +17,8 @@ class CreateTripSheet extends StatefulWidget {
   State<CreateTripSheet> createState() => _CreateTripSheetState();
 }
 
-class _CreateTripSheetState extends State<CreateTripSheet> {
+class _CreateTripSheetState extends State<CreateTripSheet>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -25,8 +26,25 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  late final AnimationController _planeController;
+  late final Animation<double> _oscillation;
+
+  @override
+  void initState() {
+    super.initState();
+    _planeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat(reverse: true);
+
+    _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(
+      CurvedAnimation(parent: _planeController, curve: Curves.easeInOut),
+    );
+  }
+
   @override
   void dispose() {
+    _planeController.dispose();
     _nameController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -140,21 +158,7 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
                     'Plan your next adventure',
                     style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
-                  const SizedBox(height: 16),
-
-                  // 3D Airplane model
-                  SizedBox(
-                    height: 120,
-                    child: ModelViewer(
-                      src: 'assets/models/toy_airplane.glb',
-                      alt: 'Toy airplane',
-                      autoRotate: true,
-                      cameraControls: false,
-                      disableZoom: true,
-                      backgroundColor: Colors.transparent,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   // Trip name field
                   TextFormField(
@@ -171,6 +175,39 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 3D Airplane model (isometric view) with oscillation
+                  AnimatedBuilder(
+                    animation: _oscillation,
+                    builder: (context, child) {
+                      return Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..translate(
+                            _oscillation.value * 8, // move along 45deg axis
+                            _oscillation.value * -8,
+                            0,
+                          ),
+                        child: child,
+                      );
+                    },
+                    child: SizedBox(
+                      height: 120,
+                      child: ModelViewer(
+                        src: 'assets/models/toy_airplane.glb',
+                        alt: 'Toy airplane',
+                        autoRotate: false,
+                        cameraControls: false,
+                        disableZoom: true,
+                        backgroundColor: Colors.transparent,
+                        cameraOrbit:
+                            '45deg 55deg 28m', // isometric angle, zoomed out
+                        fieldOfView:
+                            '20deg', // reduce perspective for orthographic look
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
 
