@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/destination.dart';
 import '../models/trip.dart';
 import '../widgets/trip_card.dart';
 
@@ -13,28 +14,45 @@ class TripsScreen extends StatefulWidget {
 
 class _TripsScreenState extends State<TripsScreen> {
   List<Trip> _trips = [];
+  List<Destination> _destinations = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadTrips();
+    _loadData();
   }
 
-  Future<void> _loadTrips() async {
+  Future<void> _loadData() async {
     try {
-      final jsonString = await rootBundle.loadString('assets/mocks/trips.json');
-      final List<dynamic> jsonList = jsonDecode(jsonString);
+      final results = await Future.wait([
+        rootBundle.loadString('assets/mocks/trips.json'),
+        rootBundle.loadString('assets/mocks/destinations.json'),
+      ]);
+
+      final List<dynamic> tripsJson = jsonDecode(results[0]);
+      final List<dynamic> destinationsJson = jsonDecode(results[1]);
+
       setState(() {
-        _trips = jsonList.map((json) => Trip.fromJson(json)).toList();
+        _trips = tripsJson.map((json) => Trip.fromJson(json)).toList();
+        _destinations = destinationsJson
+            .map((json) => Destination.fromJson(json))
+            .toList();
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('Error loading trips: $e');
+      debugPrint('Error loading data: $e');
     }
+  }
+
+  /// Get the first destination's country for a trip
+  String? _getPrimaryCountry(int tripId) {
+    final destination = _destinations.where((d) => d.tripId == tripId).toList()
+      ..sort((a, b) => (a.arrivalDate ?? '').compareTo(b.arrivalDate ?? ''));
+    return destination.isNotEmpty ? destination.first.country : null;
   }
 
   List<Trip> get _upcomingTrips =>
@@ -129,9 +147,11 @@ class _TripsScreenState extends State<TripsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate((context, index) {
+                          final trip = _upcomingTrips[index];
                           return TripCard(
-                            trip: _upcomingTrips[index],
-                            onTap: () => _onTripTapped(_upcomingTrips[index]),
+                            trip: trip,
+                            primaryCountry: _getPrimaryCountry(trip.id),
+                            onTap: () => _onTripTapped(trip),
                           );
                         }, childCount: _upcomingTrips.length),
                       ),
@@ -153,10 +173,12 @@ class _TripsScreenState extends State<TripsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate((context, index) {
+                          final trip = _pastTrips[index];
                           return TripCard(
-                            trip: _pastTrips[index],
+                            trip: trip,
+                            primaryCountry: _getPrimaryCountry(trip.id),
                             isCompact: true,
-                            onTap: () => _onTripTapped(_pastTrips[index]),
+                            onTap: () => _onTripTapped(trip),
                           );
                         }, childCount: _pastTrips.length),
                       ),

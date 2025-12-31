@@ -1,33 +1,29 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../utils/country_images.dart';
 
 class TripCard extends StatelessWidget {
   final Trip trip;
+  final String? primaryCountry;
   final VoidCallback? onTap;
   final bool isCompact;
 
   const TripCard({
     super.key,
     required this.trip,
+    this.primaryCountry,
     this.onTap,
     this.isCompact = false,
   });
 
-  // Map trip names to placeholder images (Unsplash)
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
+    return CountryImages.getImageUrl(primaryCountry);
+  }
 
-    final name = trip.name.toLowerCase();
-    if (name.contains('japan')) {
-      return 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800';
-    } else if (name.contains('europe') || name.contains('italy') || name.contains('france')) {
-      return 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800';
-    } else if (name.contains('thailand') || name.contains('beach')) {
-      return 'https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=800';
-    } else if (name.contains('nyc') || name.contains('new york')) {
-      return 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800';
-    }
-    return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800';
+  List<Color> get _placeholderColors {
+    return CountryImages.getGradientColors(primaryCountry);
   }
 
   @override
@@ -36,6 +32,28 @@ class TripCard extends StatelessWidget {
       return _buildCompactCard(context);
     }
     return _buildFullCard(context);
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: _placeholderColors,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          CountryImages.getCountryInitials(primaryCountry),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildFullCard(BuildContext context) {
@@ -48,7 +66,7 @@ class TripCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -59,24 +77,12 @@ class TripCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background image
-              Image.network(
-                _imageUrl,
+              // Background image with caching
+              CachedNetworkImage(
+                imageUrl: _imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Theme.of(context).colorScheme.primary,
-                          Theme.of(context).colorScheme.secondary,
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                placeholder: (context, url) => _buildPlaceholder(),
+                errorWidget: (context, url, error) => _buildPlaceholder(),
               ),
               // Gradient overlay
               Container(
@@ -86,7 +92,7 @@ class TripCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.7),
+                      Colors.black.withValues(alpha: 0.7),
                     ],
                     stops: const [0.4, 1.0],
                   ),
@@ -136,7 +142,7 @@ class TripCard extends StatelessWidget {
                     Text(
                       trip.formattedDateRange,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),
@@ -146,7 +152,7 @@ class TripCard extends StatelessWidget {
                       Text(
                         trip.notes!,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 13,
                         ),
                         maxLines: 1,
@@ -173,29 +179,22 @@ class TripCard extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
           ),
         ),
         child: Row(
           children: [
-            // Thumbnail
+            // Thumbnail with caching
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 width: 70,
                 height: 70,
-                child: Image.network(
-                  _imageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: _imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.flight,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    );
-                  },
+                  placeholder: (context, url) => _buildPlaceholder(),
+                  errorWidget: (context, url, error) => _buildPlaceholder(),
                 ),
               ),
             ),
@@ -216,7 +215,9 @@ class TripCard extends StatelessWidget {
                   Text(
                     trip.formattedDateRange,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
                     ),
                   ),
@@ -226,7 +227,9 @@ class TripCard extends StatelessWidget {
                       trip.daysUntilTrip!,
                       style: TextStyle(
                         color: trip.isPast
-                            ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5)
                             : const Color(0xFFFF7043),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -238,7 +241,9 @@ class TripCard extends StatelessWidget {
             ),
             Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
           ],
         ),
@@ -246,4 +251,3 @@ class TripCard extends StatelessWidget {
     );
   }
 }
-
