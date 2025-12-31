@@ -18,7 +18,7 @@ class CreateTripSheet extends StatefulWidget {
 }
 
 class _CreateTripSheetState extends State<CreateTripSheet>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -27,7 +27,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   DateTime? _endDate;
 
   late final AnimationController _planeController;
+  late final AnimationController _fadeController;
   late final Animation<double> _oscillation;
+  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -40,11 +42,22 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(
       CurvedAnimation(parent: _planeController, curve: Curves.easeInOut),
     );
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    )..forward();
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
   }
 
   @override
   void dispose() {
     _planeController.dispose();
+    _fadeController.dispose();
     _nameController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -178,34 +191,42 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                   ),
                   const SizedBox(height: 16),
 
-                  // 3D Airplane model (isometric view) with oscillation
-                  AnimatedBuilder(
-                    animation: _oscillation,
-                    builder: (context, child) {
-                      return Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..translate(
-                            _oscillation.value * 8, // move along 45deg axis
-                            _oscillation.value * -8,
-                            0,
-                          ),
-                        child: child,
-                      );
-                    },
-                    child: SizedBox(
-                      height: 120,
-                      child: ModelViewer(
-                        src: 'assets/models/toy_airplane.glb',
-                        alt: 'Toy airplane',
-                        autoRotate: false,
-                        cameraControls: false,
-                        disableZoom: true,
-                        backgroundColor: Colors.transparent,
-                        cameraOrbit:
-                            '45deg 55deg 28m', // isometric angle, zoomed out
-                        fieldOfView:
-                            '20deg', // reduce perspective for orthographic look
+                  // 3D Airplane model (isometric view) with fade-in and oscillation
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: AnimatedBuilder(
+                      animation: _oscillation,
+                      builder: (context, child) {
+                        return Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..translate(
+                              _oscillation.value * 8, // move along 45deg axis
+                              _oscillation.value * -8,
+                              0,
+                            ),
+                          child: child,
+                        );
+                      },
+                      child: SizedBox(
+                        height: 120,
+                        child: ModelViewer(
+                          src: 'assets/models/toy_airplane.glb',
+                          alt: 'Toy airplane',
+                          autoRotate: false,
+                          cameraControls: false,
+                          disableZoom: true,
+                          backgroundColor: Colors.transparent,
+                          cameraOrbit:
+                              '45deg 55deg 28m', // isometric angle, zoomed out
+                          fieldOfView:
+                              '20deg', // reduce perspective for orthographic look
+                          interactionPrompt: InteractionPrompt.none,
+                          relatedCss: '''
+                            * { overflow: hidden !important; }
+                            ::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
+                          ''',
+                        ),
                       ),
                     ),
                   ),
