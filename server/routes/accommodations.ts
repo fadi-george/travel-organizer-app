@@ -65,4 +65,3 @@ app.delete("/accommodations/:id", async (c) => {
 });
 
 export default app;
-

@@ -65,4 +65,3 @@ app.delete("/activities/:id", async (c) => {
 });
 
 export default app;
-

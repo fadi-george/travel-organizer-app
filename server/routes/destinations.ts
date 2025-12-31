@@ -67,4 +67,3 @@ app.delete("/destinations/:id", async (c) => {
 });
 
 export default app;
-

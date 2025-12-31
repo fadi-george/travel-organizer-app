@@ -38,3 +38,15 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Database files
 *.db
+
+# Flutter/Dart
+client/.metadata
+client/.dart_tool/
+client/build/
+client/ios/Flutter/ephemeral/
+client/ios/Flutter/.last_build_id
+client/android/local.properties
+client/android/gradle/wrapper/gradle-wrapper.jar
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+*.iml

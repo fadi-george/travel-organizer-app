@@ -62,4 +62,3 @@ app.delete("/flights/:id", async (c) => {
 });
 
 export default app;
-
