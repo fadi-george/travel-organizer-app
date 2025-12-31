@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
@@ -25,6 +27,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
 
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _isSubmitting = false;
 
   late final AnimationController _planeController;
   late final Animation<double> _oscillation;
@@ -102,17 +105,51 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     return DateFormat('MMM d, yyyy').format(date);
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (_formKey.currentState?.validate() ?? false) {
-      final name = _nameController.text.trim();
-      final notes = _notesController.text.trim();
-      Navigator.pop(context);
-      widget.onTripCreated?.call(
-        name,
-        _startDate,
-        _endDate,
-        notes.isEmpty ? null : notes,
-      );
+      setState(() => _isSubmitting = true);
+
+      try {
+        final name = _nameController.text.trim();
+        final notes = _notesController.text.trim();
+
+        final response = await http.post(
+          Uri.parse('http://localhost:3000/api/trips'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'name': name,
+            'startDate': _startDate?.toIso8601String(),
+            'endDate': _endDate?.toIso8601String(),
+            'notes': notes.isEmpty ? null : notes,
+          }),
+        );
+
+        if (!mounted) return;
+
+        if (response.statusCode == 201) {
+          Navigator.pop(context);
+          widget.onTripCreated?.call(
+            name,
+            _startDate,
+            _endDate,
+            notes.isEmpty ? null : notes,
+          );
+        } else {
+          throw Exception('Failed to create trip: ${response.statusCode}');
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating trip: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isSubmitting = false);
+        }
+      }
     }
   }
 
@@ -274,7 +311,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
 
                   // Submit button
                   FilledButton(
-                    onPressed: _onSubmit,
+                    onPressed: _isSubmitting ? null : _onSubmit,
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7043),
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -282,13 +319,22 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Create Trip',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Create Trip',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ],
               ),
