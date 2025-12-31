@@ -22,10 +22,6 @@ class TripCard extends StatelessWidget {
     return CountryImages.getImageUrl(primaryCountry);
   }
 
-  List<Color> get _placeholderColors {
-    return CountryImages.getGradientColors(primaryCountry);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isCompact) {
@@ -35,25 +31,7 @@ class TripCard extends StatelessWidget {
   }
 
   Widget _buildPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _placeholderColors,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          CountryImages.getCountryInitials(primaryCountry),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+    return const ColoredBox(color: Colors.transparent);
   }
 
   Widget _buildFullCard(BuildContext context) {
