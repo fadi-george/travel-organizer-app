@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../utils/country_images.dart';
 
-class TripCard extends StatelessWidget {
+class TripCard extends StatefulWidget {
   final Trip trip;
   final String? primaryCountry;
   final VoidCallback? onTap;
   final bool isCompact;
+  final int index;
 
   const TripCard({
     super.key,
@@ -15,19 +16,67 @@ class TripCard extends StatelessWidget {
     this.primaryCountry,
     this.onTap,
     this.isCompact = false,
+    this.index = 0,
   });
 
+  @override
+  State<TripCard> createState() => _TripCardState();
+}
+
+class _TripCardState extends State<TripCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    // Staggered delay: 250ms per card index
+    Future.delayed(Duration(milliseconds: 250 * widget.index), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   String get _imageUrl {
-    if (trip.imageUrl != null) return trip.imageUrl!;
-    return CountryImages.getImageUrl(primaryCountry);
+    if (widget.trip.imageUrl != null) return widget.trip.imageUrl!;
+    return CountryImages.getImageUrl(widget.primaryCountry);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isCompact) {
-      return _buildCompactCard(context);
-    }
-    return _buildFullCard(context);
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: widget.isCompact
+            ? _buildCompactCard(context)
+            : _buildFullCard(context),
+      ),
+    );
   }
 
   Widget _buildPlaceholder() {
@@ -36,7 +85,7 @@ class TripCard extends StatelessWidget {
 
   Widget _buildFullCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         height: 220,
         margin: const EdgeInsets.only(bottom: 16),
@@ -83,20 +132,20 @@ class TripCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Status badge
-                    if (trip.daysUntilTrip != null)
+                    if (widget.trip.daysUntilTrip != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: trip.isUpcoming
+                          color: widget.trip.isUpcoming
                               ? const Color(0xFFFF7043)
                               : Colors.grey.shade600,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          trip.daysUntilTrip!,
+                          widget.trip.daysUntilTrip!,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -107,7 +156,7 @@ class TripCard extends StatelessWidget {
                     const Spacer(),
                     // Trip name
                     Text(
-                      trip.name,
+                      widget.trip.name,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 28,
@@ -118,17 +167,17 @@ class TripCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     // Date range
                     Text(
-                      trip.formattedDateRange,
+                      widget.trip.formattedDateRange,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (trip.notes != null) ...[
+                    if (widget.trip.notes != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        trip.notes!,
+                        widget.trip.notes!,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 13,
@@ -149,7 +198,7 @@ class TripCard extends StatelessWidget {
 
   Widget _buildCompactCard(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -183,7 +232,7 @@ class TripCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    trip.name,
+                    widget.trip.name,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -191,7 +240,7 @@ class TripCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    trip.formattedDateRange,
+                    widget.trip.formattedDateRange,
                     style: TextStyle(
                       color: Theme.of(
                         context,
@@ -199,12 +248,12 @@ class TripCard extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
-                  if (trip.daysUntilTrip != null) ...[
+                  if (widget.trip.daysUntilTrip != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      trip.daysUntilTrip!,
+                      widget.trip.daysUntilTrip!,
                       style: TextStyle(
-                        color: trip.isPast
+                        color: widget.trip.isPast
                             ? Theme.of(
                                 context,
                               ).colorScheme.onSurface.withValues(alpha: 0.5)

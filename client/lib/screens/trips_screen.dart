@@ -151,6 +151,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           return TripCard(
                             trip: trip,
                             primaryCountry: _getPrimaryCountry(trip.id),
+                            index: index,
                             onTap: () => _onTripTapped(trip),
                           );
                         }, childCount: _upcomingTrips.length),
@@ -177,6 +178,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           return TripCard(
                             trip: trip,
                             primaryCountry: _getPrimaryCountry(trip.id),
+                            index: index,
                             isCompact: true,
                             onTap: () => _onTripTapped(trip),
                           );
