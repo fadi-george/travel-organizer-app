@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/destination.dart';
 import '../models/trip.dart';
+import '../widgets/create_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 
 class TripsScreen extends StatefulWidget {
@@ -261,34 +262,23 @@ class _TripsScreenState extends State<TripsScreen> {
   }
 
   void _onAddTrip() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Create new trip'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-}
-
-class _IconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _IconButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF7043).withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: const Color(0xFFFF7043), size: 22),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CreateTripSheet(
+        onTripCreated: (name, notes) {
+          // TODO: Actually create the trip and refresh list
+          ScaffoldMessenger.of(this.context).showSnackBar(
+            SnackBar(
+              content: Text('Created trip: $name'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
