@@ -36,7 +36,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     super.initState();
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 6000),
     )..repeat(reverse: true);
 
     _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(
@@ -45,13 +45,18 @@ class _CreateTripSheetState extends State<CreateTripSheet>
 
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
-    )..forward();
+      duration: const Duration(milliseconds: 400),
+    );
 
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeOut,
     );
+
+    // Delay before starting fade-in
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) _fadeController.forward();
+    });
   }
 
   @override
@@ -161,17 +166,71 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Title
-                  const Text(
-                    'Create a new trip',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+
+                  // Header row: Title on left, 3D model on right
+                  SizedBox(
+                    height: 120,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Title and subtitle
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Create a new trip',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Plan your next adventure',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // 3D Airplane model
+                        SizedBox(
+                          width: 140,
+                          height: 120,
+                          child: AnimatedBuilder(
+                            animation: _oscillation,
+                            builder: (context, child) {
+                              return Transform.translate(
+                                offset: Offset(
+                                  _oscillation.value * 6,
+                                  _oscillation.value * -6,
+                                ),
+                                child: child,
+                              );
+                            },
+                            child: IgnorePointer(
+                              child: ModelViewer(
+                                src: 'assets/models/toy_airplane.glb',
+                                alt: 'Toy airplane',
+                                autoRotate: false,
+                                cameraControls: false,
+                                disableZoom: true,
+                                backgroundColor: Colors.transparent,
+                                cameraOrbit: '45deg 55deg 20m',
+                                fieldOfView: '20deg',
+                                interactionPrompt: InteractionPrompt.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Plan your next adventure',
-                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
                   // Trip name field
                   TextFormField(
@@ -188,47 +247,6 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                       }
                       return null;
                     },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 3D Airplane model (isometric view) with fade-in and oscillation
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: AnimatedBuilder(
-                      animation: _oscillation,
-                      builder: (context, child) {
-                        return Transform(
-                          alignment: Alignment.center,
-                          transform: Matrix4.identity()
-                            ..translate(
-                              _oscillation.value * 8, // move along 45deg axis
-                              _oscillation.value * -8,
-                              0,
-                            ),
-                          child: child,
-                        );
-                      },
-                      child: SizedBox(
-                        height: 120,
-                        child: ModelViewer(
-                          src: 'assets/models/toy_airplane.glb',
-                          alt: 'Toy airplane',
-                          autoRotate: false,
-                          cameraControls: false,
-                          disableZoom: true,
-                          backgroundColor: Colors.transparent,
-                          cameraOrbit:
-                              '45deg 55deg 28m', // isometric angle, zoomed out
-                          fieldOfView:
-                              '20deg', // reduce perspective for orthographic look
-                          interactionPrompt: InteractionPrompt.none,
-                          relatedCss: '''
-                            * { overflow: hidden !important; }
-                            ::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
-                          ''',
-                        ),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 16),
 
