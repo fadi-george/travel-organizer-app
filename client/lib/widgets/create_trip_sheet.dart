@@ -1,6 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 class CreateTripSheet extends StatefulWidget {
   final void Function(
@@ -17,7 +17,8 @@ class CreateTripSheet extends StatefulWidget {
   State<CreateTripSheet> createState() => _CreateTripSheetState();
 }
 
-class _CreateTripSheetState extends State<CreateTripSheet> {
+class _CreateTripSheetState extends State<CreateTripSheet>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -25,8 +26,20 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  late AnimationController _planeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _planeController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    )..repeat();
+  }
+
   @override
   void dispose() {
+    _planeController.dispose();
     _nameController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -142,16 +155,27 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 3D Airplane model
+                  // Animated airplane
                   SizedBox(
-                    height: 120,
-                    child: ModelViewer(
-                      src: 'assets/models/toy_airplane.glb',
-                      alt: 'Toy airplane',
-                      autoRotate: true,
-                      cameraControls: false,
-                      disableZoom: true,
-                      backgroundColor: Colors.transparent,
+                    height: 100,
+                    child: AnimatedBuilder(
+                      animation: _planeController,
+                      builder: (context, child) {
+                        final bounce =
+                            math.sin(_planeController.value * math.pi * 2) * 8;
+                        final tilt =
+                            math.sin(_planeController.value * math.pi * 2) *
+                            0.1;
+                        return Transform.translate(
+                          offset: Offset(0, bounce),
+                          child: Transform.rotate(angle: tilt, child: child),
+                        );
+                      },
+                      child: Icon(
+                        Icons.flight,
+                        size: 64,
+                        color: const Color(0xFFFF7043).withValues(alpha: 0.8),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
