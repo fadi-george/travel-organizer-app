@@ -247,7 +247,7 @@ class _IconButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFFFF7043).withOpacity(0.1),
+          color: const Color(0xFFFF7043).withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: const Color(0xFFFF7043), size: 22),
@@ -281,7 +281,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: const Color(0xFFFF7043).withOpacity(0.1),
+            color: const Color(0xFFFF7043).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
