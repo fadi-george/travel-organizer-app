@@ -36,7 +36,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     super.initState();
     _planeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 6000),
+      duration: const Duration(milliseconds: 3000),
     )..repeat(reverse: true);
 
     _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(

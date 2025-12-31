@@ -15,6 +15,7 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 
 - [Bun](https://bun.sh) installed
 - [Flutter](https://flutter.dev) installed (for mobile client)
+- [Rust](https://rustup.rs) installed (required by `convex_flutter` package)
 
 ### Installation
 
@@ -37,6 +38,29 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 
 3. Your backend is ready! Convex provides real-time subscriptions out of the box.
 
+### Flutter Client Setup
+
+1. Set up shared environment files (symlinks client env to root):
+
+   ```bash
+   bun run setup:client
+   ```
+
+2. Install Flutter dependencies:
+
+   ```bash
+   cd client
+   flutter pub get
+   ```
+
+3. Run the app:
+
+   ```bash
+   flutter run
+   ```
+
+> **Note:** The client uses `convex_flutter` which requires Rust. Make sure your Rust toolchain is up to date: `rustup update stable`
+
 ## Convex Functions
 
 | Module           | Functions                                                |
@@ -49,10 +73,11 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 
 ## Scripts
 
-| Script               | Description             |
-| -------------------- | ----------------------- |
-| `bun run dev:convex` | Start Convex dev server |
-| `bun run dev:client` | Run Flutter client      |
+| Script                 | Description                           |
+| ---------------------- | ------------------------------------- |
+| `bun run setup:client` | Set up client env symlinks (run once) |
+| `bun run dev:convex`   | Start Convex dev server               |
+| `bun run dev:client`   | Run Flutter client                    |
 
 ## Project Structure
 

@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "setup:client": "./scripts/setup-client-env.sh",
     "dev:client": "cd client && flutter run",
     "dev:sql": "bun --hot server/sql/index.ts",
     "dev:convex": "bunx convex dev",
