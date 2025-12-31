@@ -18,7 +18,7 @@ class CreateTripSheet extends StatefulWidget {
 }
 
 class _CreateTripSheetState extends State<CreateTripSheet>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _notesController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -27,9 +27,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   DateTime? _endDate;
 
   late final AnimationController _planeController;
-  late final AnimationController _fadeController;
   late final Animation<double> _oscillation;
-  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -42,27 +40,11 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(
       CurvedAnimation(parent: _planeController, curve: Curves.easeInOut),
     );
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-
-    // Delay before starting fade-in
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) _fadeController.forward();
-    });
   }
 
   @override
   void dispose() {
     _planeController.dispose();
-    _fadeController.dispose();
     _nameController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -223,6 +205,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                                 cameraOrbit: '45deg 55deg 20m',
                                 fieldOfView: '20deg',
                                 interactionPrompt: InteractionPrompt.none,
+                                relatedCss: '''
+                                    model-viewer::part(default-progress-bar) { display: none !important; }
+                                  ''',
                               ),
                             ),
                           ),
