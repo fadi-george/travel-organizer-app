@@ -52,11 +52,14 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     super.dispose();
   }
 
-  Future<void> _selectStartDate() async {
-    final picked = await showDatePicker(
+  Future<DateTime?> _showThemedDatePicker({
+    required DateTime initialDate,
+    required DateTime firstDate,
+  }) {
+    return showDatePicker(
       context: context,
-      initialDate: _startDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
@@ -67,10 +70,16 @@ class _CreateTripSheetState extends State<CreateTripSheet>
         child: child!,
       ),
     );
+  }
+
+  Future<void> _selectStartDate() async {
+    final picked = await _showThemedDatePicker(
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+    );
     if (picked != null) {
       setState(() {
         _startDate = picked;
-        // If end date is before start date, clear it
         if (_endDate != null && _endDate!.isBefore(picked)) {
           _endDate = null;
         }
@@ -79,20 +88,10 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   }
 
   Future<void> _selectEndDate() async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await _showThemedDatePicker(
       initialDate: _endDate ?? _startDate ?? DateTime.now(),
       firstDate:
           _startDate ?? DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(
-            context,
-          ).colorScheme.copyWith(primary: const Color(0xFFFF7043)),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) {
       setState(() => _endDate = picked);
