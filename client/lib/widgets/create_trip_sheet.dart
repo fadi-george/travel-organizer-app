@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 class CreateTripSheet extends StatefulWidget {
   final void Function(
@@ -139,7 +140,21 @@ class _CreateTripSheetState extends State<CreateTripSheet> {
                     'Plan your next adventure',
                     style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+
+                  // 3D Airplane model
+                  SizedBox(
+                    height: 120,
+                    child: ModelViewer(
+                      src: 'assets/models/toy_airplane.glb',
+                      alt: 'Toy airplane',
+                      autoRotate: true,
+                      cameraControls: false,
+                      disableZoom: true,
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   // Trip name field
                   TextFormField(
