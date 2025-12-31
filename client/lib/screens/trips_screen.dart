@@ -267,7 +267,7 @@ class _TripsScreenState extends State<TripsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
-        onTripCreated: (name, notes) {
+        onTripCreated: (name, startDate, endDate, notes) {
           // TODO: Actually create the trip and refresh list
           ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(
