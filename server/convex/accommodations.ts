@@ -1,15 +1,13 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// Get all accommodations for a destination
-export const listByDestination = query({
-  args: { destinationId: v.id("destinations") },
+// Get all accommodations for a trip
+export const listByTrip = query({
+  args: { tripId: v.id("trips") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("accommodations")
-      .withIndex("by_destination", (q) =>
-        q.eq("destinationId", args.destinationId)
-      )
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
       .collect();
   },
 });
@@ -25,9 +23,10 @@ export const get = query({
 // Create a new accommodation
 export const create = mutation({
   args: {
-    destinationId: v.id("destinations"),
+    tripId: v.id("trips"),
     hotelName: v.string(),
     city: v.optional(v.string()),
+    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkOut: v.optional(v.string()),
@@ -36,10 +35,10 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Verify destination exists
-    const destination = await ctx.db.get(args.destinationId);
-    if (!destination) {
-      throw new Error("Destination not found");
+    // Verify trip exists
+    const trip = await ctx.db.get(args.tripId);
+    if (!trip) {
+      throw new Error("Trip not found");
     }
     const accommodationId = await ctx.db.insert("accommodations", args);
     return await ctx.db.get(accommodationId);
@@ -52,6 +51,7 @@ export const update = mutation({
     id: v.id("accommodations"),
     hotelName: v.optional(v.string()),
     city: v.optional(v.string()),
+    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkOut: v.optional(v.string()),
@@ -82,4 +82,3 @@ export const remove = mutation({
     return { message: "Accommodation deleted" };
   },
 });
-

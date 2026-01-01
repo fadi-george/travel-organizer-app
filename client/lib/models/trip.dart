@@ -5,7 +5,9 @@ class Trip {
   final String? endDate;
   final String? notes;
   final String? imageUrl;
-  final List<dynamic>? destinations;
+  final List<dynamic>? accommodations;
+  final List<dynamic>? flights;
+  final List<dynamic>? activities;
 
   const Trip({
     required this.id,
@@ -14,7 +16,9 @@ class Trip {
     this.endDate,
     this.notes,
     this.imageUrl,
-    this.destinations,
+    this.accommodations,
+    this.flights,
+    this.activities,
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
@@ -25,7 +29,9 @@ class Trip {
       endDate: json['endDate'] as String?,
       notes: json['notes'] as String?,
       imageUrl: json['imageUrl'] as String?,
-      destinations: json['destinations'] as List<dynamic>?,
+      accommodations: json['accommodations'] as List<dynamic>?,
+      flights: json['flights'] as List<dynamic>?,
+      activities: json['activities'] as List<dynamic>?,
     );
   }
 
@@ -83,14 +89,14 @@ class Trip {
     return end.isBefore(DateTime.now());
   }
 
-  /// Get the first destination's country from embedded destinations
+  /// Get the first accommodation's country
   String? get primaryCountry {
-    if (destinations == null || destinations!.isEmpty) return null;
+    if (accommodations == null || accommodations!.isEmpty) return null;
     final sorted = List<Map<String, dynamic>>.from(
-      destinations!.map((d) => d as Map<String, dynamic>),
+      accommodations!.map((a) => a as Map<String, dynamic>),
     )..sort((a, b) {
-        final aDate = a['arrivalDate'] as String? ?? '';
-        final bDate = b['arrivalDate'] as String? ?? '';
+        final aDate = a['checkIn'] as String? ?? '';
+        final bDate = b['checkIn'] as String? ?? '';
         return aDate.compareTo(bDate);
       });
     return sorted.first['country'] as String?;

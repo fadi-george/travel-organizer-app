@@ -10,23 +10,10 @@ export const list = query({
     // Fetch related data for each trip
     const tripsWithRelations = await Promise.all(
       trips.map(async (trip) => {
-        const destinations = await ctx.db
-          .query("destinations")
+        const accommodations = await ctx.db
+          .query("accommodations")
           .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
           .collect();
-
-        // Fetch accommodations for each destination
-        const destinationsWithAccommodations = await Promise.all(
-          destinations.map(async (destination) => {
-            const accommodations = await ctx.db
-              .query("accommodations")
-              .withIndex("by_destination", (q) =>
-                q.eq("destinationId", destination._id)
-              )
-              .collect();
-            return { ...destination, accommodations };
-          })
-        );
 
         const flights = await ctx.db
           .query("flights")
@@ -40,7 +27,7 @@ export const list = query({
 
         return {
           ...trip,
-          destinations: destinationsWithAccommodations,
+          accommodations,
           flights,
           activities,
         };
@@ -58,22 +45,10 @@ export const get = query({
     const trip = await ctx.db.get(args.id);
     if (!trip) return null;
 
-    const destinations = await ctx.db
-      .query("destinations")
+    const accommodations = await ctx.db
+      .query("accommodations")
       .withIndex("by_trip", (q) => q.eq("tripId", trip._id))
       .collect();
-
-    const destinationsWithAccommodations = await Promise.all(
-      destinations.map(async (destination) => {
-        const accommodations = await ctx.db
-          .query("accommodations")
-          .withIndex("by_destination", (q) =>
-            q.eq("destinationId", destination._id)
-          )
-          .collect();
-        return { ...destination, accommodations };
-      })
-    );
 
     const flights = await ctx.db
       .query("flights")
@@ -87,7 +62,7 @@ export const get = query({
 
     return {
       ...trip,
-      destinations: destinationsWithAccommodations,
+      accommodations,
       flights,
       activities,
     };
@@ -128,7 +103,7 @@ export const update = mutation({
   },
 });
 
-// Delete a trip (cascades to destinations, flights, activities)
+// Delete a trip (cascades to accommodations, flights, activities)
 export const remove = mutation({
   args: { id: v.id("trips") },
   handler: async (ctx, args) => {
@@ -137,24 +112,13 @@ export const remove = mutation({
       throw new Error("Trip not found");
     }
 
-    // Delete related destinations (which will cascade to accommodations)
-    const destinations = await ctx.db
-      .query("destinations")
+    // Delete related accommodations
+    const accommodations = await ctx.db
+      .query("accommodations")
       .withIndex("by_trip", (q) => q.eq("tripId", args.id))
       .collect();
-
-    for (const destination of destinations) {
-      // Delete accommodations for this destination
-      const accommodations = await ctx.db
-        .query("accommodations")
-        .withIndex("by_destination", (q) =>
-          q.eq("destinationId", destination._id)
-        )
-        .collect();
-      for (const accommodation of accommodations) {
-        await ctx.db.delete(accommodation._id);
-      }
-      await ctx.db.delete(destination._id);
+    for (const accommodation of accommodations) {
+      await ctx.db.delete(accommodation._id);
     }
 
     // Delete related flights
@@ -180,4 +144,3 @@ export const remove = mutation({
     return { message: "Trip deleted" };
   },
 });
-

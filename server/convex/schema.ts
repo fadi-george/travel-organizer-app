@@ -9,25 +9,18 @@ export default defineSchema({
     notes: v.optional(v.string()),
   }),
 
-  destinations: defineTable({
-    tripId: v.id("trips"),
-    country: v.string(),
-    arrivalDate: v.optional(v.string()),
-    departureDate: v.optional(v.string()),
-    notes: v.optional(v.string()),
-  }).index("by_trip", ["tripId"]),
-
   accommodations: defineTable({
-    destinationId: v.id("destinations"),
+    tripId: v.id("trips"),
     hotelName: v.string(),
     city: v.optional(v.string()),
+    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkOut: v.optional(v.string()),
     address: v.optional(v.string()),
     confirmationNumber: v.optional(v.string()),
     notes: v.optional(v.string()),
-  }).index("by_destination", ["destinationId"]),
+  }).index("by_trip", ["tripId"]),
 
   flights: defineTable({
     tripId: v.id("trips"),
