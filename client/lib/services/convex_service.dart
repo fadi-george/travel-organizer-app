@@ -54,16 +54,16 @@ class ConvexService {
   /// Create a new trip
   Future<Map<String, dynamic>?> createTrip({
     required String name,
-    String? startDate,
-    String? endDate,
+    required String startDate,
+    required String endDate,
     String? notes,
   }) async {
     final result = await client.mutation(
       name: 'trips:create',
       args: {
         'name': name,
-        if (startDate != null) 'startDate': startDate,
-        if (endDate != null) 'endDate': endDate,
+        'startDate': startDate,
+        'endDate': endDate,
         if (notes != null) 'notes': notes,
       },
     );
