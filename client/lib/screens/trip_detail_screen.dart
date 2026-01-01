@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../services/convex_service.dart';
 import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/flight_card.dart';
@@ -20,13 +22,49 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late DateTime _selectedDate;
   late DateTime _startDate;
   late DateTime _endDate;
+  late Trip _trip;
+  SubscriptionHandle? _subscription;
 
-  Trip get trip => widget.trip;
+  Trip get trip => _trip;
 
   @override
   void initState() {
     super.initState();
+    _trip = widget.trip;
     _initializeDates();
+    _subscribeToTrips();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _subscribeToTrips() async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      _subscription = await convexService.subscribeToTrips(
+        onUpdate: (tripsData) {
+          if (!mounted) return;
+          // Find our trip in the updated list
+          final updatedTrip = tripsData
+              .map((json) => Trip.fromJson(json))
+              .where((t) => t.id == widget.trip.id)
+              .firstOrNull;
+          if (updatedTrip != null) {
+            setState(() {
+              _trip = updatedTrip;
+            });
+          }
+        },
+        onError: (message, value) {
+          debugPrint('Trip subscription error: $message $value');
+        },
+      );
+    } catch (e) {
+      debugPrint('Error subscribing to trips: $e');
+    }
   }
 
   void _initializeDates() {
