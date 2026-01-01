@@ -99,4 +99,17 @@ class ConvexService {
   Future<void> deleteTrip(String tripId) async {
     await client.mutation(name: 'trips:remove', args: {'id': tripId});
   }
+
+  /// Extract flights from PDF using Claude AI
+  Future<Map<String, dynamic>> extractFlightsFromPdf({
+    required String tripId,
+    required String pdfBase64,
+  }) async {
+    final result = await client.action(
+      name: 'flightExtractor:extractFlightsFromPdf',
+      args: {'tripId': tripId, 'pdfBase64': pdfBase64},
+    );
+    final decoded = jsonDecode(result);
+    return Map<String, dynamic>.from(decoded as Map);
+  }
 }

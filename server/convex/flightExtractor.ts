@@ -2,6 +2,10 @@ import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 
+interface ClaudeResponse {
+  content?: Array<{ type: string; text: string }>;
+}
+
 // Internal mutation to save extracted flights
 export const saveExtractedFlights = internalMutation({
   args: {
@@ -127,7 +131,8 @@ Important:
         throw new Error(`Claude API error: ${response.status} - ${errorText}`);
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as ClaudeResponse;
+
       const content = result.content?.[0];
 
       if (!content || content.type !== "text") {
