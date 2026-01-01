@@ -84,9 +84,8 @@ class FlightCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Top row: Cities
+          // Top row: Cities and flight number
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
@@ -94,18 +93,18 @@ class FlightCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
+                    fontSize: 15,
+                    color: Colors.grey.shade800,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   flightNumber,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: Colors.grey.shade500,
                     fontWeight: FontWeight.w500,
                   ),
@@ -118,104 +117,105 @@ class FlightCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
+                    fontSize: 15,
+                    color: Colors.grey.shade800,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           // Middle row: Airport codes and flight path
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Origin airport code
               Text(
                 origin,
                 style: const TextStyle(
-                  fontSize: 32,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A1A2E),
                   letterSpacing: -1,
+                  height: 1,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               // Flight path with plane
               Expanded(
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     // Line
-                    Container(
-                      height: 3,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.grey.shade300,
-                            const Color(0xFF5B9BD5),
-                            Colors.grey.shade300,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                    Container(height: 2, color: const Color(0xFFB8D4E8)),
                     // Plane icon
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(8),
                       decoration: const BoxDecoration(
-                        color: Color(0xFFE8F4FD),
+                        color: Color(0xFFE3F0F9),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.flight,
-                        color: Color(0xFF5B9BD5),
-                        size: 20,
+                      child: const RotatedBox(
+                        quarterTurns: 1,
+                        child: Icon(
+                          Icons.flight,
+                          color: Color(0xFF5B9BD5),
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               // Destination airport code
               Text(
                 destination,
                 style: const TextStyle(
-                  fontSize: 32,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A1A2E),
                   letterSpacing: -1,
+                  height: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           // Bottom row: Times and date
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _formatTime(departureTime),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  _formatTime(departureTime),
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-              Text(
-                _formatDate(departureDate),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  _formatDate(departureDate),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-              Text(
-                _formatTime(arrivalTime),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  _formatTime(arrivalTime),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
