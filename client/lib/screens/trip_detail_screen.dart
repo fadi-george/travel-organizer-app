@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
+import '../widgets/flight_card.dart';
 import '../widgets/flight_options_sheet.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -51,9 +52,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (trip.flights != null) {
       for (final flight in trip.flights!) {
         final flightData = flight as Map<String, dynamic>;
-        final departureTime = flightData['departureTime'] as String?;
-        if (departureTime != null) {
-          final date = DateTime.tryParse(departureTime);
+        final departureDate = flightData['departureDate'] as String?;
+        if (departureDate != null) {
+          final date = DateTime.tryParse(departureDate);
           if (date != null) {
             final normalized = DateTime(date.year, date.month, date.day);
             counts[normalized] = (counts[normalized] ?? 0) + 1;
@@ -103,14 +104,29 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (trip.flights != null) {
       for (final flight in trip.flights!) {
         final flightData = flight as Map<String, dynamic>;
+        final departureDate = flightData['departureDate'] as String?;
         final departureTime = flightData['departureTime'] as String?;
-        if (departureTime != null) {
-          final date = DateTime.tryParse(departureTime);
+        if (departureDate != null) {
+          final date = DateTime.tryParse(departureDate);
           if (date != null && _isSameDay(date, _selectedDate)) {
+            // Combine date and time for sorting
+            DateTime sortTime = date;
+            if (departureTime != null) {
+              final timeParts = departureTime.split(':');
+              if (timeParts.length >= 2) {
+                sortTime = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  int.tryParse(timeParts[0]) ?? 0,
+                  int.tryParse(timeParts[1]) ?? 0,
+                );
+              }
+            }
             allItems.add({
               'type': 'flight',
               'data': flightData,
-              'sortTime': date,
+              'sortTime': sortTime,
             });
           }
         }
@@ -678,6 +694,11 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use special flight widget for flights
+    if (type == 'flight') {
+      return FlightCard(data: data);
+    }
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
