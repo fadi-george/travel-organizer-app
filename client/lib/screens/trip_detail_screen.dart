@@ -8,6 +8,7 @@ import '../widgets/days_carousel.dart';
 import '../widgets/flight_card.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
+import '../widgets/timeline_item.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -880,8 +881,6 @@ class _TimelineItem extends StatelessWidget {
                         color: Colors.grey.shade700,
                       ),
                     ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.chevron_right, color: Colors.grey.shade400),
                 ],
               ),
             ),

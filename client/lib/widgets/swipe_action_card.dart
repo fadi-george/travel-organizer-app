@@ -104,77 +104,80 @@ class _SwipeActionCardState extends State<SwipeActionCard>
       );
     }
 
+    final showActions = _dragExtent < 0 || _swipeController.isAnimating;
+
     return Padding(
       padding: widget.margin,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Action buttons
-          Positioned.fill(
-            child: Row(
-              children: [
-                const Spacer(),
-                SizedBox(
-                  width: _actionButtonWidth,
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Edit button
-                        if (widget.onEdit != null)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: 8,
-                              right: widget.onDelete != null ? 8 : 0,
+          // Action buttons - only visible when swiping
+          if (showActions)
+            Positioned.fill(
+              child: Row(
+                children: [
+                  const Spacer(),
+                  SizedBox(
+                    width: _actionButtonWidth,
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Edit button
+                          if (widget.onEdit != null)
+                            Padding(
+                              padding: EdgeInsets.only(
+                                left: 8,
+                                right: widget.onDelete != null ? 8 : 0,
+                              ),
+                              child: GestureDetector(
+                                onTap: () {
+                                  _resetSwipe();
+                                  widget.onEdit?.call();
+                                },
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade500,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: GestureDetector(
+                          // Delete button
+                          if (widget.onDelete != null)
+                            GestureDetector(
                               onTap: () {
                                 _resetSwipe();
-                                widget.onEdit?.call();
+                                widget.onDelete?.call();
                               },
                               child: Container(
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: Colors.purple.shade500,
+                                  color: Colors.red.shade500,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.edit_outlined,
+                                  Icons.delete_outline,
                                   color: Colors.white,
                                   size: 18,
                                 ),
                               ),
                             ),
-                          ),
-                        // Delete button
-                        if (widget.onDelete != null)
-                          GestureDetector(
-                            onTap: () {
-                              _resetSwipe();
-                              widget.onDelete?.call();
-                            },
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade500,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           // Main content
           AnimatedBuilder(
             animation: _swipeController,
