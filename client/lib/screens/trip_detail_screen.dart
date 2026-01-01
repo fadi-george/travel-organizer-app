@@ -6,7 +6,7 @@ import '../services/convex_service.dart';
 import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/flight_card.dart';
-import '../widgets/flight_options_sheet.dart';
+import '../widgets/save_flight_sheet.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -71,6 +71,60 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _startDate = DateTime.parse(trip.startDate);
     _endDate = DateTime.parse(trip.endDate);
     _selectedDate = DaysCarousel.getDefaultSelectedDate(_startDate, _endDate);
+  }
+
+  Future<void> _onDeleteFlight(String flightId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Flight'),
+        content: const Text('Are you sure you want to delete this flight?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteFlight(flightId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Flight deleted'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting flight: $e'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _onEditFlight(Map<String, dynamic> flightData) {
+    FlightOptionsSheet.showEditFlight(
+      context,
+      tripId: trip.id,
+      flightData: flightData,
+    );
   }
 
   String get _imageUrl {
@@ -472,6 +526,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     type: type,
                     data: data,
                     isLast: index == activities.length - 1,
+                    onEdit: type == 'flight' ? () => _onEditFlight(data) : null,
+                    onDelete: type == 'flight'
+                        ? () => _onDeleteFlight(data['_id'] as String)
+                        : null,
                   ),
                 );
               },
@@ -638,11 +696,15 @@ class _TimelineItem extends StatelessWidget {
   final String type;
   final Map<String, dynamic> data;
   final bool isLast;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _TimelineItem({
     required this.type,
     required this.data,
     this.isLast = false,
+    this.onEdit,
+    this.onDelete,
   });
 
   IconData get _icon {
@@ -734,7 +796,7 @@ class _TimelineItem extends StatelessWidget {
   Widget build(BuildContext context) {
     // Use special flight widget for flights
     if (type == 'flight') {
-      return FlightCard(data: data);
+      return FlightCard(data: data, onEdit: onEdit, onDelete: onDelete);
     }
 
     return IntrinsicHeight(

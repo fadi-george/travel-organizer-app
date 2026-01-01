@@ -28,6 +28,20 @@ class FlightOptionsSheet extends StatelessWidget {
     );
   }
 
+  static void showEditFlight(
+    BuildContext context, {
+    required String tripId,
+    required Map<String, dynamic> flightData,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _ManualFlightFormSheet(tripId: tripId, existingFlight: flightData),
+    );
+  }
+
   void _onUploadFlightPdf(BuildContext context) {
     Navigator.pop(context);
     _showPdfUploadDialog(context);
@@ -114,8 +128,9 @@ class _PdfUploadDialog extends StatefulWidget {
 
 class _ManualFlightFormSheet extends StatefulWidget {
   final String tripId;
+  final Map<String, dynamic>? existingFlight;
 
-  const _ManualFlightFormSheet({required this.tripId});
+  const _ManualFlightFormSheet({required this.tripId, this.existingFlight});
 
   @override
   State<_ManualFlightFormSheet> createState() => _ManualFlightFormSheetState();
@@ -134,6 +149,54 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
   DateTime? _arrivalDate;
   TimeOfDay? _arrivalTime;
   bool _isSubmitting = false;
+
+  bool get isEditing => widget.existingFlight != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditing) {
+      final flight = widget.existingFlight!;
+      _airlineController.text = flight['airline'] as String? ?? '';
+      _flightNumberController.text = flight['flightNumber'] as String? ?? '';
+      _departureCityController.text = flight['departureCity'] as String? ?? '';
+      _arrivalCityController.text = flight['arrivalCity'] as String? ?? '';
+      _confirmationController.text =
+          flight['confirmationNumber'] as String? ?? '';
+
+      final depDate = flight['departureDate'] as String?;
+      if (depDate != null) {
+        _departureDate = DateTime.tryParse(depDate);
+      }
+
+      final depTime = flight['departureTime'] as String?;
+      if (depTime != null) {
+        final parts = depTime.split(':');
+        if (parts.length >= 2) {
+          _departureTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
+
+      final arrDate = flight['arrivalDate'] as String?;
+      if (arrDate != null) {
+        _arrivalDate = DateTime.tryParse(arrDate);
+      }
+
+      final arrTime = flight['arrivalTime'] as String?;
+      if (arrTime != null) {
+        final parts = arrTime.split(':');
+        if (parts.length >= 2) {
+          _arrivalTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -233,26 +296,45 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
             '${_arrivalTime!.hour.toString().padLeft(2, '0')}:${_arrivalTime!.minute.toString().padLeft(2, '0')}';
       }
 
-      await convexService.createFlight(
-        tripId: widget.tripId,
-        airline: _airlineController.text.trim(),
-        flightNumber: _flightNumberController.text.trim(),
-        departureCity: _departureCityController.text.trim(),
-        arrivalCity: _arrivalCityController.text.trim(),
-        departureDate: _departureDate!.toIso8601String().split('T').first,
-        departureTime: departureTimeStr,
-        arrivalDate: _arrivalDate?.toIso8601String().split('T').first,
-        arrivalTime: arrivalTimeStr,
-        confirmationNumber: _confirmationController.text.trim().isNotEmpty
-            ? _confirmationController.text.trim()
-            : null,
-      );
+      if (isEditing) {
+        await convexService.updateFlight(
+          id: widget.existingFlight!['_id'] as String,
+          airline: _airlineController.text.trim(),
+          flightNumber: _flightNumberController.text.trim(),
+          departureCity: _departureCityController.text.trim(),
+          arrivalCity: _arrivalCityController.text.trim(),
+          departureDate: _departureDate!.toIso8601String().split('T').first,
+          departureTime: departureTimeStr,
+          arrivalDate: _arrivalDate?.toIso8601String().split('T').first,
+          arrivalTime: arrivalTimeStr,
+          confirmationNumber: _confirmationController.text.trim().isNotEmpty
+              ? _confirmationController.text.trim()
+              : null,
+        );
+      } else {
+        await convexService.createFlight(
+          tripId: widget.tripId,
+          airline: _airlineController.text.trim(),
+          flightNumber: _flightNumberController.text.trim(),
+          departureCity: _departureCityController.text.trim(),
+          arrivalCity: _arrivalCityController.text.trim(),
+          departureDate: _departureDate!.toIso8601String().split('T').first,
+          departureTime: departureTimeStr,
+          arrivalDate: _arrivalDate?.toIso8601String().split('T').first,
+          arrivalTime: arrivalTimeStr,
+          confirmationNumber: _confirmationController.text.trim().isNotEmpty
+              ? _confirmationController.text.trim()
+              : null,
+        );
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Flight added successfully'),
+        SnackBar(
+          content: Text(
+            isEditing ? 'Flight updated' : 'Flight added successfully',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.green,
         ),
@@ -307,13 +389,18 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                   const SizedBox(height: 20),
 
                   // Header
-                  const Text(
-                    'Add Flight',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Text(
+                    isEditing ? 'Edit Flight' : 'Add Flight',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Enter your flight details',
+                    isEditing
+                        ? 'Update your flight details'
+                        : 'Enter your flight details',
                     style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 24),
@@ -455,9 +542,9 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Add Flight',
-                            style: TextStyle(
+                        : Text(
+                            isEditing ? 'Update Flight' : 'Add Flight',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

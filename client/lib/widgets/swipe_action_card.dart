@@ -36,9 +36,10 @@ class _SwipeActionCardState extends State<SwipeActionCard>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    _swipeAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _swipeController, curve: Curves.easeOut),
-    );
+    _swipeAnimation = Tween<double>(
+      begin: 0,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
   }
 
   @override
@@ -99,10 +100,7 @@ class _SwipeActionCardState extends State<SwipeActionCard>
     if (!_hasSwipeActions) {
       return GestureDetector(
         onTap: widget.onTap,
-        child: Padding(
-          padding: widget.margin,
-          child: widget.child,
-        ),
+        child: Padding(padding: widget.margin, child: widget.child),
       );
     }
 
@@ -126,6 +124,7 @@ class _SwipeActionCardState extends State<SwipeActionCard>
                         if (widget.onEdit != null)
                           Padding(
                             padding: EdgeInsets.only(
+                              left: 8,
                               right: widget.onDelete != null ? 8 : 0,
                             ),
                             child: GestureDetector(
@@ -207,4 +206,3 @@ class _SwipeActionCardState extends State<SwipeActionCard>
     );
   }
 }
-

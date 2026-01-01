@@ -2,7 +2,7 @@ import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
-import '../widgets/create_trip_sheet.dart';
+import '../widgets/save_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 import 'trip_detail_screen.dart';
 
