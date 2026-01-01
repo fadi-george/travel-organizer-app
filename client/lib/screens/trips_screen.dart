@@ -141,7 +141,7 @@ class _TripsScreenState extends State<TripsScreen> {
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate((context, index) {
                           final trip = _upcomingTrips[index];

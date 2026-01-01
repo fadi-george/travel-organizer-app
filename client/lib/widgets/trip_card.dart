@@ -145,73 +145,69 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
   }
 
   Widget _buildSwipeableCard(BuildContext context) {
-    return ClipRect(
-      child: Stack(
-        children: [
-          // Delete button background
-          Positioned.fill(
-            child: Container(
-              margin: EdgeInsets.only(
-                bottom: widget.isCompact ? 12 : 32,
-                top: widget.isCompact ? 0 : 8,
-                left: widget.isCompact ? 0 : 4,
-                right: widget.isCompact ? 0 : 4,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.red.shade500,
-                borderRadius: BorderRadius.circular(widget.isCompact ? 16 : 20),
-              ),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  onTap: () {
-                    _resetSwipe();
-                    widget.onDelete?.call();
-                  },
-                  child: SizedBox(
-                    width: _deleteButtonWidth,
-                    child: const Center(
-                      child: Icon(
-                        Icons.delete_outline,
-                        color: Colors.white,
-                        size: 28,
-                      ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Delete button background
+        Positioned.fill(
+          child: Container(
+            margin: EdgeInsets.only(
+              bottom: widget.isCompact ? 12 : 32,
+              top: widget.isCompact ? 0 : 8,
+              left: widget.isCompact ? 0 : 4,
+              right: widget.isCompact ? 0 : 4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.red.shade500,
+              borderRadius: BorderRadius.circular(widget.isCompact ? 16 : 20),
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () {
+                  _resetSwipe();
+                  widget.onDelete?.call();
+                },
+                child: SizedBox(
+                  width: _deleteButtonWidth,
+                  child: const Center(
+                    child: Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 28,
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          // Card content
-          AnimatedBuilder(
-            animation: _swipeController,
-            builder: (context, child) {
-              final offset = _swipeController.isAnimating
-                  ? _swipeAnimation.value
-                  : _dragExtent;
-              return Transform.translate(
-                offset: Offset(offset, 0),
-                child: child,
-              );
+        ),
+        // Card content
+        AnimatedBuilder(
+          animation: _swipeController,
+          builder: (context, child) {
+            final offset = _swipeController.isAnimating
+                ? _swipeAnimation.value
+                : _dragExtent;
+            return Transform.translate(offset: Offset(offset, 0), child: child);
+          },
+          child: GestureDetector(
+            onTap: () {
+              if (_dragExtent < 0) {
+                _resetSwipe();
+              } else {
+                widget.onTap?.call();
+              }
             },
-            child: GestureDetector(
-              onTap: () {
-                if (_dragExtent < 0) {
-                  _resetSwipe();
-                } else {
-                  widget.onTap?.call();
-                }
-              },
-              onHorizontalDragStart: _onHorizontalDragStart,
-              onHorizontalDragUpdate: _onHorizontalDragUpdate,
-              onHorizontalDragEnd: _onHorizontalDragEnd,
-              child: widget.isCompact
-                  ? _buildCompactCardContent(context)
-                  : _buildFullCardContent(context),
-            ),
+            onHorizontalDragStart: _onHorizontalDragStart,
+            onHorizontalDragUpdate: _onHorizontalDragUpdate,
+            onHorizontalDragEnd: _onHorizontalDragEnd,
+            child: widget.isCompact
+                ? _buildCompactCardContent(context)
+                : _buildFullCardContent(context),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -227,104 +223,106 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
   }
 
   Widget _buildFullCardContent(BuildContext context) {
-    return Container(
-      height: 220,
-      margin: const EdgeInsets.fromLTRB(4, 8, 4, 32),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(
-              imageUrl: _imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => _buildPlaceholder(),
-              errorWidget: (context, url, error) => _buildPlaceholder(),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.7),
-                  ],
-                  stops: const [0.4, 1.0],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.trip.daysUntilTrip != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.trip.isUpcoming
-                            ? const Color(0xFFFF7043)
-                            : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        widget.trip.daysUntilTrip!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  const Spacer(),
-                  Text(
-                    widget.trip.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.trip.formattedDateRange,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (widget.trip.notes != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.trip.notes!,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 32),
+      child: Container(
+        height: 220,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: _imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _buildPlaceholder(),
+                errorWidget: (context, url, error) => _buildPlaceholder(),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
+                    stops: const [0.4, 1.0],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.trip.daysUntilTrip != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.trip.isUpcoming
+                              ? const Color(0xFFFF7043)
+                              : Colors.grey.shade600,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          widget.trip.daysUntilTrip!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    const Spacer(),
+                    Text(
+                      widget.trip.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.trip.formattedDateRange,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (widget.trip.notes != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.trip.notes!,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -337,88 +335,85 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCompactCardContent(
-    BuildContext context, {
-    bool hasShadow = true,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: hasShadow
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.16),
-                  blurRadius: 8,
-                  offset: const Offset(0, 6),
+  Widget _buildCompactCardContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 70,
+                height: 70,
+                child: CachedNetworkImage(
+                  imageUrl: _imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => _buildPlaceholder(),
+                  errorWidget: (context, url, error) => _buildPlaceholder(),
                 ),
-              ]
-            : null,
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 70,
-              height: 70,
-              child: CachedNetworkImage(
-                imageUrl: _imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => _buildPlaceholder(),
-                errorWidget: (context, url, error) => _buildPlaceholder(),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.trip.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.trip.formattedDateRange,
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontSize: 13,
-                  ),
-                ),
-                if (widget.trip.daysUntilTrip != null) ...[
-                  const SizedBox(height: 2),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    widget.trip.daysUntilTrip!,
-                    style: TextStyle(
-                      color: widget.trip.isPast
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.5)
-                          : const Color(0xFFFF7043),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                    widget.trip.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.trip.formattedDateRange,
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (widget.trip.daysUntilTrip != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.trip.daysUntilTrip!,
+                      style: TextStyle(
+                        color: widget.trip.isPast
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5)
+                            : const Color(0xFFFF7043),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.3),
-          ),
-        ],
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+          ],
+        ),
       ),
     );
   }
