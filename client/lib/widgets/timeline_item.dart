@@ -83,8 +83,9 @@ class TimelineItem extends StatelessWidget {
         if (departure != null) {
           final dt = DateTime.tryParse(departure);
           if (dt != null) {
-            final hour =
-                dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+            final hour = dt.hour > 12
+                ? dt.hour - 12
+                : (dt.hour == 0 ? 12 : dt.hour);
             final period = dt.hour >= 12 ? 'PM' : 'AM';
             final minute = dt.minute.toString().padLeft(2, '0');
             return '$hour:$minute $period';
@@ -196,4 +197,3 @@ class TimelineItem extends StatelessWidget {
     );
   }
 }
-
