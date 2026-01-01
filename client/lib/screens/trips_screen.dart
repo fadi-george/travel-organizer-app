@@ -4,6 +4,7 @@ import '../models/trip.dart';
 import '../services/convex_service.dart';
 import '../widgets/create_trip_sheet.dart';
 import '../widgets/trip_card.dart';
+import 'trip_detail_screen.dart';
 
 class TripsScreen extends StatefulWidget {
   const TripsScreen({super.key});
@@ -317,11 +318,11 @@ class _TripsScreenState extends State<TripsScreen> {
   }
 
   void _onTripTapped(Trip trip) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Selected: ${trip.name}'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            TripDetailScreen(trip: trip, primaryCountry: trip.primaryCountry),
       ),
     );
   }
