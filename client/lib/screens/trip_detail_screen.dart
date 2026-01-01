@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../utils/country_images.dart';
+import '../widgets/flight_options_sheet.dart';
 
 class TripDetailScreen extends StatelessWidget {
   final Trip trip;
@@ -184,9 +185,8 @@ class TripDetailScreen extends StatelessWidget {
                           icon: Icons.flight,
                           label: 'Flights',
                           color: Colors.blue,
-                          onTap: () {
-                            // TODO: Navigate to flights
-                          },
+                          onTap: () =>
+                              FlightOptionsSheet.show(context, tripId: trip.id),
                         ),
                       ),
                       const SizedBox(width: 12),
