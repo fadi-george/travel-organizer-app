@@ -220,4 +220,37 @@ class ConvexService {
     if (decoded == null) return null;
     return Map<String, dynamic>.from(decoded as Map);
   }
+
+  /// Create a new accommodation
+  Future<Map<String, dynamic>?> createAccommodation({
+    required String tripId,
+    required String hotelName,
+    String? city,
+    String? country,
+    String? roomType,
+    String? checkIn,
+    String? checkOut,
+    String? address,
+    String? confirmationNumber,
+    String? notes,
+  }) async {
+    final result = await client.mutation(
+      name: 'accommodations:create',
+      args: {
+        'tripId': tripId,
+        'hotelName': hotelName,
+        if (city != null) 'city': city,
+        if (country != null) 'country': country,
+        if (roomType != null) 'roomType': roomType,
+        if (checkIn != null) 'checkIn': checkIn,
+        if (checkOut != null) 'checkOut': checkOut,
+        if (address != null) 'address': address,
+        if (confirmationNumber != null) 'confirmationNumber': confirmationNumber,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    final decoded = jsonDecode(result);
+    if (decoded == null) return null;
+    return Map<String, dynamic>.from(decoded as Map);
+  }
 }

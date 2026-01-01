@@ -7,6 +7,7 @@ import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/flight_card.dart';
 import '../widgets/save_flight_sheet.dart';
+import '../widgets/save_hotel_sheet.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -416,9 +417,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               child: _HeaderActionButton(
                                 icon: Icons.hotel,
                                 label: 'Hotels',
-                                onTap: () {
-                                  // TODO: Navigate to hotels
-                                },
+                                onTap: () => HotelOptionsSheet.show(
+                                  context,
+                                  tripId: trip.id,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
