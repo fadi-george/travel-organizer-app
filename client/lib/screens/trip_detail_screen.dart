@@ -150,26 +150,29 @@ class TripDetailScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                   ],
 
-                  // Destinations section
-                  _SectionTitle(title: 'Destinations'),
+                  // Accommodations section
+                  _SectionTitle(title: 'Accommodations'),
                   const SizedBox(height: 8),
-                  if (trip.destinations == null || trip.destinations!.isEmpty)
+                  if (trip.accommodations == null ||
+                      trip.accommodations!.isEmpty)
                     _EmptySection(
-                      icon: Icons.place_outlined,
-                      message: 'No destinations added yet',
-                      actionLabel: 'Add Destination',
+                      icon: Icons.hotel_outlined,
+                      message: 'No accommodations added yet',
+                      actionLabel: 'Add Accommodation',
                       onAction: () {
-                        // TODO: Add destination
+                        // TODO: Add accommodation
                       },
                     )
                   else
-                    ...trip.destinations!.map((dest) {
-                      final destination = dest as Map<String, dynamic>;
-                      return _DestinationCard(
-                        city: destination['city'] as String? ?? 'Unknown',
-                        country: destination['country'] as String? ?? '',
-                        arrivalDate: destination['arrivalDate'] as String?,
-                        departureDate: destination['departureDate'] as String?,
+                    ...trip.accommodations!.map((acc) {
+                      final accommodation = acc as Map<String, dynamic>;
+                      return _AccommodationCard(
+                        hotelName:
+                            accommodation['hotelName'] as String? ?? 'Unknown',
+                        city: accommodation['city'] as String?,
+                        country: accommodation['country'] as String?,
+                        checkIn: accommodation['checkIn'] as String?,
+                        checkOut: accommodation['checkOut'] as String?,
                       );
                     }),
 
@@ -289,18 +292,33 @@ class _EmptySection extends StatelessWidget {
   }
 }
 
-class _DestinationCard extends StatelessWidget {
-  final String city;
-  final String country;
-  final String? arrivalDate;
-  final String? departureDate;
+class _AccommodationCard extends StatelessWidget {
+  final String hotelName;
+  final String? city;
+  final String? country;
+  final String? checkIn;
+  final String? checkOut;
 
-  const _DestinationCard({
-    required this.city,
-    required this.country,
-    this.arrivalDate,
-    this.departureDate,
+  const _AccommodationCard({
+    required this.hotelName,
+    this.city,
+    this.country,
+    this.checkIn,
+    this.checkOut,
   });
+
+  String get _subtitle {
+    final parts = <String>[];
+    if (city != null && city!.isNotEmpty) parts.add(city!);
+    if (country != null && country!.isNotEmpty) parts.add(country!);
+    return parts.join(', ');
+  }
+
+  String? get _dateRange {
+    if (checkIn == null) return null;
+    if (checkOut == null) return checkIn;
+    return '$checkIn → $checkOut';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -318,10 +336,10 @@ class _DestinationCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: const Color(0xFFFF7043).withValues(alpha: 0.1),
+              color: Colors.purple.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.place, color: Color(0xFFFF7043)),
+            child: const Icon(Icons.hotel, color: Colors.purple),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -329,16 +347,27 @@ class _DestinationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  city,
+                  hotelName,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (country.isNotEmpty)
+                if (_subtitle.isNotEmpty)
                   Text(
-                    country,
+                    _subtitle,
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  ),
+                if (_dateRange != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _dateRange!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
                   ),
               ],
             ),

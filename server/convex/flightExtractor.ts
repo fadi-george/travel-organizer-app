@@ -34,8 +34,25 @@ export const saveExtractedFlights = internalMutation({
       throw new Error("Trip not found");
     }
 
+    // Get existing flights for this trip to check for duplicates
+    const existingFlights = await ctx.db
+      .query("flights")
+      .withIndex("by_trip", (q) => q.eq("tripId", args.tripId))
+      .collect();
+
     const savedFlights = [];
     for (const flight of args.flights) {
+      // Check if flight already exists (same flight number and departure date)
+      const isDuplicate = existingFlights.some(
+        (existing) =>
+          existing.flightNumber === flight.flightNumber &&
+          existing.departureDate === flight.departureDate
+      );
+
+      if (isDuplicate) {
+        continue;
+      }
+
       const flightId = await ctx.db.insert("flights", {
         tripId: args.tripId,
         ...flight,
