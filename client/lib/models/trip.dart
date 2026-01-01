@@ -87,17 +87,35 @@ class Trip {
     return end.isBefore(DateTime.now());
   }
 
-  /// Get the first accommodation's country
+  /// Get the primary country from accommodations, or fall back to flight destination
   String? get primaryCountry {
-    if (accommodations == null || accommodations!.isEmpty) return null;
-    final sorted =
-        List<Map<String, dynamic>>.from(
-          accommodations!.map((a) => a as Map<String, dynamic>),
-        )..sort((a, b) {
-          final aDate = a['checkIn'] as String? ?? '';
-          final bDate = b['checkIn'] as String? ?? '';
-          return aDate.compareTo(bDate);
-        });
-    return sorted.first['country'] as String?;
+    // Try accommodations first
+    if (accommodations != null && accommodations!.isNotEmpty) {
+      final sorted =
+          List<Map<String, dynamic>>.from(
+            accommodations!.map((a) => a as Map<String, dynamic>),
+          )..sort((a, b) {
+            final aDate = a['checkIn'] as String? ?? '';
+            final bDate = b['checkIn'] as String? ?? '';
+            return aDate.compareTo(bDate);
+          });
+      final country = sorted.first['country'] as String?;
+      if (country != null && country.isNotEmpty) return country;
+    }
+
+    // Fall back to first flight's arrival city
+    if (flights != null && flights!.isNotEmpty) {
+      final sorted =
+          List<Map<String, dynamic>>.from(
+            flights!.map((f) => f as Map<String, dynamic>),
+          )..sort((a, b) {
+            final aDate = a['departureDate'] as String? ?? '';
+            final bDate = b['departureDate'] as String? ?? '';
+            return aDate.compareTo(bDate);
+          });
+      return sorted.first['arrivalCity'] as String?;
+    }
+
+    return null;
   }
 }
