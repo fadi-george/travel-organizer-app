@@ -27,6 +27,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isSubmitting = false;
+  String? _dateError;
 
   late final AnimationController _planeController;
   late final Animation<double> _oscillation;
@@ -80,6 +81,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     if (picked != null) {
       setState(() {
         _startDate = picked;
+        _dateError = null;
         if (_endDate != null && _endDate!.isBefore(picked)) {
           _endDate = null;
         }
@@ -94,7 +96,10 @@ class _CreateTripSheetState extends State<CreateTripSheet>
           _startDate ?? DateTime.now().subtract(const Duration(days: 365)),
     );
     if (picked != null) {
-      setState(() => _endDate = picked);
+      setState(() {
+        _endDate = picked;
+        _dateError = null;
+      });
     }
   }
 
@@ -103,43 +108,60 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     return DateFormat('MMM d, yyyy').format(date);
   }
 
+  String? _validateDates() {
+    if (_startDate != null && _endDate == null) {
+      return 'Please select an end date';
+    }
+    if (_endDate != null && _startDate == null) {
+      return 'Please select a start date';
+    }
+    return null;
+  }
+
   Future<void> _onSubmit() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      setState(() => _isSubmitting = true);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
-      try {
-        final name = _nameController.text.trim();
-        final notes = _notesController.text.trim();
+    final dateError = _validateDates();
+    if (dateError != null) {
+      setState(() => _dateError = dateError);
+      return;
+    }
+    setState(() => _dateError = null);
 
-        final convexService = await ConvexService.getInstance();
-        await convexService.createTrip(
-          name: name,
-          startDate: _startDate?.toIso8601String(),
-          endDate: _endDate?.toIso8601String(),
-          notes: notes.isEmpty ? null : notes,
-        );
+    setState(() => _isSubmitting = true);
 
-        if (!mounted) return;
+    try {
+      final name = _nameController.text.trim();
+      final notes = _notesController.text.trim();
 
-        Navigator.pop(context);
-        widget.onTripCreated?.call(
-          name,
-          _startDate,
-          _endDate,
-          notes.isEmpty ? null : notes,
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating trip: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isSubmitting = false);
-        }
+      final convexService = await ConvexService.getInstance();
+      await convexService.createTrip(
+        name: name,
+        startDate: _startDate?.toIso8601String(),
+        endDate: _endDate?.toIso8601String(),
+        notes: notes.isEmpty ? null : notes,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+      widget.onTripCreated?.call(
+        name,
+        _startDate,
+        _endDate,
+        notes.isEmpty ? null : notes,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating trip: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -285,6 +307,17 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                       ),
                     ],
                   ),
+                  if (_dateError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        _dateError!,
+                        style: TextStyle(
+                          color: Colors.red.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
 
                   // Notes field
