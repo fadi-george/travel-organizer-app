@@ -38,7 +38,6 @@ export default defineSchema({
     cabinClass: v.optional(v.string()),
     seatNumber: v.optional(v.string()),
     baggageAllowance: v.optional(v.string()),
-    status: v.optional(v.string()),
     aircraft: v.optional(v.string()),
     confirmationNumber: v.optional(v.string()),
     eTicketNumber: v.optional(v.string()),

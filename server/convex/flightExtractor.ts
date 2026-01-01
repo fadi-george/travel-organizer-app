@@ -98,7 +98,10 @@ For each flight found, extract the following details in JSON format:
       "arrivalTerminal": "string or null",
       "confirmationNumber": "string or null",
       "seatNumber": "string or null",
-      "cabinClass": "string (e.g., 'Economy', 'Business', 'First') or null"
+      "cabinClass": "string (e.g., 'Economy', 'Business', 'First') or null",
+      "baggageAllowance": "string (e.g., '2 x 23kg', '1 carry-on') or null",
+      "aircraft": "string (e.g., 'Boeing 737 MAX 8', 'Airbus A350') or null",
+      "duration": "string (e.g., '01:35', '2h 30m', 'Non-stop') or null"
     }
   ]
 }
@@ -151,6 +154,8 @@ Important:
       const result = (await response.json()) as ClaudeResponse;
 
       const content = result.content?.[0];
+      console.log("Content:");
+      console.log(content);
 
       if (!content || content.type !== "text") {
         throw new Error("Unexpected response format from Claude");
