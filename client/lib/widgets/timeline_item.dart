@@ -122,6 +122,9 @@ class TimelineItem extends StatelessWidget {
       );
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +149,7 @@ class TimelineItem extends StatelessWidget {
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
+                        color: colorScheme.outline.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(1),
                       ),
                     ),
@@ -161,9 +164,13 @@ class TimelineItem extends StatelessWidget {
               margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(
+                  color: colorScheme.outline.withValues(
+                    alpha: isDark ? 0.2 : 0.1,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
@@ -173,9 +180,10 @@ class TimelineItem extends StatelessWidget {
                       children: [
                         Text(
                           _title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         if (_subtitle != null)
@@ -185,7 +193,9 @@ class TimelineItem extends StatelessWidget {
                               _subtitle!,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade600,
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
                             ),
                           ),
@@ -198,7 +208,7 @@ class TimelineItem extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                 ],

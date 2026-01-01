@@ -42,6 +42,15 @@ class TravelOrganizerApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'SF Pro Display',
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFFF7043),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        fontFamily: 'SF Pro Display',
+      ),
+      themeMode: ThemeMode.system,
       home: const TripsScreen(),
     );
   }

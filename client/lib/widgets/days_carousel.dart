@@ -62,6 +62,9 @@ class DaysCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final days = _tripDays;
     if (days.isEmpty) return const SizedBox.shrink();
 
@@ -75,7 +78,7 @@ class DaysCarousel extends StatelessWidget {
             _monthYear(selectedDate),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -110,7 +113,7 @@ class DaysCarousel extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: isSelected
                               ? const Color(0xFFFF7043)
-                              : Colors.grey.shade500,
+                              : colorScheme.onSurface.withValues(alpha: 0.5),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -139,7 +142,9 @@ class DaysCarousel extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                               color: isSelected
                                   ? const Color(0xFFFF7043)
-                                  : Colors.grey.shade700,
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.7,
+                                    ),
                             ),
                           ),
                         ),

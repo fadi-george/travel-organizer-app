@@ -89,7 +89,7 @@ class _TripsScreenState extends State<TripsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F6F3),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())

@@ -67,6 +67,10 @@ class FlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     final departureCity = data['departureCity'] as String? ?? 'Departure';
     final arrivalCity = data['arrivalCity'] as String? ?? 'Arrival';
     final origin = _extractAirportCode(departureCity);
@@ -86,14 +90,24 @@ class FlightCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
+          border: isDark
+              ? Border.all(color: colorScheme.outline.withValues(alpha: 0.15))
+              : null,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.16),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
+            if (isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
           ],
         ),
         child: Column(
@@ -108,7 +122,7 @@ class FlightCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 15,
-                      color: Colors.grey.shade800,
+                      color: colorScheme.onSurface.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -119,7 +133,7 @@ class FlightCard extends StatelessWidget {
                     flightNumber,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade500,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -132,7 +146,7 @@ class FlightCard extends StatelessWidget {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 15,
-                      color: Colors.grey.shade800,
+                      color: colorScheme.onSurface.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -147,10 +161,10 @@ class FlightCard extends StatelessWidget {
                 // Origin airport code
                 Text(
                   origin,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    color: colorScheme.onSurface,
                     letterSpacing: -1,
                     height: 1,
                   ),
@@ -162,12 +176,19 @@ class FlightCard extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       // Line
-                      Container(height: 2, color: const Color(0xFFB8D4E8)),
+                      Container(
+                        height: 2,
+                        color: isDark
+                            ? const Color(0xFF4A6572)
+                            : const Color(0xFFB8D4E8),
+                      ),
                       // Plane icon
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFE3F0F9),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF2D3E50)
+                              : const Color(0xFFE3F0F9),
                           shape: BoxShape.circle,
                         ),
                         child: const RotatedBox(
@@ -186,10 +207,10 @@ class FlightCard extends StatelessWidget {
                 // Destination airport code
                 Text(
                   destination,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    color: colorScheme.onSurface,
                     letterSpacing: -1,
                     height: 1,
                   ),
@@ -205,7 +226,7 @@ class FlightCard extends StatelessWidget {
                     _formatTime(departureTime),
                     style: TextStyle(
                       fontSize: 15,
-                      color: Colors.grey.shade600,
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -216,7 +237,7 @@ class FlightCard extends StatelessWidget {
                     _formatDate(departureDate),
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade500,
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -227,7 +248,7 @@ class FlightCard extends StatelessWidget {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 15,
-                      color: Colors.grey.shade600,
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
