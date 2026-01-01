@@ -148,6 +148,8 @@ class ConvexService {
     String? arrivalDate,
     String? arrivalTime,
     String? confirmationNumber,
+    String? seatNumber,
+    String? cabinClass,
     String? notes,
   }) async {
     final result = await client.mutation(
@@ -164,6 +166,8 @@ class ConvexService {
         if (arrivalTime != null) 'arrivalTime': arrivalTime,
         if (confirmationNumber != null)
           'confirmationNumber': confirmationNumber,
+        if (seatNumber != null) 'seatNumber': seatNumber,
+        if (cabinClass != null) 'cabinClass': cabinClass,
         if (notes != null) 'notes': notes,
       },
     );
@@ -190,6 +194,8 @@ class ConvexService {
     String? arrivalDate,
     String? arrivalTime,
     String? confirmationNumber,
+    String? seatNumber,
+    String? cabinClass,
     String? notes,
   }) async {
     final result = await client.mutation(
@@ -205,6 +211,8 @@ class ConvexService {
         if (arrivalDate != null) 'arrivalDate': arrivalDate,
         if (arrivalTime != null) 'arrivalTime': arrivalTime,
         if (confirmationNumber != null) 'confirmationNumber': confirmationNumber,
+        if (seatNumber != null) 'seatNumber': seatNumber,
+        if (cabinClass != null) 'cabinClass': cabinClass,
         if (notes != null) 'notes': notes,
       },
     );

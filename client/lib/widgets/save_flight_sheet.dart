@@ -143,6 +143,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
   final _departureCityController = TextEditingController();
   final _arrivalCityController = TextEditingController();
   final _confirmationController = TextEditingController();
+  final _seatController = TextEditingController();
+  final _cabinClassController = TextEditingController();
 
   DateTime? _departureDate;
   TimeOfDay? _departureTime;
@@ -163,6 +165,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
       _arrivalCityController.text = flight['arrivalCity'] as String? ?? '';
       _confirmationController.text =
           flight['confirmationNumber'] as String? ?? '';
+      _seatController.text = flight['seatNumber'] as String? ?? '';
+      _cabinClassController.text = flight['cabinClass'] as String? ?? '';
 
       final depDate = flight['departureDate'] as String?;
       if (depDate != null) {
@@ -205,6 +209,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
     _departureCityController.dispose();
     _arrivalCityController.dispose();
     _confirmationController.dispose();
+    _seatController.dispose();
+    _cabinClassController.dispose();
     super.dispose();
   }
 
@@ -296,11 +302,20 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
             '${_arrivalTime!.hour.toString().padLeft(2, '0')}:${_arrivalTime!.minute.toString().padLeft(2, '0')}';
       }
 
+      // Normalize flight number: remove spaces
+      final flightNumber = _flightNumberController.text.trim().replaceAll(
+        ' ',
+        '',
+      );
+
+      final seatNumber = _seatController.text.trim();
+      final cabinClass = _cabinClassController.text.trim();
+
       if (isEditing) {
         await convexService.updateFlight(
           id: widget.existingFlight!['_id'] as String,
           airline: _airlineController.text.trim(),
-          flightNumber: _flightNumberController.text.trim(),
+          flightNumber: flightNumber,
           departureCity: _departureCityController.text.trim(),
           arrivalCity: _arrivalCityController.text.trim(),
           departureDate: _departureDate!.toIso8601String().split('T').first,
@@ -310,12 +325,14 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
           confirmationNumber: _confirmationController.text.trim().isNotEmpty
               ? _confirmationController.text.trim()
               : null,
+          seatNumber: seatNumber.isNotEmpty ? seatNumber : null,
+          cabinClass: cabinClass.isNotEmpty ? cabinClass : null,
         );
       } else {
         await convexService.createFlight(
           tripId: widget.tripId,
           airline: _airlineController.text.trim(),
-          flightNumber: _flightNumberController.text.trim(),
+          flightNumber: flightNumber,
           departureCity: _departureCityController.text.trim(),
           arrivalCity: _arrivalCityController.text.trim(),
           departureDate: _departureDate!.toIso8601String().split('T').first,
@@ -325,6 +342,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
           confirmationNumber: _confirmationController.text.trim().isNotEmpty
               ? _confirmationController.text.trim()
               : null,
+          seatNumber: seatNumber.isNotEmpty ? seatNumber : null,
+          cabinClass: cabinClass.isNotEmpty ? cabinClass : null,
         );
       }
 
@@ -520,6 +539,34 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                       'Confirmation # (optional)',
                       'e.g. ABC123',
                     ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Seat & Cabin Class row (optional)
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: _seatController,
+                          decoration: _inputDecoration(
+                            'Seat (optional)',
+                            'e.g. 12A',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: TextFormField(
+                          controller: _cabinClassController,
+                          decoration: _inputDecoration(
+                            'Cabin Class (optional)',
+                            'e.g. Economy',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
 

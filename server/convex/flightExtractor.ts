@@ -25,6 +25,9 @@ export const saveExtractedFlights = internalMutation({
         confirmationNumber: v.optional(v.string()),
         seatNumber: v.optional(v.string()),
         cabinClass: v.optional(v.string()),
+        baggageAllowance: v.optional(v.string()),
+        aircraft: v.optional(v.string()),
+        duration: v.optional(v.string()),
       })
     ),
   },
@@ -43,22 +46,31 @@ export const saveExtractedFlights = internalMutation({
     const savedFlights = [];
     for (const flight of args.flights) {
       // Check if flight already exists (same flight number and departure date)
-      const isDuplicate = existingFlights.some(
+      const existingFlight = existingFlights.find(
         (existing) =>
           existing.flightNumber === flight.flightNumber &&
           existing.departureDate === flight.departureDate
       );
 
-      if (isDuplicate) {
-        continue;
+      if (existingFlight) {
+        // Update existing flight with new data (merge, keeping existing values if new ones are undefined)
+        const updates: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(flight)) {
+          if (value !== undefined && value !== null && value !== "") {
+            updates[key] = value;
+          }
+        }
+        await ctx.db.patch(existingFlight._id, updates);
+        const updatedFlight = await ctx.db.get(existingFlight._id);
+        savedFlights.push(updatedFlight);
+      } else {
+        const flightId = await ctx.db.insert("flights", {
+          tripId: args.tripId,
+          ...flight,
+        });
+        const savedFlight = await ctx.db.get(flightId);
+        savedFlights.push(savedFlight);
       }
-
-      const flightId = await ctx.db.insert("flights", {
-        tripId: args.tripId,
-        ...flight,
-      });
-      const savedFlight = await ctx.db.get(flightId);
-      savedFlights.push(savedFlight);
     }
 
     return savedFlights;
@@ -154,8 +166,6 @@ Important:
       const result = (await response.json()) as ClaudeResponse;
 
       const content = result.content?.[0];
-      console.log("Content:");
-      console.log(content);
 
       if (!content || content.type !== "text") {
         throw new Error("Unexpected response format from Claude");
@@ -208,6 +218,11 @@ Important:
             : undefined,
           seatNumber: f.seatNumber ? String(f.seatNumber) : undefined,
           cabinClass: f.cabinClass ? String(f.cabinClass) : undefined,
+          baggageAllowance: f.baggageAllowance
+            ? String(f.baggageAllowance)
+            : undefined,
+          aircraft: f.aircraft ? String(f.aircraft) : undefined,
+          duration: f.duration ? String(f.duration) : undefined,
         }));
 
       if (validFlights.length === 0) {
