@@ -2,7 +2,7 @@ import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
-import '../widgets/create_trip_sheet.dart';
+import '../widgets/save_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 import 'trip_detail_screen.dart';
 
@@ -151,6 +151,7 @@ class _TripsScreenState extends State<TripsScreen> {
                             primaryCountry: trip.primaryCountry,
                             index: index,
                             onTap: () => _onTripTapped(trip),
+                            onEdit: () => _onEditTrip(trip),
                             onDelete: () => _onDeleteTrip(trip),
                           );
                         }, childCount: _upcomingTrips.length),
@@ -180,6 +181,7 @@ class _TripsScreenState extends State<TripsScreen> {
                             index: index,
                             isCompact: true,
                             onTap: () => _onTripTapped(trip),
+                            onEdit: () => _onEditTrip(trip),
                             onDelete: () => _onDeleteTrip(trip),
                           );
                         }, childCount: _pastTrips.length),
@@ -323,6 +325,28 @@ class _TripsScreenState extends State<TripsScreen> {
       MaterialPageRoute(
         builder: (context) =>
             TripDetailScreen(trip: trip, primaryCountry: trip.primaryCountry),
+      ),
+    );
+  }
+
+  void _onEditTrip(Trip trip) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CreateTripSheet(
+        existingTrip: trip,
+        onTripCreated: (name, startDate, endDate, notes) {
+          ScaffoldMessenger.of(this.context).showSnackBar(
+            SnackBar(
+              content: Text('Updated trip: $name'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

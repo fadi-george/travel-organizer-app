@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../services/convex_service.dart';
 import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
-import '../widgets/flight_options_sheet.dart';
+import '../widgets/flight_card.dart';
+import '../widgets/save_flight_sheet.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -19,19 +22,109 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late DateTime _selectedDate;
   late DateTime _startDate;
   late DateTime _endDate;
+  late Trip _trip;
+  SubscriptionHandle? _subscription;
 
-  Trip get trip => widget.trip;
+  Trip get trip => _trip;
 
   @override
   void initState() {
     super.initState();
+    _trip = widget.trip;
     _initializeDates();
+    _subscribeToTrips();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _subscribeToTrips() async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      _subscription = await convexService.subscribeToTrips(
+        onUpdate: (tripsData) {
+          if (!mounted) return;
+          // Find our trip in the updated list
+          final updatedTrip = tripsData
+              .map((json) => Trip.fromJson(json))
+              .where((t) => t.id == widget.trip.id)
+              .firstOrNull;
+          if (updatedTrip != null) {
+            setState(() {
+              _trip = updatedTrip;
+            });
+          }
+        },
+        onError: (message, value) {
+          debugPrint('Trip subscription error: $message $value');
+        },
+      );
+    } catch (e) {
+      debugPrint('Error subscribing to trips: $e');
+    }
   }
 
   void _initializeDates() {
     _startDate = DateTime.parse(trip.startDate);
     _endDate = DateTime.parse(trip.endDate);
     _selectedDate = DaysCarousel.getDefaultSelectedDate(_startDate, _endDate);
+  }
+
+  Future<void> _onDeleteFlight(String flightId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Flight'),
+        content: const Text('Are you sure you want to delete this flight?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteFlight(flightId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Flight deleted'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting flight: $e'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _onEditFlight(Map<String, dynamic> flightData) {
+    FlightOptionsSheet.showEditFlight(
+      context,
+      tripId: trip.id,
+      flightData: flightData,
+    );
   }
 
   String get _imageUrl {
@@ -51,9 +144,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (trip.flights != null) {
       for (final flight in trip.flights!) {
         final flightData = flight as Map<String, dynamic>;
-        final departureTime = flightData['departureTime'] as String?;
-        if (departureTime != null) {
-          final date = DateTime.tryParse(departureTime);
+        final departureDate = flightData['departureDate'] as String?;
+        if (departureDate != null) {
+          final date = DateTime.tryParse(departureDate);
           if (date != null) {
             final normalized = DateTime(date.year, date.month, date.day);
             counts[normalized] = (counts[normalized] ?? 0) + 1;
@@ -103,14 +196,29 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (trip.flights != null) {
       for (final flight in trip.flights!) {
         final flightData = flight as Map<String, dynamic>;
+        final departureDate = flightData['departureDate'] as String?;
         final departureTime = flightData['departureTime'] as String?;
-        if (departureTime != null) {
-          final date = DateTime.tryParse(departureTime);
+        if (departureDate != null) {
+          final date = DateTime.tryParse(departureDate);
           if (date != null && _isSameDay(date, _selectedDate)) {
+            // Combine date and time for sorting
+            DateTime sortTime = date;
+            if (departureTime != null) {
+              final timeParts = departureTime.split(':');
+              if (timeParts.length >= 2) {
+                sortTime = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  int.tryParse(timeParts[0]) ?? 0,
+                  int.tryParse(timeParts[1]) ?? 0,
+                );
+              }
+            }
             allItems.add({
               'type': 'flight',
               'data': flightData,
-              'sortTime': date,
+              'sortTime': sortTime,
             });
           }
         }
@@ -418,6 +526,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     type: type,
                     data: data,
                     isLast: index == activities.length - 1,
+                    onEdit: type == 'flight' ? () => _onEditFlight(data) : null,
+                    onDelete: type == 'flight'
+                        ? () => _onDeleteFlight(data['_id'] as String)
+                        : null,
                   ),
                 );
               },
@@ -584,11 +696,15 @@ class _TimelineItem extends StatelessWidget {
   final String type;
   final Map<String, dynamic> data;
   final bool isLast;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _TimelineItem({
     required this.type,
     required this.data,
     this.isLast = false,
+    this.onEdit,
+    this.onDelete,
   });
 
   IconData get _icon {
@@ -678,6 +794,11 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use special flight widget for flights
+    if (type == 'flight') {
+      return FlightCard(data: data, onEdit: onEdit, onDelete: onDelete);
+    }
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
