@@ -405,7 +405,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         slivers: [
           // Hero header with image
           SliverAppBar(
-            expandedHeight: 240,
+            expandedHeight: 210,
             pinned: true,
             stretch: true,
             backgroundColor: const Color(0xFFFF7043),
@@ -450,7 +450,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   Positioned(
                     left: 20,
                     right: 20,
-                    bottom: 20,
+                    bottom: 16,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -497,7 +497,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         // Quick actions
                         Row(
                           children: [
@@ -511,7 +511,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: _HeaderActionButton(
                                 icon: Icons.hotel,
@@ -522,7 +522,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: _HeaderActionButton(
                                 icon: Icons.local_activity,
@@ -728,20 +728,20 @@ class _HeaderActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Icon(icon, color: Colors.white, size: 22),
-            const SizedBox(height: 4),
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(height: 2),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),

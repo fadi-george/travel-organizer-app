@@ -83,10 +83,10 @@ class DaysCarousel extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         // Days carousel
         SizedBox(
-          height: 80,
+          height: 68,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -100,8 +100,8 @@ class DaysCarousel extends StatelessWidget {
               return GestureDetector(
                 onTap: () => onDateSelected(day),
                 child: Container(
-                  width: 52,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 46,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -109,7 +109,7 @@ class DaysCarousel extends StatelessWidget {
                       Text(
                         _dayName(day),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: isSelected
                               ? const Color(0xFFFF7043)
@@ -117,11 +117,11 @@ class DaysCarousel extends StatelessWidget {
                           letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       // Day number with selection indicator
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFFFF7043).withValues(alpha: 0.15)
@@ -138,7 +138,7 @@ class DaysCarousel extends StatelessWidget {
                           child: Text(
                             '${day.day}',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: isSelected
                                   ? const Color(0xFFFF7043)
@@ -149,18 +149,18 @@ class DaysCarousel extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       // Event indicators
                       SizedBox(
-                        height: 6,
+                        height: 5,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: List.generate(
                             eventCount.clamp(0, 3),
                             (i) => Container(
-                              width: 5,
-                              height: 5,
-                              margin: EdgeInsets.only(left: i > 0 ? 3 : 0),
+                              width: 4,
+                              height: 4,
+                              margin: EdgeInsets.only(left: i > 0 ? 2 : 0),
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? const Color(0xFFFF7043)
