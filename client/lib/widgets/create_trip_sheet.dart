@@ -148,7 +148,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       final notes = _notesController.text.trim();
 
       final convexService = await ConvexService.getInstance();
-      
+
       if (widget.isEditing) {
         await convexService.updateTrip(
           id: widget.existingTrip!.id,
@@ -179,7 +179,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error ${widget.isEditing ? 'updating' : 'creating'} trip: $e'),
+          content: Text(
+            'Error ${widget.isEditing ? 'updating' : 'creating'} trip: $e',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -236,7 +238,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.isEditing ? 'Edit trip' : 'Create a new trip',
+                                widget.isEditing
+                                    ? 'Edit trip'
+                                    : 'Create a new trip',
                                 style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -244,7 +248,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                widget.isEditing ? 'Update your trip details' : 'Plan your next adventure',
+                                widget.isEditing
+                                    ? 'Update your trip details'
+                                    : 'Plan your next adventure',
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: Colors.grey.shade600,

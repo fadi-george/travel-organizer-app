@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'swipe_action_card.dart';
 
 class FlightCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const FlightCard({super.key, required this.data});
+  const FlightCard({
+    super.key,
+    required this.data,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
 
   /// Parse time string (HH:MM or HH:MM:SS) to formatted time
   String _formatTime(String? timeStr) {
@@ -68,159 +78,164 @@ class FlightCard extends StatelessWidget {
     final arrivalTime = data['arrivalTime'] as String?;
     final flightNumber = data['flightNumber'] as String? ?? '';
 
-    return Container(
+    return SwipeActionCard(
+      onTap: onTap,
+      onEdit: onEdit,
+      onDelete: onDelete,
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Top row: Cities and flight number
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  originCityName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade800,
-                    fontWeight: FontWeight.w500,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Top row: Cities and flight number
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    originCityName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  flightNumber,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    flightNumber,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  destinationCityName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade800,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    destinationCityName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Middle row: Airport codes and flight path
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Origin airport code
-              Text(
-                origin,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: -1,
-                  height: 1,
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Middle row: Airport codes and flight path
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Origin airport code
+                Text(
+                  origin,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E),
+                    letterSpacing: -1,
+                    height: 1,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Flight path with plane
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Line
-                    Container(height: 2, color: const Color(0xFFB8D4E8)),
-                    // Plane icon
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE3F0F9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const RotatedBox(
-                        quarterTurns: 1,
-                        child: Icon(
-                          Icons.flight,
-                          color: Color(0xFF5B9BD5),
-                          size: 18,
+                const SizedBox(width: 8),
+                // Flight path with plane
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Line
+                      Container(height: 2, color: const Color(0xFFB8D4E8)),
+                      // Plane icon
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE3F0F9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const RotatedBox(
+                          quarterTurns: 1,
+                          child: Icon(
+                            Icons.flight,
+                            color: Color(0xFF5B9BD5),
+                            size: 18,
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Destination airport code
+                Text(
+                  destination,
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E),
+                    letterSpacing: -1,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Bottom row: Times and date
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatTime(departureTime),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Destination airport code
-              Text(
-                destination,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: -1,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Bottom row: Times and date
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _formatTime(departureTime),
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  _formatDate(departureDate),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade500,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    _formatDate(departureDate),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  _formatTime(arrivalTime),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    _formatTime(arrivalTime),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
