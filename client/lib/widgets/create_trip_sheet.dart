@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import '../models/trip.dart';
 import '../services/convex_service.dart';
 
 class CreateTripSheet extends StatefulWidget {
@@ -11,8 +12,11 @@ class CreateTripSheet extends StatefulWidget {
     String? notes,
   )?
   onTripCreated;
+  final Trip? existingTrip;
 
-  const CreateTripSheet({super.key, this.onTripCreated});
+  const CreateTripSheet({super.key, this.onTripCreated, this.existingTrip});
+
+  bool get isEditing => existingTrip != null;
 
   @override
   State<CreateTripSheet> createState() => _CreateTripSheetState();
@@ -43,6 +47,15 @@ class _CreateTripSheetState extends State<CreateTripSheet>
     _oscillation = Tween<double>(begin: -1.0, end: 1.0).animate(
       CurvedAnimation(parent: _planeController, curve: Curves.easeInOut),
     );
+
+    // Populate fields if editing an existing trip
+    if (widget.existingTrip != null) {
+      final trip = widget.existingTrip!;
+      _nameController.text = trip.name;
+      _notesController.text = trip.notes ?? '';
+      _startDate = DateTime.tryParse(trip.startDate);
+      _endDate = DateTime.tryParse(trip.endDate);
+    }
   }
 
   @override
@@ -135,12 +148,23 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       final notes = _notesController.text.trim();
 
       final convexService = await ConvexService.getInstance();
-      await convexService.createTrip(
-        name: name,
-        startDate: _startDate!.toIso8601String(),
-        endDate: _endDate!.toIso8601String(),
-        notes: notes.isEmpty ? null : notes,
-      );
+      
+      if (widget.isEditing) {
+        await convexService.updateTrip(
+          id: widget.existingTrip!.id,
+          name: name,
+          startDate: _startDate!.toIso8601String(),
+          endDate: _endDate!.toIso8601String(),
+          notes: notes.isEmpty ? null : notes,
+        );
+      } else {
+        await convexService.createTrip(
+          name: name,
+          startDate: _startDate!.toIso8601String(),
+          endDate: _endDate!.toIso8601String(),
+          notes: notes.isEmpty ? null : notes,
+        );
+      }
 
       if (!mounted) return;
 
@@ -155,7 +179,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error creating trip: $e'),
+          content: Text('Error ${widget.isEditing ? 'updating' : 'creating'} trip: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -211,16 +235,16 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Create a new trip',
-                                style: TextStyle(
+                              Text(
+                                widget.isEditing ? 'Edit trip' : 'Create a new trip',
+                                style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Plan your next adventure',
+                                widget.isEditing ? 'Update your trip details' : 'Plan your next adventure',
                                 style: TextStyle(
                                   fontSize: 15,
                                   color: Colors.grey.shade600,
@@ -352,9 +376,9 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Create Trip',
-                            style: TextStyle(
+                        : Text(
+                            widget.isEditing ? 'Update Trip' : 'Create Trip',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

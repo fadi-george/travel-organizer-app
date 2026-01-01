@@ -66,11 +66,7 @@ class FlightCard extends StatelessWidget {
     final departureDate = data['departureDate'] as String?;
     final departureTime = data['departureTime'] as String?;
     final arrivalTime = data['arrivalTime'] as String?;
-    final airline = data['airline'] as String? ?? '';
     final flightNumber = data['flightNumber'] as String? ?? '';
-    final flightLabel = airline.isNotEmpty
-        ? '$airline$flightNumber'
-        : flightNumber;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -95,6 +91,8 @@ class FlightCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   originCityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,
@@ -105,7 +103,7 @@ class FlightCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  flightLabel,
+                  flightNumber,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade500,
@@ -116,6 +114,8 @@ class FlightCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   destinationCityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     fontSize: 14,

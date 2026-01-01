@@ -95,6 +95,29 @@ class ConvexService {
     );
   }
 
+  /// Update an existing trip
+  Future<Map<String, dynamic>?> updateTrip({
+    required String id,
+    String? name,
+    String? startDate,
+    String? endDate,
+    String? notes,
+  }) async {
+    final result = await client.mutation(
+      name: 'trips:update',
+      args: {
+        'id': id,
+        if (name != null) 'name': name,
+        if (startDate != null) 'startDate': startDate,
+        if (endDate != null) 'endDate': endDate,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    final decoded = jsonDecode(result);
+    if (decoded == null) return null;
+    return Map<String, dynamic>.from(decoded as Map);
+  }
+
   /// Delete a trip
   Future<void> deleteTrip(String tripId) async {
     await client.mutation(name: 'trips:remove', args: {'id': tripId});

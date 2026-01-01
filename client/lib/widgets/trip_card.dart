@@ -7,6 +7,7 @@ class TripCard extends StatefulWidget {
   final Trip trip;
   final String? primaryCountry;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final bool isCompact;
   final int index;
@@ -16,6 +17,7 @@ class TripCard extends StatefulWidget {
     required this.trip,
     this.primaryCountry,
     this.onTap,
+    this.onEdit,
     this.onDelete,
     this.isCompact = false,
     this.index = 0,
@@ -33,7 +35,9 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
   late AnimationController _swipeController;
   late Animation<double> _swipeAnimation;
   double _dragExtent = 0;
-  static const double _deleteButtonWidth = 80;
+  static const double _actionButtonWidth = 70;
+
+  double get _swipeWidth => _actionButtonWidth;
 
   @override
   void initState() {
@@ -83,27 +87,23 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
 
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     setState(() {
-      _dragExtent = (_dragExtent + details.delta.dx).clamp(
-        -_deleteButtonWidth,
-        0,
-      );
+      _dragExtent = (_dragExtent + details.delta.dx).clamp(-_swipeWidth, 0);
     });
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    final shouldReveal =
-        velocity < -200 || _dragExtent < -_deleteButtonWidth / 2;
+    final shouldReveal = velocity < -200 || _dragExtent < -_swipeWidth / 2;
 
     _swipeAnimation = Tween<double>(
       begin: _dragExtent,
-      end: shouldReveal ? -_deleteButtonWidth : 0,
+      end: shouldReveal ? -_swipeWidth : 0,
     ).animate(CurvedAnimation(parent: _swipeController, curve: Curves.easeOut));
 
     _swipeController.forward(from: 0).then((_) {
       if (mounted) {
         setState(() {
-          _dragExtent = shouldReveal ? -_deleteButtonWidth : 0;
+          _dragExtent = shouldReveal ? -_swipeWidth : 0;
         });
       }
     });
@@ -129,13 +129,15 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
     return CountryImages.getImageUrl(widget.primaryCountry);
   }
 
+  bool get _hasSwipeActions => widget.onEdit != null || widget.onDelete != null;
+
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: widget.onDelete != null
+        child: _hasSwipeActions
             ? _buildSwipeableCard(context)
             : (widget.isCompact
                   ? _buildCompactCard(context)
@@ -148,7 +150,7 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Delete button background
+        // Action buttons background
         Positioned.fill(
           child: Container(
             margin: EdgeInsets.only(
@@ -158,27 +160,65 @@ class _TripCardState extends State<TripCard> with TickerProviderStateMixin {
               right: widget.isCompact ? 0 : 4,
             ),
             decoration: BoxDecoration(
-              color: Colors.red.shade500,
               borderRadius: BorderRadius.circular(widget.isCompact ? 16 : 20),
             ),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                onTap: () {
-                  _resetSwipe();
-                  widget.onDelete?.call();
-                },
-                child: SizedBox(
-                  width: _deleteButtonWidth,
-                  child: const Center(
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+            child: Row(
+              children: [
+                const Spacer(),
+                SizedBox(
+                  width: _actionButtonWidth,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Edit button
+                      if (widget.onEdit != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              _resetSwipe();
+                              widget.onEdit?.call();
+                            },
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.purple.shade500,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit_outlined,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Delete button
+                      if (widget.onDelete != null)
+                        GestureDetector(
+                          onTap: () {
+                            _resetSwipe();
+                            widget.onDelete?.call();
+                          },
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade500,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
