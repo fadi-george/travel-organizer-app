@@ -197,7 +197,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         slivers: [
           // Hero header with image
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 240,
             pinned: true,
             stretch: true,
             backgroundColor: const Color(0xFFFF7043),
@@ -246,27 +246,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: trip.isUpcoming
-                                ? const Color(0xFFFF7043)
-                                : Colors.grey.shade600,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            trip.daysUntilTrip,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                         Text(
                           trip.name,
                           style: const TextStyle(
@@ -277,13 +256,74 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          trip.formattedDateRange,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              trip.formattedDateRange,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: trip.isUpcoming
+                                    ? const Color(0xFFFF7043)
+                                    : Colors.grey.shade600,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                trip.daysUntilTrip,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Quick actions
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _HeaderActionButton(
+                                icon: Icons.flight,
+                                label: 'Flights',
+                                onTap: () => FlightOptionsSheet.show(
+                                  context,
+                                  tripId: trip.id,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _HeaderActionButton(
+                                icon: Icons.hotel,
+                                label: 'Hotels',
+                                onTap: () {
+                                  // TODO: Navigate to hotels
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _HeaderActionButton(
+                                icon: Icons.local_activity,
+                                label: 'Activities',
+                                onTap: () {
+                                  // TODO: Navigate to activities
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -394,49 +434,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 24),
-
-                  // Quick actions
-                  _SectionTitle(title: 'Plan Your Trip'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionCard(
-                          icon: Icons.flight,
-                          label: 'Flights',
-                          color: Colors.blue,
-                          onTap: () =>
-                              FlightOptionsSheet.show(context, tripId: trip.id),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionCard(
-                          icon: Icons.hotel,
-                          label: 'Hotels',
-                          color: Colors.purple,
-                          onTap: () {
-                            // TODO: Navigate to hotels
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionCard(
-                          icon: Icons.local_activity,
-                          label: 'Activities',
-                          color: Colors.orange,
-                          onTap: () {
-                            // TODO: Navigate to activities
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
                   // Notes section
                   if (trip.notes != null && trip.notes!.isNotEmpty) ...[
                     _SectionTitle(title: 'Notes'),
@@ -490,16 +487,14 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
+class _HeaderActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
-  const _ActionCard({
+  const _HeaderActionButton({
     required this.icon,
     required this.label,
-    required this.color,
     required this.onTap,
   });
 
@@ -508,21 +503,22 @@ class _ActionCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 13,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: color,
+                color: Colors.white,
               ),
             ),
           ],
