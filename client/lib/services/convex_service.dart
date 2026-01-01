@@ -177,10 +177,7 @@ class ConvexService {
   }
 
   Future<void> deleteFlight(String id) async {
-    await client.mutation(
-      name: 'flights:remove',
-      args: {'id': id},
-    );
+    await client.mutation(name: 'flights:remove', args: {'id': id});
   }
 
   Future<Map<String, dynamic>?> updateFlight({
@@ -210,7 +207,8 @@ class ConvexService {
         if (departureTime != null) 'departureTime': departureTime,
         if (arrivalDate != null) 'arrivalDate': arrivalDate,
         if (arrivalTime != null) 'arrivalTime': arrivalTime,
-        if (confirmationNumber != null) 'confirmationNumber': confirmationNumber,
+        if (confirmationNumber != null)
+          'confirmationNumber': confirmationNumber,
         if (seatNumber != null) 'seatNumber': seatNumber,
         if (cabinClass != null) 'cabinClass': cabinClass,
         if (notes != null) 'notes': notes,
@@ -245,12 +243,18 @@ class ConvexService {
         if (checkIn != null) 'checkIn': checkIn,
         if (checkOut != null) 'checkOut': checkOut,
         if (address != null) 'address': address,
-        if (confirmationNumber != null) 'confirmationNumber': confirmationNumber,
+        if (confirmationNumber != null)
+          'confirmationNumber': confirmationNumber,
         if (notes != null) 'notes': notes,
       },
     );
     final decoded = jsonDecode(result);
     if (decoded == null) return null;
     return Map<String, dynamic>.from(decoded as Map);
+  }
+
+  /// Delete an accommodation
+  Future<void> deleteAccommodation(String id) async {
+    await client.mutation(name: 'accommodations:remove', args: {'id': id});
   }
 }

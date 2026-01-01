@@ -5,6 +5,7 @@ import '../models/trip.dart';
 import '../services/convex_service.dart';
 import '../utils/country_images.dart';
 import '../widgets/days_carousel.dart';
+import '../widgets/hotel_card.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
 import '../widgets/timeline_item.dart';
@@ -128,6 +129,66 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  VoidCallback? _getDeleteHandler(String type, Map<String, dynamic> data) {
+    final id = data['_id'] as String?;
+    if (id == null) return null;
+
+    switch (type) {
+      case 'flight':
+        return () => _onDeleteFlight(id);
+      case 'accommodation':
+        return () => _onDeleteAccommodation(id);
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _onDeleteAccommodation(String accommodationId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Hotel'),
+        content: const Text('Are you sure you want to delete this hotel?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteAccommodation(accommodationId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hotel deleted'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting hotel: $e'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
     return CountryImages.getImageUrl(widget.primaryCountry);
@@ -156,14 +217,32 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       }
     }
 
-    // Count accommodations (check-in dates)
+    // Count accommodations (check-in and check-out dates)
     if (trip.accommodations != null) {
       for (final acc in trip.accommodations!) {
         final accData = acc as Map<String, dynamic>;
         final checkIn = accData['checkIn'] as String?;
+        final checkOut = accData['checkOut'] as String?;
+
         if (checkIn != null) {
           final date = DateTime.tryParse(checkIn);
           if (date != null) {
+            final normalized = DateTime(date.year, date.month, date.day);
+            counts[normalized] = (counts[normalized] ?? 0) + 1;
+          }
+        }
+
+        if (checkOut != null) {
+          final date = DateTime.tryParse(checkOut);
+          final checkInDate = checkIn != null
+              ? DateTime.tryParse(checkIn)
+              : null;
+          // Only count if check-out is on a different day than check-in
+          if (date != null &&
+              (checkInDate == null ||
+                  date.year != checkInDate.year ||
+                  date.month != checkInDate.month ||
+                  date.day != checkInDate.day)) {
             final normalized = DateTime(date.year, date.month, date.day);
             counts[normalized] = (counts[normalized] ?? 0) + 1;
           }
@@ -226,16 +305,36 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       }
     }
 
-    // Add accommodations check-in for selected date
+    // Add accommodations for selected date (check-in and check-out)
     if (trip.accommodations != null) {
       for (final acc in trip.accommodations!) {
         final accData = acc as Map<String, dynamic>;
         final checkIn = accData['checkIn'] as String?;
+        final checkOut = accData['checkOut'] as String?;
+
+        // Check-in
         if (checkIn != null) {
           final date = DateTime.tryParse(checkIn);
           if (date != null && _isSameDay(date, _selectedDate)) {
             allItems.add({
               'type': 'accommodation',
+              'accommodationType': 'checkIn',
+              'data': accData,
+              'sortTime': date,
+            });
+          }
+        }
+
+        // Check-out (only if different from check-in)
+        if (checkOut != null) {
+          final date = DateTime.tryParse(checkOut);
+          if (date != null &&
+              _isSameDay(date, _selectedDate) &&
+              (checkIn == null ||
+                  !_isSameDay(date, DateTime.tryParse(checkIn)!))) {
+            allItems.add({
+              'type': 'accommodation',
+              'accommodationType': 'checkOut',
               'data': accData,
               'sortTime': date,
             });
@@ -521,6 +620,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 final item = activities[index];
                 final type = item['type'] as String;
                 final data = item['data'] as Map<String, dynamic>;
+                final accommodationType = item['accommodationType'] as String?;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -529,9 +629,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     data: data,
                     isLast: index == activities.length - 1,
                     onEdit: type == 'flight' ? () => _onEditFlight(data) : null,
-                    onDelete: type == 'flight'
-                        ? () => _onDeleteFlight(data['_id'] as String)
-                        : null,
+                    onDelete: _getDeleteHandler(type, data),
+                    hotelCardType: accommodationType == 'checkOut'
+                        ? HotelCardType.checkOut
+                        : HotelCardType.checkIn,
                   ),
                 );
               },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'flight_card.dart';
+import 'hotel_card.dart';
 
 class TimelineItem extends StatelessWidget {
   final String type;
@@ -7,6 +8,7 @@ class TimelineItem extends StatelessWidget {
   final bool isLast;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final HotelCardType hotelCardType;
 
   const TimelineItem({
     super.key,
@@ -15,6 +17,7 @@ class TimelineItem extends StatelessWidget {
     this.isLast = false,
     this.onEdit,
     this.onDelete,
+    this.hotelCardType = HotelCardType.checkIn,
   });
 
   IconData get _icon {
@@ -107,6 +110,16 @@ class TimelineItem extends StatelessWidget {
     // Use special flight widget for flights
     if (type == 'flight') {
       return FlightCard(data: data, onEdit: onEdit, onDelete: onDelete);
+    }
+
+    // Use hotel card for accommodations
+    if (type == 'accommodation') {
+      return HotelCard(
+        data: data,
+        type: hotelCardType,
+        onEdit: onEdit,
+        onDelete: onDelete,
+      );
     }
 
     return IntrinsicHeight(
