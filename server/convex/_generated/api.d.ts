@@ -11,6 +11,7 @@
 import type * as accommodations from "../accommodations.js";
 import type * as activities from "../activities.js";
 import type * as destinations from "../destinations.js";
+import type * as flightExtractor from "../flightExtractor.js";
 import type * as flights from "../flights.js";
 import type * as trips from "../trips.js";
 
@@ -24,6 +25,7 @@ declare const fullApi: ApiFromModules<{
   accommodations: typeof accommodations;
   activities: typeof activities;
   destinations: typeof destinations;
+  flightExtractor: typeof flightExtractor;
   flights: typeof flights;
   trips: typeof trips;
 }>;

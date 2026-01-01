@@ -7,11 +7,7 @@ class TripDetailScreen extends StatelessWidget {
   final Trip trip;
   final String? primaryCountry;
 
-  const TripDetailScreen({
-    super.key,
-    required this.trip,
-    this.primaryCountry,
-  });
+  const TripDetailScreen({super.key, required this.trip, this.primaryCountry});
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
@@ -47,9 +43,8 @@ class TripDetailScreen extends StatelessWidget {
                   CachedNetworkImage(
                     imageUrl: _imageUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey.shade300,
-                    ),
+                    placeholder: (context, url) =>
+                        Container(color: Colors.grey.shade300),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey.shade300,
                       child: const Icon(Icons.image, size: 48),
@@ -140,9 +135,7 @@ class TripDetailScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade200,
-                        ),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
                       child: Text(
                         trip.notes!,
@@ -279,10 +272,7 @@ class _EmptySection extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             message,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 12),
           TextButton.icon(
@@ -331,10 +321,7 @@ class _DestinationCard extends StatelessWidget {
               color: const Color(0xFFFF7043).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.place,
-              color: Color(0xFFFF7043),
-            ),
+            child: const Icon(Icons.place, color: Color(0xFFFF7043)),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -351,18 +338,12 @@ class _DestinationCard extends StatelessWidget {
                 if (country.isNotEmpty)
                   Text(
                     country,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.chevron_right, color: Colors.grey.shade400),
         ],
       ),
     );
@@ -410,4 +391,3 @@ class _ActionCard extends StatelessWidget {
     );
   }
 }
-
