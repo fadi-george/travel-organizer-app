@@ -27,29 +27,6 @@ class HotelCard extends StatelessWidget {
 
   Color get _accentColor => Colors.purple;
 
-  String? get _dateStr {
-    final dateField = type == HotelCardType.checkIn ? 'checkIn' : 'checkOut';
-    final dateStr = data[dateField] as String?;
-    if (dateStr == null) return null;
-    final dt = DateTime.tryParse(dateStr);
-    if (dt == null) return null;
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[dt.month - 1]} ${dt.day}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final hotelName = data['hotelName'] as String? ?? 'Hotel';
@@ -65,13 +42,13 @@ class HotelCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -152,26 +129,6 @@ class HotelCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Date
-            if (_dateStr != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: _accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _dateStr!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _accentColor,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
