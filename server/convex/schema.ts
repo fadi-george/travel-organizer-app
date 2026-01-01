@@ -56,4 +56,3 @@ export default defineSchema({
     notes: v.optional(v.string()),
   }).index("by_trip", ["tripId"]),
 });
-

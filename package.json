@@ -6,7 +6,6 @@
   "scripts": {
     "setup:client": "./scripts/setup-client-env.sh",
     "dev:client": "cd client && flutter run",
-    "dev:sql": "bun --hot server/sql/index.ts",
     "dev:convex": "bunx convex dev",
     "db:sql:generate": "bunx drizzle-kit generate",
     "db:sql:migrate": "bunx drizzle-kit migrate",
@@ -14,7 +13,9 @@
     "db:sql:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
+    "@convex-dev/migrations": "^0.3.1",
     "convex": "^1.31.2",
+    "convex-helpers": "^0.1.108",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.3"
   },
