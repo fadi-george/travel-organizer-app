@@ -109,11 +109,11 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   }
 
   String? _validateDates() {
-    if (_startDate != null && _endDate == null) {
-      return 'Please select an end date';
-    }
-    if (_endDate != null && _startDate == null) {
+    if (_startDate == null) {
       return 'Please select a start date';
+    }
+    if (_endDate == null) {
+      return 'Please select an end date';
     }
     return null;
   }
@@ -137,8 +137,8 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       final convexService = await ConvexService.getInstance();
       await convexService.createTrip(
         name: name,
-        startDate: _startDate?.toIso8601String(),
-        endDate: _endDate?.toIso8601String(),
+        startDate: _startDate!.toIso8601String(),
+        endDate: _endDate!.toIso8601String(),
         notes: notes.isEmpty ? null : notes,
       );
 
@@ -290,7 +290,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                     children: [
                       Expanded(
                         child: _DatePickerField(
-                          label: 'Start date',
+                          label: 'Start date *',
                           value: _formatDate(_startDate),
                           hasValue: _startDate != null,
                           onTap: _selectStartDate,
@@ -299,7 +299,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                       const SizedBox(width: 12),
                       Expanded(
                         child: _DatePickerField(
-                          label: 'End date',
+                          label: 'End date *',
                           value: _formatDate(_endDate),
                           hasValue: _endDate != null,
                           onTap: _selectEndDate,

@@ -1,4 +1,4 @@
-# Travel Organizer App
+# Travel Organizer App (Work in Progress)
 
 A travel itinerary organizer with a Flutter client and Convex backend.
 

@@ -1,8 +1,8 @@
 class Trip {
   final String id;
   final String name;
-  final String? startDate;
-  final String? endDate;
+  final String startDate;
+  final String endDate;
   final String? notes;
   final String? imageUrl;
   final List<dynamic>? accommodations;
@@ -12,8 +12,8 @@ class Trip {
   const Trip({
     required this.id,
     required this.name,
-    this.startDate,
-    this.endDate,
+    required this.startDate,
+    required this.endDate,
     this.notes,
     this.imageUrl,
     this.accommodations,
@@ -25,8 +25,8 @@ class Trip {
     return Trip(
       id: json['_id'] as String,
       name: json['name'] as String,
-      startDate: json['startDate'] as String?,
-      endDate: json['endDate'] as String?,
+      startDate: json['startDate'] as String,
+      endDate: json['endDate'] as String,
       notes: json['notes'] as String?,
       imageUrl: json['imageUrl'] as String?,
       accommodations: json['accommodations'] as List<dynamic>?,
@@ -36,29 +36,31 @@ class Trip {
   }
 
   String get formattedDateRange {
-    if (startDate == null) return 'No dates set';
-    final start = DateTime.tryParse(startDate!);
-    final end = endDate != null ? DateTime.tryParse(endDate!) : null;
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate);
 
-    if (start == null) return 'No dates set';
-
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     final startStr = '${months[start.month - 1]} ${start.day}';
-    if (end == null) return startStr;
-
     final endStr = '${months[end.month - 1]} ${end.day}';
     return '$startStr → $endStr';
   }
 
-  String? get daysUntilTrip {
-    if (startDate == null) return null;
-    final start = DateTime.tryParse(startDate!);
-    if (start == null) return null;
-
+  String get daysUntilTrip {
+    final start = DateTime.parse(startDate);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tripDate = DateTime(start.year, start.month, start.day);
@@ -76,29 +78,26 @@ class Trip {
   }
 
   bool get isUpcoming {
-    if (startDate == null) return false;
-    final start = DateTime.tryParse(startDate!);
-    if (start == null) return false;
+    final start = DateTime.parse(startDate);
     return start.isAfter(DateTime.now());
   }
 
   bool get isPast {
-    if (endDate == null) return false;
-    final end = DateTime.tryParse(endDate!);
-    if (end == null) return false;
+    final end = DateTime.parse(endDate);
     return end.isBefore(DateTime.now());
   }
 
   /// Get the first accommodation's country
   String? get primaryCountry {
     if (accommodations == null || accommodations!.isEmpty) return null;
-    final sorted = List<Map<String, dynamic>>.from(
-      accommodations!.map((a) => a as Map<String, dynamic>),
-    )..sort((a, b) {
-        final aDate = a['checkIn'] as String? ?? '';
-        final bDate = b['checkIn'] as String? ?? '';
-        return aDate.compareTo(bDate);
-      });
+    final sorted =
+        List<Map<String, dynamic>>.from(
+          accommodations!.map((a) => a as Map<String, dynamic>),
+        )..sort((a, b) {
+          final aDate = a['checkIn'] as String? ?? '';
+          final bDate = b['checkIn'] as String? ?? '';
+          return aDate.compareTo(bDate);
+        });
     return sorted.first['country'] as String?;
   }
 }

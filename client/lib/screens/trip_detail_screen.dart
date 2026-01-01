@@ -16,9 +16,9 @@ class TripDetailScreen extends StatefulWidget {
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
-  late DateTime? _selectedDate;
-  DateTime? _startDate;
-  DateTime? _endDate;
+  late DateTime _selectedDate;
+  late DateTime _startDate;
+  late DateTime _endDate;
 
   Trip get trip => widget.trip;
 
@@ -29,19 +29,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   void _initializeDates() {
-    _startDate = trip.startDate != null
-        ? DateTime.tryParse(trip.startDate!)
-        : null;
-    _endDate = trip.endDate != null ? DateTime.tryParse(trip.endDate!) : null;
-
-    if (_startDate != null && _endDate != null) {
-      _selectedDate = DaysCarousel.getDefaultSelectedDate(
-        _startDate!,
-        _endDate!,
-      );
-    } else {
-      _selectedDate = null;
-    }
+    _startDate = DateTime.parse(trip.startDate);
+    _endDate = DateTime.parse(trip.endDate);
+    _selectedDate = DaysCarousel.getDefaultSelectedDate(_startDate, _endDate);
   }
 
   String get _imageUrl {
@@ -107,8 +97,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   /// Get activities filtered by selected date
   List<Map<String, dynamic>> get _filteredActivities {
-    if (_selectedDate == null) return [];
-
     final allItems = <Map<String, dynamic>>[];
 
     // Add flights for selected date
@@ -118,7 +106,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         final departureTime = flightData['departureTime'] as String?;
         if (departureTime != null) {
           final date = DateTime.tryParse(departureTime);
-          if (date != null && _isSameDay(date, _selectedDate!)) {
+          if (date != null && _isSameDay(date, _selectedDate)) {
             allItems.add({
               'type': 'flight',
               'data': flightData,
@@ -136,7 +124,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         final checkIn = accData['checkIn'] as String?;
         if (checkIn != null) {
           final date = DateTime.tryParse(checkIn);
-          if (date != null && _isSameDay(date, _selectedDate!)) {
+          if (date != null && _isSameDay(date, _selectedDate)) {
             allItems.add({
               'type': 'accommodation',
               'data': accData,
@@ -154,7 +142,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         final dateStr = activityData['date'] as String?;
         if (dateStr != null) {
           final date = DateTime.tryParse(dateStr);
-          if (date != null && _isSameDay(date, _selectedDate!)) {
+          if (date != null && _isSameDay(date, _selectedDate)) {
             allItems.add({
               'type': 'activity',
               'data': activityData,
@@ -175,8 +163,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   String _getDayLabel(DateTime date) {
-    if (_startDate == null) return '';
-    final dayNumber = date.difference(_startDate!).inDays + 1;
+    final dayNumber = date.difference(_startDate).inDays + 1;
 
     if (dayNumber == 1) return '1st';
     if (dayNumber == 2) return '2nd';
@@ -259,28 +246,27 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (trip.daysUntilTrip != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: trip.isUpcoming
-                                  ? const Color(0xFFFF7043)
-                                  : Colors.grey.shade600,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              trip.daysUntilTrip!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: trip.isUpcoming
+                                ? const Color(0xFFFF7043)
+                                : Colors.grey.shade600,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            trip.daysUntilTrip,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
+                        ),
                         Text(
                           trip.name,
                           style: const TextStyle(
@@ -308,101 +294,98 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           ),
 
           // Days Carousel
-          if (_startDate != null && _endDate != null && _selectedDate != null)
-            SliverToBoxAdapter(
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                DaysCarousel(
+                  startDate: _startDate,
+                  endDate: _endDate,
+                  selectedDate: _selectedDate,
+                  eventCounts: _eventCountsPerDay,
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = date;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+              ],
+            ),
+          ),
+
+          // Day's activities timeline
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
-                  DaysCarousel(
-                    startDate: _startDate!,
-                    endDate: _endDate!,
-                    selectedDate: _selectedDate!,
-                    eventCounts: _eventCountsPerDay,
-                    onDateSelected: (date) {
-                      setState(() {
-                        _selectedDate = date;
-                      });
-                    },
+                  // Day header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDayHeader(_selectedDate),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        _getDayLabel(_selectedDate),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-
-          // Day's activities timeline
-          if (_selectedDate != null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Day header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDayHeader(_selectedDate!),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          _getDayLabel(_selectedDate!),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
+          ),
 
           // Filtered activities list
-          if (_selectedDate != null)
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final activities = _filteredActivities;
-                  if (activities.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _EmptyDaySection(
-                        onAddActivity: () {
-                          // TODO: Add activity
-                        },
-                      ),
-                    );
-                  }
-                  if (index >= activities.length) return null;
-
-                  final item = activities[index];
-                  final type = item['type'] as String;
-                  final data = item['data'] as Map<String, dynamic>;
-
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final activities = _filteredActivities;
+                if (activities.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _TimelineItem(
-                      type: type,
-                      data: data,
-                      isLast: index == activities.length - 1,
+                    child: _EmptyDaySection(
+                      onAddActivity: () {
+                        // TODO: Add activity
+                      },
                     ),
                   );
-                },
-                childCount: _filteredActivities.isEmpty
-                    ? 1
-                    : _filteredActivities.length,
-              ),
+                }
+                if (index >= activities.length) return null;
+
+                final item = activities[index];
+                final type = item['type'] as String;
+                final data = item['data'] as Map<String, dynamic>;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _TimelineItem(
+                    type: type,
+                    data: data,
+                    isLast: index == activities.length - 1,
+                  ),
+                );
+              },
+              childCount: _filteredActivities.isEmpty
+                  ? 1
+                  : _filteredActivities.length,
             ),
+          ),
 
           // Content
           SliverToBoxAdapter(

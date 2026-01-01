@@ -73,8 +73,8 @@ export const get = query({
 export const create = mutation({
   args: {
     name: v.string(),
-    startDate: v.optional(v.string()),
-    endDate: v.optional(v.string()),
+    startDate: v.string(),
+    endDate: v.string(),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

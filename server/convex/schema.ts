@@ -4,8 +4,8 @@ import { v } from "convex/values";
 export default defineSchema({
   trips: defineTable({
     name: v.string(),
-    startDate: v.optional(v.string()),
-    endDate: v.optional(v.string()),
+    startDate: v.string(),
+    endDate: v.string(),
     notes: v.optional(v.string()),
   }),
 
