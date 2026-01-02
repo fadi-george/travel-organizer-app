@@ -108,7 +108,7 @@ For each activity found, extract the following details in JSON format:
       "title": "string (e.g., 'Visit Eiffel Tower', 'Dinner at Le Cinq', 'City Walking Tour')",
       "date": "string (ISO format: YYYY-MM-DD)",
       "time": "string (24-hour format: HH:MM, e.g., '14:30') or null",
-      "location": "string (address or venue name) or null",
+      "location": "string (full address suitable for Google Maps, e.g., 'Grand Palace, Na Phra Lan Rd, Phra Borom Maha Ratchawang, Bangkok, Thailand') or null",
       "type": "string (one of: ${validTypes.join(", ")}) or null",
       "notes": "string (any additional details like duration, confirmation numbers, tickets) or null"
     }
@@ -121,11 +121,15 @@ Important:
 - Convert all dates to ISO format (YYYY-MM-DD)
 - Convert times to 24-hour format (HH:MM)
 - Handle 2-digit years by assuming 20xx
+- SPLIT COMPOUND ACTIVITIES: If a title contains multiple destinations/places separated by commas or "and" (e.g., "Flower Market, Grand Palace, Wat Pho"), create SEPARATE activity entries for each distinct place/attraction with the same date
+- Each split activity should have a clean, simple title (e.g., "Visit Grand Palace" instead of "Grand Palace")
 - Classify each activity with the most appropriate type from the list
 - Include restaurant reservations as "Food & Dining"
 - Include museum/gallery visits as "Cultural"
 - Include spa appointments as "Relaxation"
 - Include hiking, diving, etc. as "Adventure"
+- For location, provide a full Google Maps-compatible address when possible (include venue name, street, city, country)
+- If you know the actual address of a famous landmark/attraction, include it even if not in the PDF
 - Use null for any fields that cannot be determined`;
 
     try {
