@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'airport_autocomplete.dart';
 import 'pdf_upload_dialog.dart';
 
 class FlightOptionsSheet extends StatelessWidget {
@@ -460,45 +461,24 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // From & To Airport Codes
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _departureAirportCodeController,
-                          decoration: _inputDecoration('From', 'LAX'),
-                          textCapitalization: TextCapitalization.characters,
-                          maxLength: 3,
-                          validator: (v) =>
-                              v?.trim().isEmpty == true ? 'Required' : null,
-                          buildCounter:
-                              (
-                                context, {
-                                required currentLength,
-                                required isFocused,
-                                maxLength,
-                              }) => null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _arrivalAirportCodeController,
-                          decoration: _inputDecoration('To', 'SIN'),
-                          textCapitalization: TextCapitalization.characters,
-                          maxLength: 3,
-                          validator: (v) =>
-                              v?.trim().isEmpty == true ? 'Required' : null,
-                          buildCounter:
-                              (
-                                context, {
-                                required currentLength,
-                                required isFocused,
-                                maxLength,
-                              }) => null,
-                        ),
-                      ),
-                    ],
+                  // From Airport
+                  AirportAutocomplete(
+                    controller: _departureAirportCodeController,
+                    label: 'From',
+                    hint: 'Search departure airport',
+                    validator: (v) =>
+                        v?.trim().isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // To Airport
+                  AirportAutocomplete(
+                    controller: _arrivalAirportCodeController,
+                    label: 'To',
+                    hint: 'Search arrival airport',
+                    isDeparture: false,
+                    validator: (v) =>
+                        v?.trim().isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
 
