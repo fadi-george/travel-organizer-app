@@ -39,4 +39,3 @@ export function parseClaudeJson<T = unknown>(text: string): T {
     );
   }
 }
-

@@ -101,43 +101,19 @@ export const extractActivitiesFromPdf = action({
       "Other",
     ];
 
-    const extractionPrompt = `Analyze this PDF document and extract all activities, tours, reservations, and planned events.
-For each activity found, extract the following details in JSON format:
+    const extractionPrompt = `Extract activities from this PDF as JSON. Return ONLY valid JSON, no markdown.
 
-{
-  "activities": [
-    {
-      "title": "string (e.g., 'Visit Eiffel Tower', 'Dinner at Le Cinq', 'City Walking Tour')",
-      "date": "string (ISO format: YYYY-MM-DD)",
-      "time": "string (24-hour format: HH:MM, e.g., '14:30') or null",
-      "location": "string (full address suitable for Google Maps, e.g., 'Grand Palace, Na Phra Lan Rd, Phra Borom Maha Ratchawang, Bangkok, Thailand') or null",
-      "type": "string (one of: ${validTypes.join(", ")}) or null",
-      "notes": "string (any additional details like duration, confirmation numbers, tickets) or null"
-    }
-  ]
-}
+Format: {"activities": [{"title": "string", "date": "YYYY-MM-DD", "time": "HH:MM or null", "location": "full Google Maps address or null", "type": "one of: ${validTypes.join(", ")} or null", "notes": "string or null"}]}
 
-Important:
-- Return ONLY valid JSON, no additional text
-- If no activities are found, return {"activities": []}
-- Convert all dates to ISO format (YYYY-MM-DD)
-- Convert times to 24-hour format (HH:MM)
-- Handle 2-digit years by assuming 20xx
-- SPLIT COMPOUND ACTIVITIES: If a title contains multiple destinations/places separated by commas or "and" (e.g., "Flower Market, Grand Palace, Wat Pho"), create SEPARATE activity entries for each distinct place/attraction with the same date
-- Each split activity should have a clean, simple title (e.g., "Visit Grand Palace" instead of "Grand Palace")
-- Classify each activity with the most appropriate type from the list
-- MEAL ACTIVITIES: Extract breakfast, lunch, dinner, and other meal mentions as separate "Food & Dining" activities
-  - If time is not specified for breakfast, use "08:00" as default
-  - If time is not specified for lunch, use "12:00" as default
-  - If time is not specified for dinner, use "19:00" as default
-  - Use descriptive titles like "Breakfast at Hotel Name" or "Lunch at Restaurant Name"
-- Include restaurant reservations as "Food & Dining"
-- Include museum/gallery visits as "Cultural"
-- Include spa appointments as "Relaxation"
-- Include hiking, diving, etc. as "Adventure"
-- For location, provide a full Google Maps-compatible address when possible (include venue name, street, city, country)
-- If you know the actual address of a famous landmark/attraction, include it even if not in the PDF
-- Use null for any fields that cannot be determined`;
+Rules:
+- SKIP flights and hotel transfers/check-ins/check-outs (handled separately)
+- SPLIT titles with commas into separate entries (e.g., "Grand Palace, Wat Pho" → 2 activities)
+- Use clean titles (e.g., "Visit Grand Palace" not just "Grand Palace")
+- MEALS: Extract as "Food & Dining". Default times: breakfast 08:00, lunch 12:00, dinner 19:00. For generic locations use simple titles (e.g., "Lunch" not "Lunch at the local restaurant"), but keep specific names (e.g., "Dinner at Le Cinq")
+- Type mapping: museums→Cultural, spas→Relaxation, hiking/diving→Adventure, restaurants→Food & Dining
+- For famous landmarks, include full address even if not in PDF
+- 2-digit years → 20xx
+- Return {"activities": []} if none found`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
