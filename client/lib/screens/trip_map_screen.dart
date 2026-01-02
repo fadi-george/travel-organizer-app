@@ -118,26 +118,27 @@ class _TripMapScreenState extends State<TripMapScreen> {
         if (dateStr != null) {
           final date = DateTime.tryParse(dateStr);
           if (date != null && _isSameDay(date, _selectedDate)) {
-            final departureAirport = data['departureAirport'] as String?;
-            final arrivalAirport = data['arrivalAirport'] as String?;
-            final departureCity = data['departureCity'] as String?;
-            final arrivalCity = data['arrivalCity'] as String?;
+            final departureAirportCode =
+                data['departureAirportCode'] as String?;
+            final arrivalAirportCode = data['arrivalAirportCode'] as String?;
 
-            if (departureAirport != null && departureAirport.isNotEmpty) {
+            if (departureAirportCode != null &&
+                departureAirportCode.isNotEmpty) {
               items.add(
                 MapItem(
-                  title: 'Departure: $departureAirport',
-                  address: '$departureAirport Airport, ${departureCity ?? ''}',
+                  title: 'Departure: $departureAirportCode',
+                  address: '$departureAirportCode Airport',
                   type: MapItemType.flight,
                   time: data['departureTime'] as String?,
                 ),
               );
             }
-            if (arrivalAirport != null && arrivalAirport.isNotEmpty) {
+
+            if (arrivalAirportCode != null && arrivalAirportCode.isNotEmpty) {
               items.add(
                 MapItem(
-                  title: 'Arrival: $arrivalAirport',
-                  address: '$arrivalAirport Airport, ${arrivalCity ?? ''}',
+                  title: 'Arrival: $arrivalAirportCode',
+                  address: '$arrivalAirportCode Airport',
                   type: MapItemType.flight,
                   time: data['arrivalTime'] as String?,
                 ),

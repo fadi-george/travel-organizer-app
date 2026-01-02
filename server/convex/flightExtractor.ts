@@ -16,8 +16,8 @@ export const saveExtractedFlights = internalMutation({
       v.object({
         flightNumber: v.string(),
         airline: v.string(),
-        departureCity: v.string(),
-        arrivalCity: v.string(),
+        departureAirportCode: v.string(),
+        arrivalAirportCode: v.string(),
         departureDate: v.string(),
         departureTime: v.optional(v.string()),
         arrivalDate: v.optional(v.string()),
@@ -102,8 +102,8 @@ For each flight found, extract the following details in JSON format:
     {
       "flightNumber": "string (e.g., 'AA123')",
       "airline": "string (e.g., 'American Airlines')",
-      "departureCity": "string (city name or airport code)",
-      "arrivalCity": "string (city name or airport code)",
+      "departureAirportCode": "string (3-letter IATA code, e.g., 'LAX')",
+      "arrivalAirportCode": "string (3-letter IATA code, e.g., 'SIN')",
       "departureDate": "string (ISO format: YYYY-MM-DD)",
       "departureTime": "string (24h format: HH:MM) or null",
       "arrivalDate": "string (ISO format: YYYY-MM-DD) or null",
@@ -125,7 +125,8 @@ Important:
 - If no flights are found, return {"flights": []}
 - Convert all dates to ISO format (YYYY-MM-DD)
 - Convert times to 24-hour format (HH:MM)
-- Use null for any fields that cannot be determined`;
+- Use null for any fields that cannot be determined
+- IATA airport codes (3-letter codes like LAX, JFK, SIN) are REQUIRED`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -188,15 +189,15 @@ Important:
           (f: Record<string, unknown>) =>
             f.flightNumber &&
             f.airline &&
-            f.departureCity &&
-            f.arrivalCity &&
+            f.departureAirportCode &&
+            f.arrivalAirportCode &&
             f.departureDate
         )
         .map((f: Record<string, unknown>) => ({
           flightNumber: String(f.flightNumber),
           airline: String(f.airline),
-          departureCity: String(f.departureCity),
-          arrivalCity: String(f.arrivalCity),
+          departureAirportCode: String(f.departureAirportCode).toUpperCase(),
+          arrivalAirportCode: String(f.arrivalAirportCode).toUpperCase(),
           departureDate: String(f.departureDate),
           departureTime: f.departureTime ? String(f.departureTime) : undefined,
           arrivalDate: f.arrivalDate ? String(f.arrivalDate) : undefined,

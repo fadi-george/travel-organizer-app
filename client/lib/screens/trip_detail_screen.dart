@@ -296,6 +296,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
+    debugPrint('Primary place: ${widget.primaryPlace}');
     return PlacesImages.getImageUrl(widget.primaryPlace);
   }
 
