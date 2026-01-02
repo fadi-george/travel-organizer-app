@@ -329,6 +329,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Future<void> _updateMarkers() async {
     if (!mounted) return;
+    
+    // Capture dark mode status before async operations
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     setState(() => _isLoadingMarkers = true);
 
     try {
@@ -357,7 +361,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
           bounds.add(location);
           orderedLocations.add((location, item));
 
-          final icon = await _getNumberedMarkerIcon(item.type, i + 1);
+          final icon = await _getNumberedMarkerIcon(
+            item.type,
+            i + 1,
+            isDarkMode: isDarkMode,
+          );
           markers.add(
             Marker(
               markerId: MarkerId('${item.type.name}_$i'),
@@ -477,18 +485,19 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Future<BitmapDescriptor> _getNumberedMarkerIcon(
     MapItemType type,
-    int number,
-  ) async {
-    final cacheKey = '${type.name}_$number';
+    int number, {
+    bool isDarkMode = false,
+  }) async {
+    final cacheKey = '${type.name}_${number}_${isDarkMode ? 'dark' : 'light'}';
     final cached = _markerIconCache[cacheKey];
     if (cached != null) return cached;
 
     try {
       final color = _getMarkerColor(type);
-      const width = 40.0;
-      const height = 56.0;
+      const width = 44.0;
+      const height = 60.0;
       const circleRadius = 16.0;
-      const circleY = circleRadius + 4; // Center of circle from top
+      const circleY = circleRadius + 6; // Center of circle from top
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -499,16 +508,23 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
       // Pin body - starts from bottom point
       path.moveTo(width / 2, height - 2); // Bottom point
-      path.quadraticBezierTo(2, circleY + 8, 2, circleY);
+      path.quadraticBezierTo(4, circleY + 8, 4, circleY);
       path.arcToPoint(
-        Offset(width - 2, circleY),
+        Offset(width - 4, circleY),
         radius: const Radius.circular(circleRadius + 2),
         clockwise: true,
       );
-      path.quadraticBezierTo(width - 2, circleY + 8, width / 2, height - 2);
+      path.quadraticBezierTo(width - 4, circleY + 8, width / 2, height - 2);
       path.close();
 
       canvas.drawPath(path, paint);
+
+      // Draw border around pin for better visibility
+      final borderPaint = Paint()
+        ..color = isDarkMode ? Colors.white : Colors.black.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      canvas.drawPath(path, borderPaint);
 
       // Draw number in white
       final textPainter = TextPainter(
