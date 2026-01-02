@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-
-interface ClaudeResponse {
-  content?: Array<{ type: string; text: string }>;
-}
+import {
+  type ClaudeResponse,
+  parseClaudeJson,
+  CLAUDE_MODEL,
+  CLAUDE_MAX_TOKENS,
+} from "./lib/parseClaudeJson";
 
 // Internal mutation to save extracted accommodations
 export const saveExtractedAccommodations = internalMutation({
@@ -136,8 +138,8 @@ Important:
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
+          model: CLAUDE_MODEL,
+          max_tokens: CLAUDE_MAX_TOKENS,
           messages: [
             {
               role: "user",
@@ -174,17 +176,9 @@ Important:
       }
 
       // Parse the JSON response
-      let extractedData;
-      try {
-        // Try to extract JSON from the response (in case there's any surrounding text)
-        const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error("No JSON found in response");
-        }
-        extractedData = JSON.parse(jsonMatch[0]);
-      } catch {
-        throw new Error(`Failed to parse Claude response: ${content.text}`);
-      }
+      const extractedData = parseClaudeJson<{
+        accommodations?: Array<Record<string, unknown>>;
+      }>(content.text);
 
       if (
         !extractedData.accommodations ||

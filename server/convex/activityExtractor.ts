@@ -1,10 +1,12 @@
 import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-
-interface ClaudeResponse {
-  content?: Array<{ type: string; text: string }>;
-}
+import {
+  type ClaudeResponse,
+  parseClaudeJson,
+  CLAUDE_MODEL,
+  CLAUDE_MAX_TOKENS,
+} from "./lib/parseClaudeJson";
 
 // Internal mutation to save extracted activities
 export const saveExtractedActivities = internalMutation({
@@ -124,6 +126,11 @@ Important:
 - SPLIT COMPOUND ACTIVITIES: If a title contains multiple destinations/places separated by commas or "and" (e.g., "Flower Market, Grand Palace, Wat Pho"), create SEPARATE activity entries for each distinct place/attraction with the same date
 - Each split activity should have a clean, simple title (e.g., "Visit Grand Palace" instead of "Grand Palace")
 - Classify each activity with the most appropriate type from the list
+- MEAL ACTIVITIES: Extract breakfast, lunch, dinner, and other meal mentions as separate "Food & Dining" activities
+  - If time is not specified for breakfast, use "08:00" as default
+  - If time is not specified for lunch, use "12:00" as default
+  - If time is not specified for dinner, use "19:00" as default
+  - Use descriptive titles like "Breakfast at Hotel Name" or "Lunch at Restaurant Name"
 - Include restaurant reservations as "Food & Dining"
 - Include museum/gallery visits as "Cultural"
 - Include spa appointments as "Relaxation"
@@ -141,8 +148,8 @@ Important:
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
+          model: CLAUDE_MODEL,
+          max_tokens: CLAUDE_MAX_TOKENS,
           messages: [
             {
               role: "user",
@@ -179,16 +186,9 @@ Important:
       }
 
       // Parse the JSON response
-      let extractedData;
-      try {
-        const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error("No JSON found in response");
-        }
-        extractedData = JSON.parse(jsonMatch[0]);
-      } catch {
-        throw new Error(`Failed to parse Claude response: ${content.text}`);
-      }
+      const extractedData = parseClaudeJson<{
+        activities?: Array<Record<string, unknown>>;
+      }>(content.text);
 
       if (
         !extractedData.activities ||

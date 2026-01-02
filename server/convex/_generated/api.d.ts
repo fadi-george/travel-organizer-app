@@ -14,6 +14,7 @@ import type * as activities from "../activities.js";
 import type * as activityExtractor from "../activityExtractor.js";
 import type * as flightExtractor from "../flightExtractor.js";
 import type * as flights from "../flights.js";
+import type * as lib_parseClaudeJson from "../lib/parseClaudeJson.js";
 import type * as migrations from "../migrations.js";
 import type * as trips from "../trips.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   activityExtractor: typeof activityExtractor;
   flightExtractor: typeof flightExtractor;
   flights: typeof flights;
+  "lib/parseClaudeJson": typeof lib_parseClaudeJson;
   migrations: typeof migrations;
   trips: typeof trips;
 }>;

@@ -13,7 +13,8 @@ class PdfUploadDialog extends StatefulWidget {
   final Future<Map<String, dynamic>> Function({
     required String tripId,
     required String pdfBase64,
-  }) onExtract;
+  })
+  onExtract;
 
   const PdfUploadDialog({
     super.key,
@@ -29,7 +30,8 @@ class PdfUploadDialog extends StatefulWidget {
     required Future<Map<String, dynamic>> Function({
       required String tripId,
       required String pdfBase64,
-    }) onExtract,
+    })
+    onExtract,
   }) {
     showDialog(
       context: context,
@@ -49,7 +51,8 @@ class PdfUploadDialog extends StatefulWidget {
     required Future<Map<String, dynamic>> Function({
       required String tripId,
       required String pdfBase64,
-    }) onExtract,
+    })
+    onExtract,
   }) {
     showDialog(
       context: context,
@@ -69,7 +72,8 @@ class PdfUploadDialog extends StatefulWidget {
     required Future<Map<String, dynamic>> Function({
       required String tripId,
       required String pdfBase64,
-    }) onExtract,
+    })
+    onExtract,
   }) {
     showDialog(
       context: context,
@@ -113,16 +117,7 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
     }
   }
 
-  String get _extractButtonText {
-    switch (widget.extractType) {
-      case PdfExtractType.flights:
-        return 'Extract Flights';
-      case PdfExtractType.accommodations:
-        return 'Extract Hotels';
-      case PdfExtractType.activities:
-        return 'Extract Activities';
-    }
-  }
+  String get _extractButtonText => 'Extract';
 
   String get _itemName {
     switch (widget.extractType) {
@@ -341,8 +336,9 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed:
-                        _isUploading ? null : () => Navigator.pop(context),
+                    onPressed: _isUploading
+                        ? null
+                        : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -385,4 +381,3 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
     );
   }
 }
-
