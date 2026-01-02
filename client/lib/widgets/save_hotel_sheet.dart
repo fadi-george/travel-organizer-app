@@ -132,6 +132,32 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   DateTime? _checkOutDate;
   bool _isSubmitting = false;
 
+  bool get isEditing => widget.existingHotel != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditing) {
+      final hotel = widget.existingHotel!;
+      _hotelNameController.text = hotel['hotelName'] as String? ?? '';
+      _cityController.text = hotel['city'] as String? ?? '';
+      _countryController.text = hotel['country'] as String? ?? '';
+      _addressController.text = hotel['address'] as String? ?? '';
+      _roomTypeController.text = hotel['roomType'] as String? ?? '';
+      _confirmationController.text = hotel['confirmationNumber'] as String? ?? '';
+      _notesController.text = hotel['notes'] as String? ?? '';
+
+      final checkIn = hotel['checkIn'] as String?;
+      if (checkIn != null) {
+        _checkInDate = DateTime.tryParse(checkIn);
+      }
+      final checkOut = hotel['checkOut'] as String?;
+      if (checkOut != null) {
+        _checkOutDate = DateTime.tryParse(checkOut);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _hotelNameController.dispose();
@@ -194,36 +220,63 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
     try {
       final convexService = await ConvexService.getInstance();
 
-      await convexService.createAccommodation(
-        tripId: widget.tripId,
-        hotelName: _hotelNameController.text.trim(),
-        city: _cityController.text.trim().isNotEmpty
-            ? _cityController.text.trim()
-            : null,
-        country: _countryController.text.trim().isNotEmpty
-            ? _countryController.text.trim()
-            : null,
-        address: _addressController.text.trim().isNotEmpty
-            ? _addressController.text.trim()
-            : null,
-        roomType: _roomTypeController.text.trim().isNotEmpty
-            ? _roomTypeController.text.trim()
-            : null,
-        checkIn: _checkInDate!.toIso8601String().split('T').first,
-        checkOut: _checkOutDate?.toIso8601String().split('T').first,
-        confirmationNumber: _confirmationController.text.trim().isNotEmpty
-            ? _confirmationController.text.trim()
-            : null,
-        notes: _notesController.text.trim().isNotEmpty
-            ? _notesController.text.trim()
-            : null,
-      );
+      if (isEditing) {
+        await convexService.updateAccommodation(
+          id: widget.existingHotel!['_id'] as String,
+          hotelName: _hotelNameController.text.trim(),
+          city: _cityController.text.trim().isNotEmpty
+              ? _cityController.text.trim()
+              : null,
+          country: _countryController.text.trim().isNotEmpty
+              ? _countryController.text.trim()
+              : null,
+          address: _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
+          roomType: _roomTypeController.text.trim().isNotEmpty
+              ? _roomTypeController.text.trim()
+              : null,
+          checkIn: _checkInDate!.toIso8601String().split('T').first,
+          checkOut: _checkOutDate?.toIso8601String().split('T').first,
+          confirmationNumber: _confirmationController.text.trim().isNotEmpty
+              ? _confirmationController.text.trim()
+              : null,
+          notes: _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
+        );
+      } else {
+        await convexService.createAccommodation(
+          tripId: widget.tripId,
+          hotelName: _hotelNameController.text.trim(),
+          city: _cityController.text.trim().isNotEmpty
+              ? _cityController.text.trim()
+              : null,
+          country: _countryController.text.trim().isNotEmpty
+              ? _countryController.text.trim()
+              : null,
+          address: _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
+          roomType: _roomTypeController.text.trim().isNotEmpty
+              ? _roomTypeController.text.trim()
+              : null,
+          checkIn: _checkInDate!.toIso8601String().split('T').first,
+          checkOut: _checkOutDate?.toIso8601String().split('T').first,
+          confirmationNumber: _confirmationController.text.trim().isNotEmpty
+              ? _confirmationController.text.trim()
+              : null,
+          notes: _notesController.text.trim().isNotEmpty
+              ? _notesController.text.trim()
+              : null,
+        );
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hotel added successfully'),
+        SnackBar(
+          content: Text(isEditing ? 'Hotel updated successfully' : 'Hotel added successfully'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.green,
         ),
@@ -232,7 +285,7 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error adding hotel: $e'),
+          content: Text('Error ${isEditing ? 'updating' : 'adding'} hotel: $e'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
         ),
@@ -280,13 +333,13 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                   const SizedBox(height: 20),
 
                   // Header
-                  const Text(
-                    'Add Hotel',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Text(
+                    isEditing ? 'Edit Hotel' : 'Add Hotel',
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Enter your hotel details',
+                    isEditing ? 'Update your hotel details' : 'Enter your hotel details',
                     style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 24),
@@ -423,9 +476,9 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Add Hotel',
-                            style: TextStyle(
+                        : Text(
+                            isEditing ? 'Update Hotel' : 'Add Hotel',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

@@ -129,6 +129,25 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  void _onEditAccommodation(Map<String, dynamic> hotelData) {
+    HotelOptionsSheet.showEditHotel(
+      context,
+      tripId: trip.id,
+      hotelData: hotelData,
+    );
+  }
+
+  VoidCallback? _getEditHandler(String type, Map<String, dynamic> data) {
+    switch (type) {
+      case 'flight':
+        return () => _onEditFlight(data);
+      case 'accommodation':
+        return () => _onEditAccommodation(data);
+      default:
+        return null;
+    }
+  }
+
   VoidCallback? _getDeleteHandler(String type, Map<String, dynamic> data) {
     final id = data['_id'] as String?;
     if (id == null) return null;
@@ -594,7 +613,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     type: type,
                     data: data,
                     isLast: index == activities.length - 1,
-                    onEdit: type == 'flight' ? () => _onEditFlight(data) : null,
+                    onEdit: _getEditHandler(type, data),
                     onDelete: _getDeleteHandler(type, data),
                     hotelCardType: accommodationType == 'checkOut'
                         ? HotelCardType.checkOut
