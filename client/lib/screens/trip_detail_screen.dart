@@ -6,6 +6,7 @@ import '../services/convex_service.dart';
 import '../utils/places_images.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/hotel_card.dart';
+import '../widgets/save_activity_sheet.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
 import '../widgets/save_trip_sheet.dart';
@@ -160,12 +161,70 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  void _onEditActivity(Map<String, dynamic> activityData) {
+    ActivityOptionsSheet.showEditActivity(
+      context,
+      tripId: trip.id,
+      activityData: activityData,
+    );
+  }
+
+  void _onAddActivity() {
+    ActivityOptionsSheet.show(context, tripId: trip.id);
+  }
+
+  Future<void> _onDeleteActivity(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Activity'),
+        content: const Text('Are you sure you want to delete this activity?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteActivity(id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Activity deleted'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting activity: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   VoidCallback? _getEditHandler(String type, Map<String, dynamic> data) {
     switch (type) {
       case 'flight':
         return () => _onEditFlight(data);
       case 'accommodation':
         return () => _onEditAccommodation(data);
+      case 'activity':
+        return () => _onEditActivity(data);
       default:
         return null;
     }
@@ -180,6 +239,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         return () => _onDeleteFlight(id);
       case 'accommodation':
         return () => _onDeleteAccommodation(id);
+      case 'activity':
+        return () => _onDeleteActivity(id);
       default:
         return null;
     }
@@ -651,9 +712,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               child: _HeaderActionButton(
                                 icon: Icons.local_activity,
                                 label: 'Activities',
-                                onTap: () {
-                                  // TODO: Navigate to activities
-                                },
+                                onTap: _onAddActivity,
                               ),
                             ),
                           ],
@@ -698,11 +757,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 if (activities.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _EmptyDaySection(
-                      onAddActivity: () {
-                        // TODO: Add activity
-                      },
-                    ),
+                    child: _EmptyDaySection(onAddActivity: _onAddActivity),
                   );
                 }
                 if (index >= activities.length) return null;

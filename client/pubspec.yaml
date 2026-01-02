@@ -41,6 +41,7 @@ dependencies:
   convex_flutter: ^2.0.0
   flutter_dotenv: ^6.0.0
   file_picker: ^8.0.0+1
+  google_places_autocomplete_text_field: ^3.0.0
 
 dev_dependencies:
   flutter_test:
