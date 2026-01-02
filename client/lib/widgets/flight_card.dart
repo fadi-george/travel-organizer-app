@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/airports_service.dart';
 import '../utils/time_format.dart';
 import 'swipe_action_card.dart';
 import 'timeline_styles.dart';
@@ -63,22 +64,6 @@ class FlightCard extends StatelessWidget {
       'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.day}';
-  }
-
-  /// Extract airport code from city string (e.g., "Newark (EWR)" -> "EWR")
-  String _extractAirportCode(String city) {
-    final match = RegExp(r'\(([A-Z]{3})\)').firstMatch(city);
-    if (match != null) return match.group(1)!;
-    // If no code in parens, take first 3 chars uppercase as fallback
-    return city.length >= 3
-        ? city.substring(0, 3).toUpperCase()
-        : city.toUpperCase();
-  }
-
-  /// Extract city name without airport code
-  String _extractCityName(String city) {
-    // Remove airport code in parentheses if present
-    return city.replaceAll(RegExp(r'\s*\([A-Z]{3}\)'), '').trim();
   }
 
   static const _accentColor = Color(0xFF5B9BD5);
@@ -169,12 +154,12 @@ class FlightCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final departureCity = data['departureCity'] as String? ?? 'Departure';
-    final arrivalCity = data['arrivalCity'] as String? ?? 'Arrival';
-    final origin = _extractAirportCode(departureCity);
-    final destination = _extractAirportCode(arrivalCity);
-    final originCityName = _extractCityName(departureCity);
-    final destinationCityName = _extractCityName(arrivalCity);
+    final origin = data['departureAirportCode'] as String? ?? 'DEP';
+    final destination = data['arrivalAirportCode'] as String? ?? 'ARR';
+    final originCityName =
+        AirportsService.instance.getByIata(origin)?.city ?? origin;
+    final destinationCityName =
+        AirportsService.instance.getByIata(destination)?.city ?? destination;
     final departureDate = data['departureDate'] as String?;
     final departureTime = data['departureTime'] as String?;
     final arrivalTime = data['arrivalTime'] as String?;
