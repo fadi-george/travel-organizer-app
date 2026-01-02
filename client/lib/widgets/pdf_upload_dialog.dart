@@ -130,6 +130,17 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
     }
   }
 
+  String get _itemNamePlural {
+    switch (widget.extractType) {
+      case PdfExtractType.flights:
+        return 'flights';
+      case PdfExtractType.accommodations:
+        return 'hotels';
+      case PdfExtractType.activities:
+        return 'activities';
+    }
+  }
+
   String get _resultKey {
     switch (widget.extractType) {
       case PdfExtractType.flights:
@@ -165,53 +176,88 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
   Future<void> _uploadAndExtract() async {
     if (_selectedFile == null) return;
 
-    setState(() {
-      _isUploading = true;
-      _error = null;
-    });
+    // Read file and convert to base64 before closing
+    final file = File(_selectedFile!.path!);
+    final bytes = await file.readAsBytes();
+    final base64Pdf = base64Encode(bytes);
+
+    // Close dialog immediately and show processing snackbar
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    final messenger = ScaffoldMessenger.of(context);
+    final itemName = _itemName;
+    final itemNamePlural = _itemNamePlural;
+    final resultKey = _resultKey;
+
+    // Show processing snackbar
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('Processing $itemNamePlural PDF...'),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(
+          minutes: 5,
+        ), // Long duration, will be dismissed
+        backgroundColor: const Color(0xFFFF7043),
+      ),
+    );
 
     try {
-      // Read file and convert to base64
-      final file = File(_selectedFile!.path!);
-      final bytes = await file.readAsBytes();
-      final base64Pdf = base64Encode(bytes);
-
       // Call the extraction function
       final result = await widget.onExtract(
         tripId: widget.tripId,
         pdfBase64: base64Pdf,
       );
 
-      if (!mounted) return;
+      // Dismiss processing snackbar and show result
+      messenger.hideCurrentSnackBar();
 
       if (result['success'] == true) {
-        final items = result[_resultKey] as List?;
+        final items = result[resultKey] as List?;
         final count = items?.length ?? 0;
 
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               count > 0
-                  ? 'Extracted $count $_itemName${count > 1 ? 's' : ''} from PDF'
-                  : 'No ${_itemName}s found in PDF',
+                  ? 'Extracted $count $itemName${count > 1 ? 's' : ''} from PDF'
+                  : 'No ${itemName}s found in PDF',
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: count > 0 ? Colors.green : Colors.orange,
           ),
         );
       } else {
-        setState(() {
-          _error = result['error'] ?? 'Failed to extract ${_itemName}s';
-          _isUploading = false;
-        });
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to extract ${itemName}s'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Error: $e';
-        _isUploading = false;
-      });
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

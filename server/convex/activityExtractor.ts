@@ -101,19 +101,19 @@ export const extractActivitiesFromPdf = action({
       "Other",
     ];
 
-    const extractionPrompt = `Extract activities from this PDF as JSON. Return ONLY valid JSON, no markdown.
+    const extractionPrompt = `Extract activities from PDF as JSON only (no markdown).
 
-Format: {"activities": [{"title": "string", "date": "YYYY-MM-DD", "time": "HH:MM or null", "location": "full Google Maps address or null", "type": "one of: ${validTypes.join(", ")} or null", "notes": "string or null"}]}
+Format: {"activities": [{"title": "string", "date": "YYYY-MM-DD", "time": "HH:MM|null", "location": "full address|null", "type": "${validTypes.join("|")}|null", "notes": "string|null"}]}
 
 Rules:
-- SKIP flights and hotel transfers/check-ins/check-outs (handled separately)
-- SPLIT titles with commas into separate entries (e.g., "Grand Palace, Wat Pho" → 2 activities)
-- Use clean titles (e.g., "Visit Grand Palace" not just "Grand Palace")
-- MEALS: Extract as "Food & Dining". Default times: breakfast 08:00, lunch 12:00, dinner 19:00. For generic locations use simple titles (e.g., "Lunch" not "Lunch at the local restaurant"), but keep specific names (e.g., "Dinner at Le Cinq")
-- Type mapping: museums→Cultural, spas→Relaxation, hiking/diving→Adventure, restaurants→Food & Dining
-- For famous landmarks, include full address even if not in PDF
-- 2-digit years → 20xx
-- Return {"activities": []} if none found`;
+- SKIP flights, hotel check-ins/check-outs
+- Split comma-separated destinations ("Flower Market, Grand Palace"→2), but keep combined tours ("Railway & Floating Market Tour"→1 or "Wat Pho and Thonburi Khlongs"→1)
+- Clean titles: "Visit Grand Palace" not "Grand Palace"
+- MEALS→"Food & Dining", defaults: breakfast 08:00, lunch 12:00, dinner 19:00. Split concatenated meals ("Breakfast at hotel Lunch"→2 entries). Always use simple titles: "Breakfast", "Lunch", "Dinner" (drop location from title)
+- Types: museums→Cultural, spas→Relaxation, hiking/diving→Adventure
+- Famous landmarks: include full google maps address
+- 2-digit years→20xx
+- Empty: {"activities": []}`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
