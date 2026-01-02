@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -30,31 +31,16 @@ class _TripMapScreenState extends State<TripMapScreen> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  bool _mapError = false;
+  final bool _mapError = false;
   bool _isLoadingMarkers = true; // Start as true to avoid flash of empty state
 
   // Cache geocoded addresses to avoid repeated API calls
   final Map<String, LatLng?> _geocodeCache = {};
 
-  static const _defaultCenter = LatLng(0, 0);
+  // Cache marker icons to avoid expensive recreation
+  static final Map<String, BitmapDescriptor> _markerIconCache = {};
 
-  // Clean map style - shows streets, country names/borders, hides POIs
-  static const _minimalMapStyle = '''
-[
-  {"featureType": "poi", "stylers": [{"visibility": "off"}]},
-  {"featureType": "transit", "stylers": [{"visibility": "off"}]},
-  {"featureType": "road", "elementType": "labels", "stylers": [{"visibility": "on"}]},
-  {"featureType": "administrative.country", "elementType": "labels", "stylers": [{"visibility": "on"}]},
-  {"featureType": "administrative.country", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"color": "#999999"}, {"weight": 1}]},
-  {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility": "off"}]},
-  {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility": "off"}]},
-  {"featureType": "water", "elementType": "geometry.fill", "stylers": [{"color": "#a8d4e6"}]},
-  {"featureType": "water", "elementType": "labels", "stylers": [{"visibility": "off"}]},
-  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#ffffff"}]},
-  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#f0f0f0"}]},
-  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#e0e0e0"}]}
-]
-''';
+  static const _defaultCenter = LatLng(0, 0);
 
   @override
   void initState() {
@@ -300,103 +286,136 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   Future<void> _updateMarkers() async {
+    if (!mounted) return;
     setState(() => _isLoadingMarkers = true);
 
-    final items = _getItemsForSelectedDate();
-    final flightRoutes = _getFlightRoutesForSelectedDate();
-    final markers = <Marker>{};
-    final polylines = <Polyline>{};
-    final bounds = <LatLng>[];
-    final orderedLocations =
-        <(LatLng, MapItem)>[]; // Track locations with items
+    try {
+      final items = _getItemsForSelectedDate();
+      final flightRoutes = _getFlightRoutesForSelectedDate();
+      final markers = <Marker>{};
+      final polylines = <Polyline>{};
+      final bounds = <LatLng>[];
+      final orderedLocations =
+          <(LatLng, MapItem)>[]; // Track locations with items
 
-    for (int i = 0; i < items.length; i++) {
-      final item = items[i];
-      LatLng? location;
+      for (int i = 0; i < items.length; i++) {
+        if (!mounted) return;
 
-      // Get location based on item type
-      if (item.type == MapItemType.flight && item.airportCode != null) {
-        location = _getAirportLocation(item.airportCode!);
-      } else {
-        location = await _geocodeAddress(item.address);
-      }
+        final item = items[i];
+        LatLng? location;
 
-      if (location != null) {
-        bounds.add(location);
-        orderedLocations.add((location, item));
+        // Get location based on item type
+        if (item.type == MapItemType.flight && item.airportCode != null) {
+          location = _getAirportLocation(item.airportCode!);
+        } else {
+          location = await _geocodeAddress(item.address);
+        }
 
-        markers.add(
-          Marker(
-            markerId: MarkerId('${item.type.name}_$i'),
-            position: location,
-            icon: await _getNumberedMarkerIcon(item.type, i + 1),
-            infoWindow: InfoWindow(
-              title: item.title,
-              snippet: item.time != null
-                  ? '${item.time} • ${item.address}'
-                  : item.address,
-            ),
-          ),
-        );
-      }
-    }
+        if (location != null) {
+          bounds.add(location);
+          orderedLocations.add((location, item));
 
-    // Create polylines for flight routes (geodesic curves)
-    for (int i = 0; i < flightRoutes.length; i++) {
-      final route = flightRoutes[i];
-      polylines.add(
-        Polyline(
-          polylineId: PolylineId('flight_route_$i'),
-          points: [route.departure, route.arrival],
-          color: const Color(0xFF9C27B0), // Purple to match flight markers
-          width: 3,
-          geodesic:
-              true, // This creates a curved line following Earth's curvature
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        ),
-      );
-    }
-
-    // Create dashed lines connecting consecutive pins (itinerary path)
-    // Skip flight departure→arrival pairs (they have geodesic curves)
-    for (int i = 0; i < orderedLocations.length - 1; i++) {
-      final current = orderedLocations[i];
-      final next = orderedLocations[i + 1];
-
-      // Skip if this is a flight departure followed by its arrival
-      final isFlightPair =
-          current.$2.type == MapItemType.flight &&
-          next.$2.type == MapItemType.flight &&
-          current.$2.sortOrder == 0 &&
-          next.$2.sortOrder == 1;
-
-      if (!isFlightPair) {
-        // Create geographic dashes that scale with zoom
-        final dashSegments = _createDashedPath(current.$1, next.$1);
-        for (int j = 0; j < dashSegments.length; j++) {
-          polylines.add(
-            Polyline(
-              polylineId: PolylineId('path_${i}_$j'),
-              points: dashSegments[j],
-              color: Colors.orange,
-              width: 3,
+          final icon = await _getNumberedMarkerIcon(item.type, i + 1);
+          markers.add(
+            Marker(
+              markerId: MarkerId('${item.type.name}_$i'),
+              position: location,
+              icon: icon,
+              infoWindow: InfoWindow(
+                title: item.title,
+                snippet: item.time != null
+                    ? '${item.time} • ${item.address}'
+                    : item.address,
+              ),
             ),
           );
         }
+
+        // Yield to allow UI to remain responsive
+        if (i % 2 == 1) {
+          await Future.delayed(Duration.zero);
+        }
       }
-    }
 
-    if (!mounted) return;
+      // Create polylines for flight routes (geodesic curves)
+      for (int i = 0; i < flightRoutes.length; i++) {
+        final route = flightRoutes[i];
+        polylines.add(
+          Polyline(
+            polylineId: PolylineId('flight_route_$i'),
+            points: [route.departure, route.arrival],
+            color: const Color(0xFF9C27B0),
+            width: 3,
+            geodesic: true,
+          ),
+        );
+      }
 
-    setState(() {
-      _markers = markers;
-      _polylines = polylines;
-      _isLoadingMarkers = false;
-    });
+      // Create lines connecting consecutive pins (itinerary path)
+      for (int i = 0; i < orderedLocations.length - 1; i++) {
+        final current = orderedLocations[i];
+        final next = orderedLocations[i + 1];
+        final isFlightPair =
+            current.$2.type == MapItemType.flight &&
+            next.$2.type == MapItemType.flight &&
+            current.$2.sortOrder == 0 &&
+            next.$2.sortOrder == 1;
+        if (!isFlightPair) {
+          // Create dashed line using segments (PatternItem.dash freezes on iOS)
+          final dashSegments = _createDashedPath(current.$1, next.$1);
+          for (int j = 0; j < dashSegments.length; j++) {
+            polylines.add(
+              Polyline(
+                polylineId: PolylineId('path_${i}_$j'),
+                points: dashSegments[j],
+                color: Colors.orange,
+                width: 5,
+              ),
+            );
+          }
 
-    // Fit camera to show all markers
-    if (bounds.isNotEmpty && _mapController != null) {
-      _fitBounds(bounds);
+          // Add up to 4 arrow markers evenly spaced along the line
+          final angle = _calculateBearing(current.$1, next.$1);
+          final arrowIcon = await _getArrowIcon(Colors.orange, angle);
+          
+          for (int a = 1; a <= 4; a++) {
+            final fraction = a / 5.0; // Positions at 20%, 40%, 60%, 80%
+            final arrowPos = LatLng(
+              current.$1.latitude + (next.$1.latitude - current.$1.latitude) * fraction,
+              current.$1.longitude + (next.$1.longitude - current.$1.longitude) * fraction,
+            );
+            markers.add(
+              Marker(
+                markerId: MarkerId('arrow_${i}_$a'),
+                position: arrowPos,
+                icon: arrowIcon,
+                anchor: const Offset(0.5, 0.5),
+              ),
+            );
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _markers = markers;
+        _polylines = polylines;
+        _isLoadingMarkers = false;
+      });
+
+      // Fit camera to show all markers - use post-frame callback to avoid race condition
+      if (bounds.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _mapController == null) return;
+          _fitBounds(bounds);
+        });
+      }
+    } catch (e) {
+      debugPrint('TripMapScreen: Error updating markers: $e');
+      if (mounted) {
+        setState(() => _isLoadingMarkers = false);
+      }
     }
   }
 
@@ -411,75 +430,111 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
   }
 
+  BitmapDescriptor _getDefaultMarkerIcon(MapItemType type) {
+    switch (type) {
+      case MapItemType.activity:
+        return BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueOrange,
+        );
+      case MapItemType.hotel:
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+      case MapItemType.flight:
+        return BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueViolet,
+        );
+    }
+  }
+
   Future<BitmapDescriptor> _getNumberedMarkerIcon(
     MapItemType type,
     int number,
   ) async {
-    final color = _getMarkerColor(type);
-    const width = 40.0;
-    const height = 56.0;
-    const circleRadius = 16.0;
-    const circleY = circleRadius + 4; // Center of circle from top
+    final cacheKey = '${type.name}_$number';
+    final cached = _markerIconCache[cacheKey];
+    if (cached != null) return cached;
 
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
+    try {
+      final color = _getMarkerColor(type);
+      const width = 40.0;
+      const height = 56.0;
+      const circleRadius = 16.0;
+      const circleY = circleRadius + 4; // Center of circle from top
 
-    // Draw pin shape
-    final paint = Paint()..color = color;
-    final path = Path();
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
 
-    // Pin body (teardrop shape) - starts from bottom point
-    path.moveTo(width / 2, height - 2); // Bottom point
-    path.quadraticBezierTo(2, circleY + 8, 2, circleY);
-    path.arcToPoint(
-      Offset(width - 2, circleY),
-      radius: const Radius.circular(circleRadius + 2),
-      clockwise: true,
-    );
-    path.quadraticBezierTo(width - 2, circleY + 8, width / 2, height - 2);
-    path.close();
+      // Draw pin shape (teardrop)
+      final paint = Paint()..color = color;
+      final path = Path();
 
-    canvas.drawPath(path, paint);
+      // Pin body - starts from bottom point
+      path.moveTo(width / 2, height - 2); // Bottom point
+      path.quadraticBezierTo(2, circleY + 8, 2, circleY);
+      path.arcToPoint(
+        Offset(width - 2, circleY),
+        radius: const Radius.circular(circleRadius + 2),
+        clockwise: true,
+      );
+      path.quadraticBezierTo(width - 2, circleY + 8, width / 2, height - 2);
+      path.close();
 
-    // Draw white circle background for number
-    final circlePaint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(width / 2, circleY), 12, circlePaint);
+      canvas.drawPath(path, paint);
 
-    // Draw number
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: number.toString(),
-        style: TextStyle(
-          color: color,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+      // Draw white circle background for number
+      final circlePaint = Paint()..color = Colors.white;
+      canvas.drawCircle(Offset(width / 2, circleY), 12, circlePaint);
+
+      // Draw number
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: number.toString(),
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        width / 2 - textPainter.width / 2,
-        circleY - textPainter.height / 2,
-      ),
-    );
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          width / 2 - textPainter.width / 2,
+          circleY - textPainter.height / 2,
+        ),
+      );
 
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(width.toInt(), height.toInt());
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(width.toInt(), height.toInt());
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
 
-    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+      if (bytes == null) {
+        return _getDefaultMarkerIcon(type);
+      }
+
+      final icon = BitmapDescriptor.bytes(bytes.buffer.asUint8List());
+      _markerIconCache[cacheKey] = icon;
+      return icon;
+    } catch (e) {
+      debugPrint('Failed to create numbered marker: $e');
+      return _getDefaultMarkerIcon(type);
+    }
   }
 
-  /// Create geographic dashed path segments that scale with zoom
+  /// Calculate bearing angle between two points (in radians for canvas rotation)
+  double _calculateBearing(LatLng start, LatLng end) {
+    final dLat = end.latitude - start.latitude;
+    final dLng = end.longitude - start.longitude;
+    // atan2 gives angle from positive X axis, we need from positive Y (north)
+    // Canvas rotation: 0 = up, positive = clockwise
+    return math.atan2(dLng, dLat);
+  }
+
+  /// Create dashed path segments between two points
   /// Returns a list of line segments (each segment is a list of 2 points)
-  List<List<LatLng>> _createDashedPath(
-    LatLng start,
-    LatLng end, {
-    int segments = 10,
-  }) {
+  List<List<LatLng>> _createDashedPath(LatLng start, LatLng end) {
+    const segments = 5; // Number of dashes
     final dashes = <List<LatLng>>[];
 
     final latStep = (end.latitude - start.latitude) / (segments * 2);
@@ -498,6 +553,50 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
 
     return dashes;
+  }
+
+  /// Create arrow icon for direction indicator
+  Future<BitmapDescriptor> _getArrowIcon(Color color, double bearing) async {
+    const size = 24.0;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Rotate canvas to point in direction of travel
+    canvas.translate(size / 2, size / 2);
+    canvas.rotate(bearing);
+    canvas.translate(-size / 2, -size / 2);
+
+    // Draw arrow pointing up (will be rotated)
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    path.moveTo(size / 2, 4); // Top point
+    path.lineTo(size - 4, size - 4); // Bottom right
+    path.lineTo(size / 2, size - 8); // Bottom center notch
+    path.lineTo(4, size - 4); // Bottom left
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    // White border
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(path, borderPaint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    if (bytes == null) {
+      return BitmapDescriptor.defaultMarker;
+    }
+
+    return BitmapDescriptor.bytes(bytes.buffer.asUint8List());
   }
 
   void _fitBounds(List<LatLng> points) {
@@ -690,7 +789,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     ),
                     markers: _markers,
                     polylines: _polylines,
-                    style: _minimalMapStyle,
                     onMapCreated: (controller) {
                       _mapController = controller;
                       // Re-fit bounds after map is created if we have markers

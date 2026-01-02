@@ -92,7 +92,7 @@ class PdfUploadDialog extends StatefulWidget {
 
 class _PdfUploadDialogState extends State<PdfUploadDialog> {
   PlatformFile? _selectedFile;
-  bool _isUploading = false;
+  final bool _isUploading = false;
   String? _error;
 
   String get _title {
