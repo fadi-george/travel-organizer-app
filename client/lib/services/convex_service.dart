@@ -304,4 +304,67 @@ class ConvexService {
     final decoded = jsonDecode(result);
     return Map<String, dynamic>.from(decoded as Map);
   }
+
+  /// Create a new activity
+  Future<Map<String, dynamic>?> createActivity({
+    required String tripId,
+    required String date,
+    required String title,
+    String? time,
+    String? description,
+    String? location,
+    String? type,
+    String? notes,
+  }) async {
+    final result = await client.mutation(
+      name: 'activities:create',
+      args: {
+        'tripId': tripId,
+        'date': date,
+        'title': title,
+        if (time != null) 'time': time,
+        if (description != null) 'description': description,
+        if (location != null) 'location': location,
+        if (type != null) 'type': type,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    final decoded = jsonDecode(result);
+    if (decoded == null) return null;
+    return Map<String, dynamic>.from(decoded as Map);
+  }
+
+  /// Update an activity
+  Future<Map<String, dynamic>?> updateActivity({
+    required String id,
+    String? date,
+    String? time,
+    String? title,
+    String? description,
+    String? location,
+    String? type,
+    String? notes,
+  }) async {
+    final result = await client.mutation(
+      name: 'activities:update',
+      args: {
+        'id': id,
+        if (date != null) 'date': date,
+        if (time != null) 'time': time,
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (location != null) 'location': location,
+        if (type != null) 'type': type,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    final decoded = jsonDecode(result);
+    if (decoded == null) return null;
+    return Map<String, dynamic>.from(decoded as Map);
+  }
+
+  /// Delete an activity
+  Future<void> deleteActivity(String id) async {
+    await client.mutation(name: 'activities:remove', args: {'id': id});
+  }
 }
