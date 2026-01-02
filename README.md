@@ -46,14 +46,32 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    bun run setup:client
    ```
 
-2. Install Flutter dependencies:
+2. **Configure Google Maps API Key** (required for map features):
+
+   ```bash
+   # Copy the example config
+   cp client/ios/Flutter/Secrets.xcconfig.example client/ios/Flutter/Secrets.xcconfig
+   ```
+
+   Then edit `client/ios/Flutter/Secrets.xcconfig` and add your API key:
+
+   ```
+   GOOGLE_MAPS_API_KEY=your-actual-api-key-here
+   ```
+
+   To get an API key:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create a new API key
+   - Enable these APIs: **Maps SDK for iOS**, **Maps SDK for Android**, **Geocoding API**, **Places API**
+
+3. Install Flutter dependencies:
 
    ```bash
    cd client
    flutter pub get
    ```
 
-3. Run the app:
+4. Run the app:
 
    ```bash
    flutter run
@@ -98,8 +116,30 @@ travel-organizer-app/
 
 ## Troubleshooting
 
-If functions fail to sync, ensure you're logged in:
+### Convex functions fail to sync
+
+Ensure you're logged in:
 
 ```bash
 bunx convex login
 ```
+
+### Gray screen instead of Google Maps
+
+This means the Google Maps API key is missing or invalid:
+
+1. Check that `client/ios/Flutter/Secrets.xcconfig` exists and has a valid API key
+2. Check that `client/android/local.properties` has `GOOGLE_MAPS_API_KEY` set
+3. Ensure the API key has these APIs enabled in Google Cloud Console:
+   - Maps SDK for iOS
+   - Maps SDK for Android
+   - Geocoding API
+   - Places API
+4. **Restart the app** (not hot reload) after changing native config files
+
+### "API key not found" or map loads but shows errors
+
+Check the Google Cloud Console to ensure:
+- The API key is not restricted to wrong bundle IDs/package names
+- Billing is enabled on the Google Cloud project
+- The required APIs are enabled

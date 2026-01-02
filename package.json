@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "setup:client": "./scripts/setup-client-env.sh",
+    "setup:client:prod": "./scripts/setup-client-env.sh prod",
+    "setup:client:staging": "./scripts/setup-client-env.sh staging",
     "dev:client": "cd client && flutter run",
     "dev:convex": "bunx convex dev",
     "db:sql:generate": "bunx drizzle-kit generate",

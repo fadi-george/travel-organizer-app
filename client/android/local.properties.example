@@ -1,0 +1,11 @@
+# Android SDK location (auto-detected by Android Studio, or set manually)
+# sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
+
+# Flutter SDK location (usually auto-detected)
+# flutter.sdk=/path/to/flutter
+
+# Google Maps API Key
+# Get your API key from: https://console.cloud.google.com/apis/credentials
+# Required APIs: Maps SDK for Android, Geocoding API, Places API
+GOOGLE_MAPS_API_KEY=YOUR_API_KEY_HERE
+
