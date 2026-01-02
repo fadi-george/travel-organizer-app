@@ -148,7 +148,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           final trip = _upcomingTrips[index];
                           return TripCard(
                             trip: trip,
-                            primaryCountry: trip.primaryCountry,
+                            primaryPlace: trip.primaryPlace,
                             index: index,
                             onTap: () => _onTripTapped(trip),
                             onEdit: () => _onEditTrip(trip),
@@ -177,7 +177,7 @@ class _TripsScreenState extends State<TripsScreen> {
                           final trip = _pastTrips[index];
                           return TripCard(
                             trip: trip,
-                            primaryCountry: trip.primaryCountry,
+                            primaryPlace: trip.primaryPlace,
                             index: index,
                             isCompact: true,
                             onTap: () => _onTripTapped(trip),
@@ -324,7 +324,7 @@ class _TripsScreenState extends State<TripsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            TripDetailScreen(trip: trip, primaryCountry: trip.primaryCountry),
+            TripDetailScreen(trip: trip, primaryPlace: trip.primaryPlace),
       ),
     );
   }

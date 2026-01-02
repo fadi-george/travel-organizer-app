@@ -3,7 +3,7 @@ import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
-import '../utils/country_images.dart';
+import '../utils/places_images.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/hotel_card.dart';
 import '../widgets/save_flight_sheet.dart';
@@ -13,9 +13,9 @@ import '../widgets/timeline_item.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
-  final String? primaryCountry;
+  final String? primaryPlace;
 
-  const TripDetailScreen({super.key, required this.trip, this.primaryCountry});
+  const TripDetailScreen({super.key, required this.trip, this.primaryPlace});
 
   @override
   State<TripDetailScreen> createState() => _TripDetailScreenState();
@@ -233,7 +233,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
-    return CountryImages.getImageUrl(widget.primaryCountry);
+    return PlacesImages.getImageUrl(widget.primaryPlace);
   }
 
   void _onEditTrip() {
@@ -556,16 +556,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       child: const Icon(Icons.image, size: 48),
                     ),
                   ),
+                  // Gradient overlay - dark at bottom fading to transparent at top
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
                         colors: [
-                          Colors.transparent,
                           Colors.black.withValues(alpha: 0.7),
+                          Colors.black.withValues(alpha: 0.3),
+                          Colors.transparent,
                         ],
-                        stops: const [0.5, 1.0],
+                        stops: const [0.0, 0.4, 0.8],
                       ),
                     ),
                   ),

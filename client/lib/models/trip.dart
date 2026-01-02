@@ -96,7 +96,7 @@ class Trip {
   }
 
   /// Get the primary country from accommodations, or fall back to flight destination
-  String? get primaryCountry {
+  String? get primaryPlace {
     // Try accommodations first
     if (accommodations != null && accommodations!.isNotEmpty) {
       final sorted =

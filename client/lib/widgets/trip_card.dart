@@ -1,12 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
-import '../utils/country_images.dart';
+import '../utils/places_images.dart';
 import 'swipe_action_card.dart';
 
 class TripCard extends StatefulWidget {
   final Trip trip;
-  final String? primaryCountry;
+  final String? primaryPlace;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -16,7 +16,7 @@ class TripCard extends StatefulWidget {
   const TripCard({
     super.key,
     required this.trip,
-    this.primaryCountry,
+    this.primaryPlace,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -68,7 +68,7 @@ class _TripCardState extends State<TripCard>
 
   String get _imageUrl {
     if (widget.trip.imageUrl != null) return widget.trip.imageUrl!;
-    return CountryImages.getImageUrl(widget.primaryCountry);
+    return PlacesImages.getImageUrl(widget.primaryPlace);
   }
 
   @override
