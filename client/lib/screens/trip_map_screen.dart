@@ -307,6 +307,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final markers = <Marker>{};
     final polylines = <Polyline>{};
     final bounds = <LatLng>[];
+    final orderedLocations =
+        <(LatLng, MapItem)>[]; // Track locations with items
 
     for (int i = 0; i < items.length; i++) {
       final item = items[i];
@@ -321,6 +323,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
       if (location != null) {
         bounds.add(location);
+        orderedLocations.add((location, item));
 
         markers.add(
           Marker(
@@ -352,6 +355,35 @@ class _TripMapScreenState extends State<TripMapScreen> {
           patterns: [PatternItem.dash(20), PatternItem.gap(10)],
         ),
       );
+    }
+
+    // Create dashed lines connecting consecutive pins (itinerary path)
+    // Skip flight departure→arrival pairs (they have geodesic curves)
+    for (int i = 0; i < orderedLocations.length - 1; i++) {
+      final current = orderedLocations[i];
+      final next = orderedLocations[i + 1];
+
+      // Skip if this is a flight departure followed by its arrival
+      final isFlightPair =
+          current.$2.type == MapItemType.flight &&
+          next.$2.type == MapItemType.flight &&
+          current.$2.sortOrder == 0 &&
+          next.$2.sortOrder == 1;
+
+      if (!isFlightPair) {
+        // Create geographic dashes that scale with zoom
+        final dashSegments = _createDashedPath(current.$1, next.$1);
+        for (int j = 0; j < dashSegments.length; j++) {
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path_${i}_$j'),
+              points: dashSegments[j],
+              color: Colors.orange,
+              width: 3,
+            ),
+          );
+        }
+      }
     }
 
     if (!mounted) return;
@@ -439,6 +471,33 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
 
     return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
+  }
+
+  /// Create geographic dashed path segments that scale with zoom
+  /// Returns a list of line segments (each segment is a list of 2 points)
+  List<List<LatLng>> _createDashedPath(
+    LatLng start,
+    LatLng end, {
+    int segments = 10,
+  }) {
+    final dashes = <List<LatLng>>[];
+
+    final latStep = (end.latitude - start.latitude) / (segments * 2);
+    final lngStep = (end.longitude - start.longitude) / (segments * 2);
+
+    for (int i = 0; i < segments; i++) {
+      final dashStart = LatLng(
+        start.latitude + latStep * (i * 2),
+        start.longitude + lngStep * (i * 2),
+      );
+      final dashEnd = LatLng(
+        start.latitude + latStep * (i * 2 + 1),
+        start.longitude + lngStep * (i * 2 + 1),
+      );
+      dashes.add([dashStart, dashEnd]);
+    }
+
+    return dashes;
   }
 
   void _fitBounds(List<LatLng> points) {
