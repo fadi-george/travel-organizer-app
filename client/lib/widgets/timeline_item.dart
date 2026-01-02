@@ -21,219 +21,32 @@ class TimelineItem extends StatelessWidget {
     this.hotelCardType = HotelCardType.checkIn,
   });
 
-  IconData get _icon {
-    switch (type) {
-      case 'flight':
-        return Icons.flight;
-      case 'accommodation':
-        return Icons.hotel;
-      case 'activity':
-        return Icons.local_activity;
-      default:
-        return Icons.event;
-    }
-  }
-
-  Color get _iconColor {
-    switch (type) {
-      case 'flight':
-        return Colors.blue;
-      case 'accommodation':
-        return Colors.purple;
-      case 'activity':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String get _title {
-    switch (type) {
-      case 'flight':
-        final origin = data['origin'] as String? ?? '';
-        final destination = data['destination'] as String? ?? '';
-        return '$origin to $destination';
-      case 'accommodation':
-        return data['hotelName'] as String? ?? 'Hotel';
-      case 'activity':
-        return data['name'] as String? ?? 'Activity';
-      default:
-        return 'Event';
-    }
-  }
-
-  String? get _subtitle {
-    switch (type) {
-      case 'flight':
-        final airline = data['airline'] as String?;
-        final flightNumber = data['flightNumber'] as String?;
-        if (airline != null && flightNumber != null) {
-          return '$airline $flightNumber';
-        }
-        return airline ?? flightNumber;
-      case 'accommodation':
-        return 'Check-in';
-      case 'activity':
-        return data['location'] as String?;
-      default:
-        return null;
-    }
-  }
-
-  String? get _timeStr {
-    switch (type) {
-      case 'flight':
-        final departure = data['departureTime'] as String?;
-        if (departure != null) {
-          final dt = DateTime.tryParse(departure);
-          if (dt != null) {
-            final hour = dt.hour > 12
-                ? dt.hour - 12
-                : (dt.hour == 0 ? 12 : dt.hour);
-            final period = dt.hour >= 12 ? 'PM' : 'AM';
-            final minute = dt.minute.toString().padLeft(2, '0');
-            return '$hour:$minute $period';
-          }
-        }
-        return null;
-      case 'accommodation':
-        return null;
-      case 'activity':
-        final time = data['time'] as String?;
-        return time;
-      default:
-        return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Use special flight widget for flights
-    if (type == 'flight') {
-      return FlightCard(
-        data: data,
-        viewType: FlightCardViewType.timeline,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      );
+    switch (type) {
+      case 'flight':
+        return FlightCard(
+          data: data,
+          viewType: FlightCardViewType.timeline,
+          onEdit: onEdit,
+          onDelete: onDelete,
+        );
+      case 'accommodation':
+        return HotelCard(
+          data: data,
+          type: hotelCardType,
+          onEdit: onEdit,
+          onDelete: onDelete,
+        );
+      case 'activity':
+        return ActivityCard(
+          data: data,
+          viewType: ActivityCardViewType.timeline,
+          onEdit: onEdit,
+          onDelete: onDelete,
+        );
+      default:
+        return const SizedBox.shrink();
     }
-
-    // Use hotel card for accommodations
-    if (type == 'accommodation') {
-      return HotelCard(
-        data: data,
-        type: hotelCardType,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      );
-    }
-
-    // Use activity card for activities
-    if (type == 'activity') {
-      return ActivityCard(
-        data: data,
-        viewType: ActivityCardViewType.timeline,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      );
-    }
-
-    // Fallback for unknown types
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline connector
-          SizedBox(
-            width: 40,
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _iconColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(_icon, color: _iconColor, size: 20),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.outline.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Content
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colorScheme.outline.withValues(
-                    alpha: isDark ? 0.2 : 0.1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        if (_subtitle != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              _subtitle!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (_timeStr != null)
-                    Text(
-                      _timeStr!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
