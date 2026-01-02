@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import '../utils/time_format.dart';
 import 'swipe_action_card.dart';
 import 'timeline_styles.dart';
 
@@ -41,19 +44,7 @@ class ActivityCard extends StatelessWidget {
     return _typeIcons[type] ?? Icons.local_activity_outlined;
   }
 
-  String? get _formattedTime {
-    final time = data['time'] as String?;
-    if (time == null) return null;
-
-    final parts = time.split(':');
-    if (parts.length < 2) return time;
-
-    final hour = int.tryParse(parts[0]) ?? 0;
-    final minute = int.tryParse(parts[1]) ?? 0;
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    final period = hour >= 12 ? 'PM' : 'AM';
-    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
-  }
+  String? get _formattedTime => formatTimeOrNull(data['time'] as String?);
 
   Widget _buildTimelineView(
     BuildContext context, {
@@ -122,11 +113,7 @@ class ActivityCard extends StatelessWidget {
             if (_formattedTime != null)
               Text(
                 _formattedTime!,
-                style: TextStyle(
-                  fontSize: TimelineStyles.subtitleFontSize,
-                  color: _accentColor,
-                  fontWeight: TimelineStyles.subtitleFontWeight,
-                ),
+                style: TimelineStyles.subtitleStyle(colorScheme),
               ),
           ],
         ),
@@ -222,9 +209,9 @@ class ActivityCard extends StatelessWidget {
                         Text(
                           _formattedTime!,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: TimelineStyles.subtitleFontSize,
                             color: _accentColor,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: TimelineStyles.subtitleFontWeight,
                           ),
                         ),
                       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/time_format.dart';
 import 'swipe_action_card.dart';
 import 'timeline_styles.dart';
 
@@ -19,18 +20,6 @@ class FlightCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
   });
-
-  /// Parse time string (HH:MM or HH:MM:SS) to formatted time
-  String _formatTime(String? timeStr) {
-    if (timeStr == null || timeStr.isEmpty) return '--:--';
-    final parts = timeStr.split(':');
-    if (parts.length < 2) return timeStr;
-    final hour = int.tryParse(parts[0]) ?? 0;
-    final minute = int.tryParse(parts[1]) ?? 0;
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    final period = hour >= 12 ? 'PM' : 'AM';
-    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
-  }
 
   String _formatDate(String? dateStr) {
     if (dateStr == null) return '';
@@ -163,7 +152,7 @@ class FlightCard extends StatelessWidget {
                     style: TimelineStyles.subtitleStyle(colorScheme),
                   ),
                 Text(
-                  '${_formatTime(departureTime)} – ${_formatTime(arrivalTime)}',
+                  '${formatTime(departureTime)} – ${formatTime(arrivalTime)}',
                   style: TimelineStyles.subtitleStyle(colorScheme),
                 ),
               ],
@@ -348,7 +337,7 @@ class FlightCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    _formatTime(departureTime),
+                    formatTime(departureTime),
                     style: TextStyle(
                       fontSize: 15,
                       color: colorScheme.onSurface.withValues(alpha: 0.6),
@@ -369,7 +358,7 @@ class FlightCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    _formatTime(arrivalTime),
+                    formatTime(arrivalTime),
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 15,
