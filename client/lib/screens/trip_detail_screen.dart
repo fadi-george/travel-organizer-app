@@ -509,13 +509,28 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       for (final activity in trip.activities!) {
         final activityData = activity as Map<String, dynamic>;
         final dateStr = activityData['date'] as String?;
+        final timeStr = activityData['time'] as String?;
         if (dateStr != null) {
           final date = DateTime.tryParse(dateStr);
           if (date != null && _isSameDay(date, _selectedDate)) {
+            // Combine date and time for sorting
+            DateTime sortTime = date;
+            if (timeStr != null) {
+              final timeParts = timeStr.split(':');
+              if (timeParts.length >= 2) {
+                sortTime = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  int.tryParse(timeParts[0]) ?? 0,
+                  int.tryParse(timeParts[1]) ?? 0,
+                );
+              }
+            }
             allItems.add({
               'type': 'activity',
               'data': activityData,
-              'sortTime': date,
+              'sortTime': sortTime,
             });
           }
         }

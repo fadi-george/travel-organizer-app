@@ -141,7 +141,15 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   final _notesController = TextEditingController();
 
   DateTime? _checkInDate;
+  TimeOfDay _checkInTime = const TimeOfDay(
+    hour: 15,
+    minute: 0,
+  ); // Default 3:00 PM
   DateTime? _checkOutDate;
+  TimeOfDay _checkOutTime = const TimeOfDay(
+    hour: 11,
+    minute: 0,
+  ); // Default 11:00 AM
   bool _isSubmitting = false;
 
   bool get isEditing => widget.existingHotel != null;
@@ -164,9 +172,29 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
       if (checkIn != null) {
         _checkInDate = DateTime.tryParse(checkIn);
       }
+      final checkInTimeStr = hotel['checkInTime'] as String?;
+      if (checkInTimeStr != null) {
+        final parts = checkInTimeStr.split(':');
+        if (parts.length >= 2) {
+          _checkInTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 15,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
       final checkOut = hotel['checkOut'] as String?;
       if (checkOut != null) {
         _checkOutDate = DateTime.tryParse(checkOut);
+      }
+      final checkOutTimeStr = hotel['checkOutTime'] as String?;
+      if (checkOutTimeStr != null) {
+        final parts = checkOutTimeStr.split(':');
+        if (parts.length >= 2) {
+          _checkOutTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 11,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
       }
     }
   }
@@ -186,6 +214,16 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   String _formatDate(DateTime? date) {
     if (date == null) return 'Select date';
     return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:${time.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  String _timeToString(TimeOfDay time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _selectDate(bool isCheckIn) async {
@@ -210,6 +248,25 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
           }
         } else {
           _checkOutDate = date;
+        }
+      });
+    }
+  }
+
+  Future<void> _selectTime(bool isCheckIn) async {
+    final initialTime = isCheckIn ? _checkInTime : _checkOutTime;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+
+    if (time != null) {
+      setState(() {
+        if (isCheckIn) {
+          _checkInTime = time;
+        } else {
+          _checkOutTime = time;
         }
       });
     }
@@ -250,7 +307,9 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
               ? _roomTypeController.text.trim()
               : null,
           checkIn: _checkInDate!.toIso8601String().split('T').first,
+          checkInTime: _timeToString(_checkInTime),
           checkOut: _checkOutDate?.toIso8601String().split('T').first,
+          checkOutTime: _timeToString(_checkOutTime),
           confirmationNumber: _confirmationController.text.trim().isNotEmpty
               ? _confirmationController.text.trim()
               : null,
@@ -275,7 +334,9 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
               ? _roomTypeController.text.trim()
               : null,
           checkIn: _checkInDate!.toIso8601String().split('T').first,
+          checkInTime: _timeToString(_checkInTime),
           checkOut: _checkOutDate?.toIso8601String().split('T').first,
+          checkOutTime: _timeToString(_checkOutTime),
           confirmationNumber: _confirmationController.text.trim().isNotEmpty
               ? _confirmationController.text.trim()
               : null,
@@ -408,7 +469,7 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Check-in Date
+                  // Check-in Date & Time
                   Text(
                     'Check-in',
                     style: TextStyle(
@@ -418,14 +479,30 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _DateButton(
-                    icon: Icons.calendar_today,
-                    label: _formatDate(_checkInDate),
-                    onTap: () => _selectDate(true),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _DateTimeButton(
+                          icon: Icons.calendar_today,
+                          label: _formatDate(_checkInDate),
+                          onTap: () => _selectDate(true),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: _DateTimeButton(
+                          icon: Icons.access_time,
+                          label: _formatTime(_checkInTime),
+                          onTap: () => _selectTime(true),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Check-out Date
+                  // Check-out Date & Time
                   Text(
                     'Check-out',
                     style: TextStyle(
@@ -435,10 +512,26 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _DateButton(
-                    icon: Icons.calendar_today,
-                    label: _formatDate(_checkOutDate),
-                    onTap: () => _selectDate(false),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _DateTimeButton(
+                          icon: Icons.calendar_today,
+                          label: _formatDate(_checkOutDate),
+                          onTap: () => _selectDate(false),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: _DateTimeButton(
+                          icon: Icons.access_time,
+                          label: _formatTime(_checkOutTime),
+                          onTap: () => _selectTime(false),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
 
@@ -537,12 +630,12 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   }
 }
 
-class _DateButton extends StatelessWidget {
+class _DateTimeButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const _DateButton({
+  const _DateTimeButton({
     required this.icon,
     required this.label,
     required this.onTap,

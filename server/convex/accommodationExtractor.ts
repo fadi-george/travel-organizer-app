@@ -17,7 +17,9 @@ export const saveExtractedAccommodations = internalMutation({
         country: v.optional(v.string()),
         roomType: v.optional(v.string()),
         checkIn: v.optional(v.string()),
+        checkInTime: v.optional(v.string()),
         checkOut: v.optional(v.string()),
+        checkOutTime: v.optional(v.string()),
         address: v.optional(v.string()),
         confirmationNumber: v.optional(v.string()),
         notes: v.optional(v.string()),
@@ -102,7 +104,9 @@ For each accommodation found, extract the following details in JSON format:
       "country": "string (e.g., 'Thailand', 'Japan') or null",
       "roomType": "string (e.g., 'Deluxe Room', 'Superior Suite', 'Deluxe Pool View') or null",
       "checkIn": "string (ISO format: YYYY-MM-DD) or null",
+      "checkInTime": "string (24-hour format: HH:MM, e.g., '15:00') or null - default to '15:00' if not specified",
       "checkOut": "string (ISO format: YYYY-MM-DD) or null",
+      "checkOutTime": "string (24-hour format: HH:MM, e.g., '11:00') or null - default to '11:00' if not specified",
       "address": "string (full hotel address) or null",
       "confirmationNumber": "string (booking reference/confirmation number) or null",
       "notes": "string (any additional details like number of nights, meal plan, special requests) or null"
@@ -114,6 +118,9 @@ Important:
 - Return ONLY valid JSON, no additional text
 - If no accommodations are found, return {"accommodations": []}
 - Convert all dates to ISO format (YYYY-MM-DD)
+- Convert all times to 24-hour format (HH:MM)
+- If check-in time is not specified, use "15:00" as default
+- If check-out time is not specified, use "11:00" as default
 - If dates are in format like "13 – 16 Jan 26", convert the start date to checkIn (2026-01-13) and end date to checkOut (2026-01-16)
 - Handle 2-digit years by assuming 20xx (e.g., "Jan 26" = January 2026)
 - If number of nights is mentioned, include it in the notes field
@@ -195,7 +202,9 @@ Important:
           country: a.country ? String(a.country) : undefined,
           roomType: a.roomType ? String(a.roomType) : undefined,
           checkIn: a.checkIn ? String(a.checkIn) : undefined,
+          checkInTime: a.checkInTime ? String(a.checkInTime) : undefined,
           checkOut: a.checkOut ? String(a.checkOut) : undefined,
+          checkOutTime: a.checkOutTime ? String(a.checkOutTime) : undefined,
           address: a.address ? String(a.address) : undefined,
           confirmationNumber: a.confirmationNumber
             ? String(a.confirmationNumber)
