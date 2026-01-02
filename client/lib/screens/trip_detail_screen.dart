@@ -9,6 +9,7 @@ import '../widgets/hotel_card.dart';
 import '../widgets/save_activity_sheet.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
+import '../theme/app_theme.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
 import 'trip_map_screen.dart';
@@ -560,12 +561,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openMapScreen,
-        backgroundColor: const Color(0xFFFF7043),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.map_outlined),
-      ),
+      floatingActionButton: AppFab.map(onPressed: _openMapScreen),
       body: CustomScrollView(
         slivers: [
           // Hero header with image

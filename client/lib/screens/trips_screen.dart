@@ -2,6 +2,7 @@ import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 import 'trip_detail_screen.dart';
@@ -253,13 +254,7 @@ class _TripsScreenState extends State<TripsScreen> {
       ),
       floatingActionButton: _trips.isEmpty
           ? null
-          : FloatingActionButton(
-              onPressed: _onAddTrip,
-              backgroundColor: const Color(0xFFFF7043),
-              foregroundColor: Colors.white,
-              elevation: 4,
-              child: const Icon(Icons.add, size: 28),
-            ),
+          : AppFab.add(onPressed: _onAddTrip),
     );
   }
 
