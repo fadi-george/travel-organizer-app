@@ -24,6 +24,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   // ignore: unused_field
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
+  bool _mapError = false;
 
   static const _defaultCenter = LatLng(0, 0);
 
@@ -251,19 +252,46 @@ class _TripMapScreenState extends State<TripMapScreen> {
           Expanded(
             child: Stack(
               children: [
-                // Google Map
-                GoogleMap(
-                  initialCameraPosition: const CameraPosition(
-                    target: _defaultCenter,
-                    zoom: 2,
+                // Google Map (with error fallback)
+                if (_mapError)
+                  Container(
+                    color: Colors.grey.shade200,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.map_outlined, size: 64, color: Colors.grey.shade400),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Map unavailable',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Check Google Maps API key configuration',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  GoogleMap(
+                    initialCameraPosition: const CameraPosition(
+                      target: _defaultCenter,
+                      zoom: 2,
+                    ),
+                    markers: _markers,
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                    },
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
                   ),
-                  markers: _markers,
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                  },
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                ),
                 // Locations list overlay
                 if (hasLocations)
                   Positioned(
