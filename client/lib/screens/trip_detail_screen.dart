@@ -11,6 +11,7 @@ import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
+import 'trip_map_screen.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -546,9 +547,25 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return allItems;
   }
 
+  void _openMapScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            TripMapScreen(trip: _trip, initialDate: _selectedDate),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openMapScreen,
+        backgroundColor: const Color(0xFFFF7043),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.map_outlined),
+      ),
       body: CustomScrollView(
         slivers: [
           // Hero header with image
