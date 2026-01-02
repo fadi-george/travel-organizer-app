@@ -277,7 +277,8 @@ class ConvexService {
         if (checkIn != null) 'checkIn': checkIn,
         if (checkOut != null) 'checkOut': checkOut,
         if (address != null) 'address': address,
-        if (confirmationNumber != null) 'confirmationNumber': confirmationNumber,
+        if (confirmationNumber != null)
+          'confirmationNumber': confirmationNumber,
         if (notes != null) 'notes': notes,
       },
     );
@@ -289,5 +290,18 @@ class ConvexService {
   /// Delete an accommodation
   Future<void> deleteAccommodation(String id) async {
     await client.mutation(name: 'accommodations:remove', args: {'id': id});
+  }
+
+  /// Extract accommodations from PDF using Claude AI
+  Future<Map<String, dynamic>> extractAccommodationsFromPdf({
+    required String tripId,
+    required String pdfBase64,
+  }) async {
+    final result = await client.action(
+      name: 'accommodationExtractor:extractAccommodationsFromPdf',
+      args: {'tripId': tripId, 'pdfBase64': pdfBase64},
+    );
+    final decoded = jsonDecode(result);
+    return Map<String, dynamic>.from(decoded as Map);
   }
 }

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accommodationExtractor from "../accommodationExtractor.js";
 import type * as accommodations from "../accommodations.js";
 import type * as activities from "../activities.js";
 import type * as flightExtractor from "../flightExtractor.js";
@@ -22,6 +23,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accommodationExtractor: typeof accommodationExtractor;
   accommodations: typeof accommodations;
   activities: typeof activities;
   flightExtractor: typeof flightExtractor;

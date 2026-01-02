@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'pdf_upload_dialog.dart';
 
 class HotelOptionsSheet extends StatelessWidget {
   final String tripId;
@@ -41,7 +42,18 @@ class HotelOptionsSheet extends StatelessWidget {
 
   void _onUploadHotelPdf(BuildContext context) {
     Navigator.pop(context);
-    // TODO: Show PDF upload dialog for hotels
+    _showPdfUploadDialog(context);
+  }
+
+  Future<void> _showPdfUploadDialog(BuildContext context) async {
+    final convexService = await ConvexService.getInstance();
+    if (!context.mounted) return;
+
+    PdfUploadDialog.showForAccommodations(
+      context,
+      tripId: tripId,
+      onExtract: convexService.extractAccommodationsFromPdf,
+    );
   }
 
   @override
@@ -144,7 +156,8 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
       _countryController.text = hotel['country'] as String? ?? '';
       _addressController.text = hotel['address'] as String? ?? '';
       _roomTypeController.text = hotel['roomType'] as String? ?? '';
-      _confirmationController.text = hotel['confirmationNumber'] as String? ?? '';
+      _confirmationController.text =
+          hotel['confirmationNumber'] as String? ?? '';
       _notesController.text = hotel['notes'] as String? ?? '';
 
       final checkIn = hotel['checkIn'] as String?;
@@ -276,7 +289,11 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isEditing ? 'Hotel updated successfully' : 'Hotel added successfully'),
+          content: Text(
+            isEditing
+                ? 'Hotel updated successfully'
+                : 'Hotel added successfully',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.green,
         ),
@@ -335,11 +352,16 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                   // Header
                   Text(
                     isEditing ? 'Edit Hotel' : 'Add Hotel',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isEditing ? 'Update your hotel details' : 'Enter your hotel details',
+                    isEditing
+                        ? 'Update your hotel details'
+                        : 'Enter your hotel details',
                     style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 24),
