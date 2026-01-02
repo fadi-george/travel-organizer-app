@@ -8,6 +8,7 @@ import '../widgets/days_carousel.dart';
 import '../widgets/hotel_card.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
+import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -213,6 +214,64 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return CountryImages.getImageUrl(widget.primaryCountry);
   }
 
+  void _onEditTrip() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CreateTripSheet(existingTrip: _trip),
+    );
+  }
+
+  Future<void> _onDeleteTrip() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Trip'),
+        content: Text(
+          'Are you sure you want to delete "${_trip.name}"? This will also delete all flights, hotels, and activities associated with this trip.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final convexService = await ConvexService.getInstance();
+        await convexService.deleteTrip(_trip.id);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Trip deleted'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting trip: $e'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
@@ -389,34 +448,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return allItems;
   }
 
-  String _getDayLabel(DateTime date) {
-    final dayNumber = date.difference(_startDate).inDays + 1;
-
-    if (dayNumber == 1) return '1st';
-    if (dayNumber == 2) return '2nd';
-    if (dayNumber == 3) return '3rd';
-    return '${dayNumber}th';
-  }
-
-  String _formatDayHeader(DateTime date) {
-    const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-    const months = [
-      'JANUARY',
-      'FEBRUARY',
-      'MARCH',
-      'APRIL',
-      'MAY',
-      'JUNE',
-      'JULY',
-      'AUGUST',
-      'SEPTEMBER',
-      'OCTOBER',
-      'NOVEMBER',
-      'DECEMBER',
-    ];
-    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -439,6 +470,56 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               ),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              PopupMenuButton<String>(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.more_vert,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      _onEditTrip();
+                    case 'delete':
+                      _onDeleteTrip();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 20),
+                        SizedBox(width: 12),
+                        Text('Edit Trip'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 20, color: Colors.red),
+                        SizedBox(width: 12),
+                        Text(
+                          'Delete Trip',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,

@@ -74,7 +74,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       context: context,
       initialDate: initialDate,
       firstDate: firstDate,
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      lastDate: DateTime(3000),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(
@@ -89,7 +89,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   Future<void> _selectStartDate() async {
     final picked = await _showThemedDatePicker(
       initialDate: _startDate ?? DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      firstDate: DateTime(1900),
     );
     if (picked != null) {
       setState(() {
@@ -105,8 +105,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
   Future<void> _selectEndDate() async {
     final picked = await _showThemedDatePicker(
       initialDate: _endDate ?? _startDate ?? DateTime.now(),
-      firstDate:
-          _startDate ?? DateTime.now().subtract(const Duration(days: 365)),
+      firstDate: _startDate ?? DateTime(2000),
     );
     if (picked != null) {
       setState(() {

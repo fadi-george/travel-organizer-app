@@ -54,7 +54,9 @@ export const saveExtractedAccommodations = internalMutation({
           }
         }
         await ctx.db.patch(existingAccommodation._id, updates);
-        const updatedAccommodation = await ctx.db.get(existingAccommodation._id);
+        const updatedAccommodation = await ctx.db.get(
+          existingAccommodation._id
+        );
         savedAccommodations.push(updatedAccommodation);
       } else {
         const accommodationId = await ctx.db.insert("accommodations", {
@@ -79,7 +81,11 @@ export const extractAccommodationsFromPdf = action({
   handler: async (
     ctx,
     args
-  ): Promise<{ success: boolean; accommodations?: unknown[]; error?: string }> => {
+  ): Promise<{
+    success: boolean;
+    accommodations?: unknown[];
+    error?: string;
+  }> => {
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicApiKey) {
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");
@@ -219,4 +225,3 @@ Important:
     }
   },
 });
-
