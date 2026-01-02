@@ -49,7 +49,6 @@ export default defineSchema({
     date: v.string(),
     time: v.optional(v.string()),
     title: v.string(),
-    description: v.optional(v.string()),
     location: v.optional(v.string()),
     type: v.optional(v.string()),
     notes: v.optional(v.string()),

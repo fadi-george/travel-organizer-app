@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'pdf_upload_dialog.dart';
 
 class ActivityOptionsSheet extends StatelessWidget {
   final String tripId;
@@ -12,9 +13,8 @@ class ActivityOptionsSheet extends StatelessWidget {
   static void show(BuildContext context, {required String tripId}) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ManualActivityFormSheet(tripId: tripId),
+      builder: (context) => ActivityOptionsSheet(tripId: tripId),
     );
   }
 
@@ -34,10 +34,93 @@ class ActivityOptionsSheet extends StatelessWidget {
     );
   }
 
+  void _onAddActivityManually(BuildContext context) {
+    Navigator.pop(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ManualActivityFormSheet(tripId: tripId),
+    );
+  }
+
+  void _onUploadActivityPdf(BuildContext context) {
+    Navigator.pop(context);
+    _showPdfUploadDialog(context);
+  }
+
+  Future<void> _showPdfUploadDialog(BuildContext context) async {
+    final convexService = await ConvexService.getInstance();
+    if (!context.mounted) return;
+
+    PdfUploadDialog.showForActivities(
+      context,
+      tripId: tripId,
+      onExtract: convexService.extractActivitiesFromPdf,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // This widget is not used directly - we go straight to the form
-    return const SizedBox.shrink();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Add Activity',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF7043).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.edit, color: Color(0xFFFF7043)),
+              ),
+              title: const Text('Add Manually'),
+              subtitle: const Text('Enter activity details by hand'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _onAddActivityManually(context),
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.upload_file, color: Colors.orange),
+              ),
+              title: const Text('Upload Activities (PDF)'),
+              subtitle: const Text('Extract details from itinerary'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _onUploadActivityPdf(context),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -55,13 +138,12 @@ class _ManualActivityFormSheet extends StatefulWidget {
 class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
 
   DateTime? _date;
   TimeOfDay? _time;
-  String? _selectedType;
+  String? _selectedType = 'Sightseeing';
   bool _isSubmitting = false;
 
   bool get isEditing => widget.existingActivity != null;
@@ -86,7 +168,6 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
     if (isEditing) {
       final activity = widget.existingActivity!;
       _titleController.text = activity['title'] as String? ?? '';
-      _descriptionController.text = activity['description'] as String? ?? '';
       _locationController.text = activity['location'] as String? ?? '';
       _notesController.text = activity['notes'] as String? ?? '';
       _selectedType = activity['type'] as String?;
@@ -112,7 +193,6 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -200,9 +280,6 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
           title: _titleController.text.trim(),
           date: _date!.toIso8601String().split('T').first,
           time: timeStr,
-          description: _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : null,
           location: _locationController.text.trim().isNotEmpty
               ? _locationController.text.trim()
               : null,
@@ -217,9 +294,6 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
           title: _titleController.text.trim(),
           date: _date!.toIso8601String().split('T').first,
           time: timeStr,
-          description: _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : null,
           location: _locationController.text.trim().isNotEmpty
               ? _locationController.text.trim()
               : null,
@@ -377,8 +451,8 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
 
                   // Activity Type
                   DropdownButtonFormField<String>(
-                    value: _selectedType,
-                    decoration: _inputDecoration('Type (optional)', ''),
+                    initialValue: _selectedType,
+                    decoration: _inputDecoration('Type', ''),
                     hint: const Text('Select activity type'),
                     items: _activityTypes.entries.map((entry) {
                       return DropdownMenuItem(
@@ -432,25 +506,14 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: _inputDecoration(
-                      'Description (optional)',
-                      'e.g. Guided tour of the tower',
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
-
                   // Notes
                   TextFormField(
                     controller: _notesController,
                     decoration: _inputDecoration(
                       'Notes (optional)',
-                      'e.g. Buy tickets in advance',
+                      'e.g. Guided tour, buy tickets in advance',
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                   ),
                   const SizedBox(height: 24),
 

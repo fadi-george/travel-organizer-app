@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'activity_card.dart';
 import 'flight_card.dart';
 import 'hotel_card.dart';
 
@@ -127,6 +128,17 @@ class TimelineItem extends StatelessWidget {
       );
     }
 
+    // Use activity card for activities
+    if (type == 'activity') {
+      return ActivityCard(
+        data: data,
+        viewType: ActivityCardViewType.timeline,
+        onEdit: onEdit,
+        onDelete: onDelete,
+      );
+    }
+
+    // Fallback for unknown types
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

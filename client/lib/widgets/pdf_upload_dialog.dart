@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 /// The type of content to extract from a PDF
-enum PdfExtractType { flights, accommodations }
+enum PdfExtractType { flights, accommodations, activities }
 
 /// A reusable dialog for uploading PDFs and extracting travel information
 class PdfUploadDialog extends StatefulWidget {
@@ -62,6 +62,26 @@ class PdfUploadDialog extends StatefulWidget {
     );
   }
 
+  /// Show the dialog for extracting activities
+  static void showForActivities(
+    BuildContext context, {
+    required String tripId,
+    required Future<Map<String, dynamic>> Function({
+      required String tripId,
+      required String pdfBase64,
+    }) onExtract,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => PdfUploadDialog(
+        tripId: tripId,
+        extractType: PdfExtractType.activities,
+        onExtract: onExtract,
+      ),
+    );
+  }
+
   @override
   State<PdfUploadDialog> createState() => _PdfUploadDialogState();
 }
@@ -77,6 +97,8 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         return 'Upload Flight PDF';
       case PdfExtractType.accommodations:
         return 'Upload Hotel PDF';
+      case PdfExtractType.activities:
+        return 'Upload Itinerary PDF';
     }
   }
 
@@ -86,6 +108,8 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         return 'Select a flight confirmation PDF to automatically extract flight details';
       case PdfExtractType.accommodations:
         return 'Select a hotel booking PDF to automatically extract accommodation details';
+      case PdfExtractType.activities:
+        return 'Select an itinerary PDF to automatically extract activity details';
     }
   }
 
@@ -95,6 +119,8 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         return 'Extract Flights';
       case PdfExtractType.accommodations:
         return 'Extract Hotels';
+      case PdfExtractType.activities:
+        return 'Extract Activities';
     }
   }
 
@@ -104,6 +130,8 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         return 'flight';
       case PdfExtractType.accommodations:
         return 'hotel';
+      case PdfExtractType.activities:
+        return 'activity';
     }
   }
 
@@ -113,6 +141,8 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         return 'flights';
       case PdfExtractType.accommodations:
         return 'accommodations';
+      case PdfExtractType.activities:
+        return 'activities';
     }
   }
 
