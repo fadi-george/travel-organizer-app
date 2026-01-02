@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
 import '../utils/places_images.dart';
+import '../utils/time_format.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/hotel_card.dart';
 import '../widgets/save_activity_sheet.dart';
@@ -447,17 +448,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           if (date != null && _isSameDay(date, _selectedDate)) {
             // Combine date and time for sorting
             DateTime sortTime = date;
-            if (departureTime != null) {
-              final timeParts = departureTime.split(':');
-              if (timeParts.length >= 2) {
-                sortTime = DateTime(
-                  date.year,
-                  date.month,
-                  date.day,
-                  int.tryParse(timeParts[0]) ?? 0,
-                  int.tryParse(timeParts[1]) ?? 0,
-                );
-              }
+            final parsed = parseTime(departureTime);
+            if (parsed != null) {
+              sortTime = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                parsed.$1,
+                parsed.$2,
+              );
             }
             allItems.add({
               'type': 'flight',
@@ -476,7 +475,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         final checkIn = accData['checkIn'] as String?;
         final checkOut = accData['checkOut'] as String?;
 
-        // Check-in
+        // Check-in - sort to 3:00 PM (typical check-in time, after flights arrive)
         if (checkIn != null) {
           final date = DateTime.tryParse(checkIn);
           if (date != null && _isSameDay(date, _selectedDate)) {
@@ -484,12 +483,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               'type': 'accommodation',
               'accommodationType': 'checkIn',
               'data': accData,
-              'sortTime': date,
+              'sortTime': DateTime(date.year, date.month, date.day, 15, 0),
             });
           }
         }
 
-        // Check-out (only if different from check-in)
+        // Check-out - sort to 11:00 AM (typical check-out time, before flights depart)
         if (checkOut != null) {
           final date = DateTime.tryParse(checkOut);
           if (date != null &&
@@ -500,7 +499,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               'type': 'accommodation',
               'accommodationType': 'checkOut',
               'data': accData,
-              'sortTime': date,
+              'sortTime': DateTime(date.year, date.month, date.day, 11, 0),
             });
           }
         }
@@ -518,17 +517,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           if (date != null && _isSameDay(date, _selectedDate)) {
             // Combine date and time for sorting
             DateTime sortTime = date;
-            if (timeStr != null) {
-              final timeParts = timeStr.split(':');
-              if (timeParts.length >= 2) {
-                sortTime = DateTime(
-                  date.year,
-                  date.month,
-                  date.day,
-                  int.tryParse(timeParts[0]) ?? 0,
-                  int.tryParse(timeParts[1]) ?? 0,
-                );
-              }
+            final parsed = parseTime(timeStr);
+            if (parsed != null) {
+              sortTime = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                parsed.$1,
+                parsed.$2,
+              );
             }
             allItems.add({
               'type': 'activity',

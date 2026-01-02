@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../models/trip.dart';
 import '../services/airports_service.dart';
+import '../utils/time_format.dart';
 import '../widgets/days_carousel.dart';
 
 class TripMapScreen extends StatefulWidget {
@@ -27,13 +29,32 @@ class _TripMapScreenState extends State<TripMapScreen> {
   late DateTime _endDate;
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
   bool _mapError = false;
-  bool _isLoadingMarkers = false;
+  bool _isLoadingMarkers = true; // Start as true to avoid flash of empty state
 
   // Cache geocoded addresses to avoid repeated API calls
   final Map<String, LatLng?> _geocodeCache = {};
 
   static const _defaultCenter = LatLng(0, 0);
+
+  // Clean map style - shows streets, country names/borders, hides POIs
+  static const _minimalMapStyle = '''
+[
+  {"featureType": "poi", "stylers": [{"visibility": "off"}]},
+  {"featureType": "transit", "stylers": [{"visibility": "off"}]},
+  {"featureType": "road", "elementType": "labels", "stylers": [{"visibility": "on"}]},
+  {"featureType": "administrative.country", "elementType": "labels", "stylers": [{"visibility": "on"}]},
+  {"featureType": "administrative.country", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"color": "#999999"}, {"weight": 1}]},
+  {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "water", "elementType": "geometry.fill", "stylers": [{"color": "#a8d4e6"}]},
+  {"featureType": "water", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#ffffff"}]},
+  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#f0f0f0"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#e0e0e0"}]}
+]
+''';
 
   @override
   void initState() {
@@ -175,6 +196,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 data['departureAirportCode'] as String?;
             final arrivalAirportCode = data['arrivalAirportCode'] as String?;
 
+            // Use departureTime for both to keep them together, sortOrder to maintain departure→arrival
+            final depTime = data['departureTime'] as String?;
+
             if (departureAirportCode != null &&
                 departureAirportCode.isNotEmpty) {
               final airport = AirportsService.instance.getByIata(
@@ -185,8 +209,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                   title: 'Departure: $departureAirportCode',
                   address: airport?.name ?? '$departureAirportCode Airport',
                   type: MapItemType.flight,
-                  time: data['departureTime'] as String?,
+                  time: depTime,
                   airportCode: departureAirportCode,
+                  sortOrder: 0, // Departure comes first
                 ),
               );
             }
@@ -200,8 +225,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                   title: 'Arrival: $arrivalAirportCode',
                   address: airport?.name ?? '$arrivalAirportCode Airport',
                   type: MapItemType.flight,
-                  time: data['arrivalTime'] as String?,
+                  time: depTime, // Use departure time to keep with departure
                   airportCode: arrivalAirportCode,
+                  sortOrder: 1, // Arrival comes after departure
                 ),
               );
             }
@@ -210,14 +236,76 @@ class _TripMapScreenState extends State<TripMapScreen> {
       }
     }
 
+    // Sort items by time, then by sortOrder for tiebreaking
+    items.sort((a, b) {
+      final timeA = parseTimeToMinutes(a.time);
+      final timeB = parseTimeToMinutes(b.time);
+
+      // Items without time go after items with time
+      if (timeA == null && timeB == null) {
+        return a.sortOrder.compareTo(b.sortOrder);
+      }
+      if (timeA == null) return 1;
+      if (timeB == null) return -1;
+
+      final timeCompare = timeA.compareTo(timeB);
+      if (timeCompare != 0) return timeCompare;
+
+      // Same time: use sortOrder (departure before arrival)
+      return a.sortOrder.compareTo(b.sortOrder);
+    });
+
     return items;
+  }
+
+  /// Get flight routes for the selected date (departure and arrival airport pairs)
+  List<FlightRoute> _getFlightRoutesForSelectedDate() {
+    final routes = <FlightRoute>[];
+
+    if (widget.trip.flights != null) {
+      for (final flight in widget.trip.flights!) {
+        final data = flight as Map<String, dynamic>;
+        final dateStr = data['departureDate'] as String?;
+
+        if (dateStr != null) {
+          final date = DateTime.tryParse(dateStr);
+          if (date != null && _isSameDay(date, _selectedDate)) {
+            final departureCode = data['departureAirportCode'] as String?;
+            final arrivalCode = data['arrivalAirportCode'] as String?;
+
+            if (departureCode != null &&
+                departureCode.isNotEmpty &&
+                arrivalCode != null &&
+                arrivalCode.isNotEmpty) {
+              final departureLoc = _getAirportLocation(departureCode);
+              final arrivalLoc = _getAirportLocation(arrivalCode);
+
+              if (departureLoc != null && arrivalLoc != null) {
+                routes.add(
+                  FlightRoute(
+                    departure: departureLoc,
+                    arrival: arrivalLoc,
+                    departureCode: departureCode,
+                    arrivalCode: arrivalCode,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return routes;
   }
 
   Future<void> _updateMarkers() async {
     setState(() => _isLoadingMarkers = true);
 
     final items = _getItemsForSelectedDate();
+    final flightRoutes = _getFlightRoutesForSelectedDate();
     final markers = <Marker>{};
+    final polylines = <Polyline>{};
     final bounds = <LatLng>[];
 
     for (int i = 0; i < items.length; i++) {
@@ -238,7 +326,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
           Marker(
             markerId: MarkerId('${item.type.name}_$i'),
             position: location,
-            icon: await _getMarkerIcon(item.type),
+            icon: await _getNumberedMarkerIcon(item.type, i + 1),
             infoWindow: InfoWindow(
               title: item.title,
               snippet: item.time != null
@@ -250,10 +338,27 @@ class _TripMapScreenState extends State<TripMapScreen> {
       }
     }
 
+    // Create polylines for flight routes (geodesic curves)
+    for (int i = 0; i < flightRoutes.length; i++) {
+      final route = flightRoutes[i];
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId('flight_route_$i'),
+          points: [route.departure, route.arrival],
+          color: const Color(0xFF9C27B0), // Purple to match flight markers
+          width: 3,
+          geodesic:
+              true, // This creates a curved line following Earth's curvature
+          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+        ),
+      );
+    }
+
     if (!mounted) return;
 
     setState(() {
       _markers = markers;
+      _polylines = polylines;
       _isLoadingMarkers = false;
     });
 
@@ -263,19 +368,77 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
   }
 
-  Future<BitmapDescriptor> _getMarkerIcon(MapItemType type) async {
+  Color _getMarkerColor(MapItemType type) {
     switch (type) {
       case MapItemType.activity:
-        return BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueOrange,
-        );
+        return Colors.orange;
       case MapItemType.hotel:
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+        return Colors.blue;
       case MapItemType.flight:
-        return BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueViolet,
-        );
+        return Colors.purple;
     }
+  }
+
+  Future<BitmapDescriptor> _getNumberedMarkerIcon(
+    MapItemType type,
+    int number,
+  ) async {
+    final color = _getMarkerColor(type);
+    const width = 40.0;
+    const height = 56.0;
+    const circleRadius = 16.0;
+    const circleY = circleRadius + 4; // Center of circle from top
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Draw pin shape
+    final paint = Paint()..color = color;
+    final path = Path();
+
+    // Pin body (teardrop shape) - starts from bottom point
+    path.moveTo(width / 2, height - 2); // Bottom point
+    path.quadraticBezierTo(2, circleY + 8, 2, circleY);
+    path.arcToPoint(
+      Offset(width - 2, circleY),
+      radius: const Radius.circular(circleRadius + 2),
+      clockwise: true,
+    );
+    path.quadraticBezierTo(width - 2, circleY + 8, width / 2, height - 2);
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    // Draw white circle background for number
+    final circlePaint = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(width / 2, circleY), 12, circlePaint);
+
+    // Draw number
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: number.toString(),
+        style: TextStyle(
+          color: color,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        width / 2 - textPainter.width / 2,
+        circleY - textPainter.height / 2,
+      ),
+    );
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.toInt(), height.toInt());
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List());
   }
 
   void _fitBounds(List<LatLng> points) {
@@ -283,7 +446,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
     if (points.length == 1) {
       _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(points.first, 14),
+        CameraUpdate.newLatLngZoom(points.first, 12),
       );
       return;
     }
@@ -305,7 +468,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
       northeast: LatLng(maxLat, maxLng),
     );
 
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
+    // Use generous pixel padding to ensure pins are visible at edges
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
   /// Get event counts per day for the carousel indicators
@@ -466,6 +630,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
                       zoom: 2,
                     ),
                     markers: _markers,
+                    polylines: _polylines,
+                    style: _minimalMapStyle,
                     onMapCreated: (controller) {
                       _mapController = controller;
                       // Re-fit bounds after map is created if we have markers
@@ -477,14 +643,20 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     myLocationButtonEnabled: false,
                     zoomControlsEnabled: true,
                     mapToolbarEnabled: false,
+                    zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
                   ),
-                // Loading indicator
+                // Loading indicator - IgnorePointer so it doesn't block map gestures
                 if (_isLoadingMarkers)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFFF7043),
+                  IgnorePointer(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFFF7043),
+                        ),
                       ),
                     ),
                   ),
@@ -622,6 +794,8 @@ class MapItem {
   final String? time;
   final String? subtitle;
   final String? airportCode;
+  final int
+  sortOrder; // For maintaining logical order (e.g., departure before arrival)
 
   const MapItem({
     required this.title,
@@ -630,5 +804,20 @@ class MapItem {
     this.time,
     this.subtitle,
     this.airportCode,
+    this.sortOrder = 0,
+  });
+}
+
+class FlightRoute {
+  final LatLng departure;
+  final LatLng arrival;
+  final String departureCode;
+  final String arrivalCode;
+
+  const FlightRoute({
+    required this.departure,
+    required this.arrival,
+    required this.departureCode,
+    required this.arrivalCode,
   });
 }
