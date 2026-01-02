@@ -56,8 +56,14 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               .where((t) => t.id == widget.trip.id)
               .firstOrNull;
           if (updatedTrip != null) {
+            final datesChanged =
+                updatedTrip.startDate != _trip.startDate ||
+                updatedTrip.endDate != _trip.endDate;
             setState(() {
               _trip = updatedTrip;
+              if (datesChanged) {
+                _updateDates();
+              }
             });
           }
         },
@@ -74,6 +80,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _startDate = DateTime.parse(trip.startDate);
     _endDate = DateTime.parse(trip.endDate);
     _selectedDate = DaysCarousel.getDefaultSelectedDate(_startDate, _endDate);
+  }
+
+  void _updateDates() {
+    final newStart = DateTime.parse(trip.startDate);
+    final newEnd = DateTime.parse(trip.endDate);
+
+    // Check if current selected date is still valid in the new range
+    final selectedStillValid =
+        !_selectedDate.isBefore(newStart) && !_selectedDate.isAfter(newEnd);
+
+    _startDate = newStart;
+    _endDate = newEnd;
+
+    if (!selectedStillValid) {
+      _selectedDate = DaysCarousel.getDefaultSelectedDate(_startDate, _endDate);
+    }
   }
 
   Future<void> _onDeleteFlight(String flightId) async {
@@ -479,7 +501,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.more_vert,
+                    Icons.more_horiz,
                     color: Colors.white,
                     size: 20,
                   ),

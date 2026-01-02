@@ -78,13 +78,21 @@ class Trip {
   }
 
   bool get isUpcoming {
-    final start = DateTime.parse(startDate);
-    return start.isAfter(DateTime.now());
+    final end = DateTime.parse(endDate);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endDay = DateTime(end.year, end.month, end.day);
+    // Trip is upcoming if it hasn't ended yet (end date is today or in the future)
+    return !endDay.isBefore(today);
   }
 
   bool get isPast {
     final end = DateTime.parse(endDate);
-    return end.isBefore(DateTime.now());
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endDay = DateTime(end.year, end.month, end.day);
+    // Trip is past if end date is before today
+    return endDay.isBefore(today);
   }
 
   /// Get the primary country from accommodations, or fall back to flight destination
