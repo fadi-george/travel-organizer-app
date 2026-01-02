@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'address_autocomplete.dart';
 import 'pdf_upload_dialog.dart';
 
 class HotelOptionsSheet extends StatelessWidget {
@@ -459,13 +460,11 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Address
-                  TextFormField(
+                  // Address with autocomplete
+                  AddressAutocomplete(
                     controller: _addressController,
-                    decoration: _inputDecoration(
-                      'Address (optional)',
-                      'e.g. 123 Main Street',
-                    ),
+                    label: 'Address (optional)',
+                    hint: 'e.g. 123 Main Street',
                   ),
                   const SizedBox(height: 20),
 

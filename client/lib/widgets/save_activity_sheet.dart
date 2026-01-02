@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_places_autocomplete_text_field/google_places_autocomplete_text_field.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'address_autocomplete.dart';
 import 'pdf_upload_dialog.dart';
 
 class ActivityOptionsSheet extends StatelessWidget {
@@ -477,32 +476,10 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
                   const SizedBox(height: 16),
 
                   // Location with Google Places Autocomplete
-                  GooglePlacesAutoCompleteTextFormField(
-                    textEditingController: _locationController,
-                    config: GoogleApiConfig(
-                      apiKey: dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '',
-                      debounceTime: 400,
-                    ),
-                    minInputLength: 2,
-                    decoration: _inputDecoration(
-                      'Location (optional)',
-                      'e.g. Champ de Mars, Paris',
-                    ),
-                    overlayContainerBuilder: (child) => Material(
-                      elevation: 4,
-                      borderRadius: BorderRadius.circular(12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: child,
-                      ),
-                    ),
-                    onSuggestionClicked: (prediction) {
-                      _locationController.text = prediction.description ?? '';
-                      _locationController
-                          .selection = TextSelection.fromPosition(
-                        TextPosition(offset: _locationController.text.length),
-                      );
-                    },
+                  AddressAutocomplete(
+                    controller: _locationController,
+                    label: 'Location (optional)',
+                    hint: 'e.g. Champ de Mars, Paris',
                   ),
                   const SizedBox(height: 16),
 

@@ -329,10 +329,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Future<void> _updateMarkers() async {
     if (!mounted) return;
-    
+
     // Capture dark mode status before async operations
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     setState(() => _isLoadingMarkers = true);
 
     try {
@@ -414,13 +414,15 @@ class _TripMapScreenState extends State<TripMapScreen> {
           // Add arrow markers evenly spaced along the path (no lines, just arrows)
           final angle = _calculateBearing(current.$1, next.$1);
           final arrowIcon = await _getArrowIcon(Colors.orange, angle);
-          
+
           const arrowCount = 8;
           for (int j = 1; j <= arrowCount; j++) {
             final fraction = j / (arrowCount + 1); // Evenly spaced
             final arrowPos = LatLng(
-              current.$1.latitude + (next.$1.latitude - current.$1.latitude) * fraction,
-              current.$1.longitude + (next.$1.longitude - current.$1.longitude) * fraction,
+              current.$1.latitude +
+                  (next.$1.latitude - current.$1.latitude) * fraction,
+              current.$1.longitude +
+                  (next.$1.longitude - current.$1.longitude) * fraction,
             );
             markers.add(
               Marker(
@@ -521,7 +523,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
       // Draw border around pin for better visibility
       final borderPaint = Paint()
-        ..color = isDarkMode ? Colors.white : Colors.black.withValues(alpha: 0.3)
+        ..color = isDarkMode
+            ? Colors.white
+            : Colors.black.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
       canvas.drawPath(path, borderPaint);
