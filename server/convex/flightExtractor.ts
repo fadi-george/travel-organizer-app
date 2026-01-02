@@ -94,39 +94,26 @@ export const extractFlightsFromPdf = action({
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");
     }
 
-    const extractionPrompt = `Analyze this PDF document and extract all flight information. 
-For each flight found, extract the following details in JSON format:
-
-{
-  "flights": [
-    {
-      "flightNumber": "string (e.g., 'AA123')",
-      "airline": "string (e.g., 'American Airlines')",
-      "departureAirportCode": "string (3-letter IATA code, e.g., 'LAX')",
-      "arrivalAirportCode": "string (3-letter IATA code, e.g., 'SIN')",
-      "departureDate": "string (ISO format: YYYY-MM-DD)",
-      "departureTime": "string (24h format: HH:MM) or null",
-      "arrivalDate": "string (ISO format: YYYY-MM-DD) or null",
-      "arrivalTime": "string (24h format: HH:MM) or null",
-      "departureTerminal": "string or null",
-      "arrivalTerminal": "string or null",
-      "confirmationNumber": "string or null",
-      "seatNumber": "string or null",
-      "cabinClass": "string (e.g., 'Economy', 'Business', 'First') or null",
-      "baggageAllowance": "string (e.g., '2 x 23kg', '1 carry-on') or null",
-      "aircraft": "string (e.g., 'Boeing 737 MAX 8', 'Airbus A350') or null",
-      "duration": "string (e.g., '01:35', '2h 30m', 'Non-stop') or null"
-    }
-  ]
-}
-
-Important:
-- Return ONLY valid JSON, no additional text
-- If no flights are found, return {"flights": []}
-- Convert all dates to ISO format (YYYY-MM-DD)
-- Convert times to 24-hour format (HH:MM)
-- Use null for any fields that cannot be determined
-- IATA airport codes (3-letter codes like LAX, JFK, SIN) are REQUIRED`;
+    const extractionPrompt = `Extract flights from this PDF. Return JSON only:
+{"flights":[{
+  "flightNumber":"AA123",
+  "airline":"American Airlines",
+  "departureAirportCode":"LAX",
+  "arrivalAirportCode":"SIN",
+  "departureDate":"YYYY-MM-DD",
+  "departureTime":"HH:MM"|null,
+  "arrivalDate":"YYYY-MM-DD"|null,
+  "arrivalTime":"HH:MM"|null,
+  "departureTerminal":string|null,
+  "arrivalTerminal":string|null,
+  "confirmationNumber":string|null,
+  "seatNumber":string|null,
+  "cabinClass":"Economy"|"Business"|"First"|null,
+  "baggageAllowance":string|null,
+  "aircraft":string|null,
+  "duration":string|null
+}]}
+Rules: JSON only. Dates=YYYY-MM-DD. Times=HH:MM 24h. Airport codes=3-letter IATA (required). No flights={"flights":[]}`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
