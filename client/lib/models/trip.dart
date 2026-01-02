@@ -97,7 +97,7 @@ class Trip {
 
   /// Get the primary country from accommodations, or fall back to flight destination
   String? get primaryPlace {
-    // Try accommodations first
+    // Try accommodations first - extract country from address (last comma-separated part)
     if (accommodations != null && accommodations!.isNotEmpty) {
       final sorted =
           List<Map<String, dynamic>>.from(
@@ -107,8 +107,12 @@ class Trip {
             final bDate = b['checkIn'] as String? ?? '';
             return aDate.compareTo(bDate);
           });
-      final country = sorted.first['country'] as String?;
-      if (country != null && country.isNotEmpty) return country;
+      final address = sorted.first['address'] as String?;
+      if (address != null && address.isNotEmpty) {
+        final parts = address.split(',').map((p) => p.trim()).toList();
+        final country = parts.last;
+        if (country.isNotEmpty) return country;
+      }
     }
 
     // Fall back to first flight's arrival city

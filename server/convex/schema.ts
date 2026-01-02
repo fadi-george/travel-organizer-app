@@ -12,8 +12,6 @@ export default defineSchema({
   accommodations: defineTable({
     tripId: v.id("trips"),
     hotelName: v.string(),
-    city: v.optional(v.string()),
-    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkInTime: v.optional(v.string()),

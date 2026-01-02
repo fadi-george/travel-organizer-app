@@ -224,8 +224,6 @@ class ConvexService {
   Future<Map<String, dynamic>?> createAccommodation({
     required String tripId,
     required String hotelName,
-    String? city,
-    String? country,
     String? roomType,
     String? checkIn,
     String? checkInTime,
@@ -240,8 +238,6 @@ class ConvexService {
       args: {
         'tripId': tripId,
         'hotelName': hotelName,
-        if (city != null) 'city': city,
-        if (country != null) 'country': country,
         if (roomType != null) 'roomType': roomType,
         if (checkIn != null) 'checkIn': checkIn,
         if (checkInTime != null) 'checkInTime': checkInTime,
@@ -262,8 +258,6 @@ class ConvexService {
   Future<Map<String, dynamic>?> updateAccommodation({
     required String id,
     String? hotelName,
-    String? city,
-    String? country,
     String? roomType,
     String? checkIn,
     String? checkInTime,
@@ -278,8 +272,6 @@ class ConvexService {
       args: {
         'id': id,
         if (hotelName != null) 'hotelName': hotelName,
-        if (city != null) 'city': city,
-        if (country != null) 'country': country,
         if (roomType != null) 'roomType': roomType,
         if (checkIn != null) 'checkIn': checkIn,
         if (checkInTime != null) 'checkInTime': checkInTime,

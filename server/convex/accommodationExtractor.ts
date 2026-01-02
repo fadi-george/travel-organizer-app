@@ -95,39 +95,17 @@ export const extractAccommodationsFromPdf = action({
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");
     }
 
-    const extractionPrompt = `Analyze this PDF document and extract all accommodation/hotel booking information.
-For each accommodation found, extract the following details in JSON format:
+    const extractionPrompt = `Extract hotel bookings from this PDF as JSON:
+{"accommodations":[{hotelName,roomType,checkIn,checkInTime,checkOut,checkOutTime,address,confirmationNumber,notes}]}
 
-{
-  "accommodations": [
-    {
-      "hotelName": "string (e.g., 'Amari Bangkok', 'Hilton Garden Inn')",
-      "city": "string (e.g., 'Bangkok', 'Phuket') or null",
-      "country": "string (e.g., 'Thailand', 'Japan') or null",
-      "roomType": "string (e.g., 'Deluxe Room', 'Superior Suite', 'Deluxe Pool View') or null",
-      "checkIn": "string (ISO format: YYYY-MM-DD) or null",
-      "checkInTime": "string (24-hour format: HH:MM, e.g., '15:00') or null - default to '15:00' if not specified",
-      "checkOut": "string (ISO format: YYYY-MM-DD) or null",
-      "checkOutTime": "string (24-hour format: HH:MM, e.g., '11:00') or null - default to '11:00' if not specified",
-      "address": "string (full hotel address) or null",
-      "confirmationNumber": "string (booking reference/confirmation number) or null",
-      "notes": "string (any additional details like number of nights, meal plan, special requests) or null"
-    }
-  ]
-}
-
-Important:
-- Return ONLY valid JSON, no additional text
-- If no accommodations are found, return {"accommodations": []}
-- Convert all dates to ISO format (YYYY-MM-DD)
-- Convert all times to 24-hour format (HH:MM)
-- If check-in time is not specified, use "15:00" as default
-- If check-out time is not specified, use "11:00" as default
-- If dates are in format like "13 – 16 Jan 26", convert the start date to checkIn (2026-01-13) and end date to checkOut (2026-01-16)
-- Handle 2-digit years by assuming 20xx (e.g., "Jan 26" = January 2026)
-- If number of nights is mentioned, include it in the notes field
-- Use null for any fields that cannot be determined
-- Extract room type/category information if available`;
+Rules:
+- Dates: YYYY-MM-DD format. "13-16 Jan 26" → checkIn:2026-01-13, checkOut:2026-01-16
+- Times: HH:MM format. Default checkIn:15:00, checkOut:11:00
+- 2-digit years = 20xx
+- address: Full Google Maps format (street, city, country)
+- Include nights count in notes
+- Use null for unknown fields
+- Return ONLY valid JSON`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
