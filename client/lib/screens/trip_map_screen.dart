@@ -42,6 +42,48 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   static const _defaultCenter = LatLng(0, 0);
 
+  // Light mode map style
+  static const _lightMapStyle = '''
+[
+  {"featureType": "poi", "stylers": [{"visibility": "off"}]},
+  {"featureType": "poi.park", "stylers": [{"visibility": "on"}]},
+  {"featureType": "transit", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.country", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"color": "#aaaaaa"}, {"weight": 1}]},
+  {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility": "simplified"}]},
+  {"featureType": "water", "elementType": "geometry.fill", "stylers": [{"color": "#c9e9f6"}]},
+  {"featureType": "landscape.natural", "elementType": "geometry.fill", "stylers": [{"color": "#f5f5f5"}]},
+  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#ffffff"}]},
+  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#fafafa"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#f0f0f0"}]},
+  {"featureType": "road", "elementType": "labels.icon", "stylers": [{"visibility": "off"}]}
+]
+''';
+
+  // Dark mode map style
+  static const _darkMapStyle = '''
+[
+  {"elementType": "geometry", "stylers": [{"color": "#1d2c4d"}]},
+  {"elementType": "labels.text.fill", "stylers": [{"color": "#8ec3b9"}]},
+  {"elementType": "labels.text.stroke", "stylers": [{"color": "#1a3646"}]},
+  {"featureType": "poi", "stylers": [{"visibility": "off"}]},
+  {"featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{"visibility": "on"}, {"color": "#023e58"}]},
+  {"featureType": "transit", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.country", "elementType": "geometry.stroke", "stylers": [{"visibility": "on"}, {"color": "#4b6878"}, {"weight": 1}]},
+  {"featureType": "administrative.province", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.locality", "elementType": "labels", "stylers": [{"visibility": "simplified"}]},
+  {"featureType": "water", "elementType": "geometry.fill", "stylers": [{"color": "#0e1626"}]},
+  {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#4e6d70"}]},
+  {"featureType": "landscape.natural", "elementType": "geometry.fill", "stylers": [{"color": "#1d2c4d"}]},
+  {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#304a7d"}]},
+  {"featureType": "road", "elementType": "labels.text.fill", "stylers": [{"color": "#98a5be"}]},
+  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#2c3e5e"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#2c3e50"}]},
+  {"featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{"color": "#255763"}]},
+  {"featureType": "road", "elementType": "labels.icon", "stylers": [{"visibility": "off"}]}
+]
+''';
+
   @override
   void initState() {
     super.initState();
@@ -361,32 +403,20 @@ class _TripMapScreenState extends State<TripMapScreen> {
             current.$2.sortOrder == 0 &&
             next.$2.sortOrder == 1;
         if (!isFlightPair) {
-          // Create dashed line using segments (PatternItem.dash freezes on iOS)
-          final dashSegments = _createDashedPath(current.$1, next.$1);
-          for (int j = 0; j < dashSegments.length; j++) {
-            polylines.add(
-              Polyline(
-                polylineId: PolylineId('path_${i}_$j'),
-                points: dashSegments[j],
-                color: Colors.orange,
-                width: 5,
-              ),
-            );
-          }
-
-          // Add up to 4 arrow markers evenly spaced along the line
+          // Add arrow markers evenly spaced along the path (no lines, just arrows)
           final angle = _calculateBearing(current.$1, next.$1);
           final arrowIcon = await _getArrowIcon(Colors.orange, angle);
           
-          for (int a = 1; a <= 4; a++) {
-            final fraction = a / 5.0; // Positions at 20%, 40%, 60%, 80%
+          const arrowCount = 8;
+          for (int j = 1; j <= arrowCount; j++) {
+            final fraction = j / (arrowCount + 1); // Evenly spaced
             final arrowPos = LatLng(
               current.$1.latitude + (next.$1.latitude - current.$1.latitude) * fraction,
               current.$1.longitude + (next.$1.longitude - current.$1.longitude) * fraction,
             );
             markers.add(
               Marker(
-                markerId: MarkerId('arrow_${i}_$a'),
+                markerId: MarkerId('arrow_${i}_$j'),
                 position: arrowPos,
                 icon: arrowIcon,
                 anchor: const Offset(0.5, 0.5),
@@ -480,17 +510,13 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
       canvas.drawPath(path, paint);
 
-      // Draw white circle background for number
-      final circlePaint = Paint()..color = Colors.white;
-      canvas.drawCircle(Offset(width / 2, circleY), 12, circlePaint);
-
-      // Draw number
+      // Draw number in white
       final textPainter = TextPainter(
         text: TextSpan(
           text: number.toString(),
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -531,30 +557,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return math.atan2(dLng, dLat);
   }
 
-  /// Create dashed path segments between two points
-  /// Returns a list of line segments (each segment is a list of 2 points)
-  List<List<LatLng>> _createDashedPath(LatLng start, LatLng end) {
-    const segments = 5; // Number of dashes
-    final dashes = <List<LatLng>>[];
-
-    final latStep = (end.latitude - start.latitude) / (segments * 2);
-    final lngStep = (end.longitude - start.longitude) / (segments * 2);
-
-    for (int i = 0; i < segments; i++) {
-      final dashStart = LatLng(
-        start.latitude + latStep * (i * 2),
-        start.longitude + lngStep * (i * 2),
-      );
-      final dashEnd = LatLng(
-        start.latitude + latStep * (i * 2 + 1),
-        start.longitude + lngStep * (i * 2 + 1),
-      );
-      dashes.add([dashStart, dashEnd]);
-    }
-
-    return dashes;
-  }
-
   /// Create arrow icon for direction indicator
   Future<BitmapDescriptor> _getArrowIcon(Color color, double bearing) async {
     const size = 24.0;
@@ -580,13 +582,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
     path.close();
 
     canvas.drawPath(path, paint);
-
-    // White border
-    final borderPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawPath(path, borderPaint);
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(size.toInt(), size.toInt());
@@ -789,6 +784,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     ),
                     markers: _markers,
                     polylines: _polylines,
+                    style: Theme.of(context).brightness == Brightness.dark
+                        ? _darkMapStyle
+                        : _lightMapStyle,
                     onMapCreated: (controller) {
                       _mapController = controller;
                       // Re-fit bounds after map is created if we have markers
