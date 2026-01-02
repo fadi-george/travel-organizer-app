@@ -753,21 +753,37 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             ),
           ),
 
-          // Days Carousel
+          // Days Carousel with Hero transition
           SliverToBoxAdapter(
             child: Column(
               children: [
                 const SizedBox(height: 16),
-                DaysCarousel(
-                  startDate: _startDate,
-                  endDate: _endDate,
-                  selectedDate: _selectedDate,
-                  eventCounts: _eventCountsPerDay,
-                  onDateSelected: (date) {
-                    setState(() {
-                      _selectedDate = date;
-                    });
-                  },
+                Hero(
+                  tag: 'days-carousel-${_trip.id}',
+                  flightShuttleBuilder:
+                      (
+                        flightContext,
+                        animation,
+                        flightDirection,
+                        fromHeroContext,
+                        toHeroContext,
+                      ) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: toHeroContext.widget,
+                        );
+                      },
+                  child: DaysCarousel(
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    selectedDate: _selectedDate,
+                    eventCounts: _eventCountsPerDay,
+                    onDateSelected: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),

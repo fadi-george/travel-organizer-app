@@ -55,12 +55,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
         if (dateStr != null && location != null && location.isNotEmpty) {
           final date = DateTime.tryParse(dateStr);
           if (date != null && _isSameDay(date, _selectedDate)) {
-            items.add(MapItem(
-              title: data['title'] as String? ?? 'Activity',
-              address: location,
-              type: MapItemType.activity,
-              time: data['time'] as String?,
-            ));
+            items.add(
+              MapItem(
+                title: data['title'] as String? ?? 'Activity',
+                address: location,
+                type: MapItemType.activity,
+                time: data['time'] as String?,
+              ),
+            );
           }
         }
       }
@@ -79,24 +81,28 @@ class _TripMapScreenState extends State<TripMapScreen> {
           if (checkIn != null) {
             final date = DateTime.tryParse(checkIn);
             if (date != null && _isSameDay(date, _selectedDate)) {
-              items.add(MapItem(
-                title: data['name'] as String? ?? 'Hotel',
-                address: address,
-                type: MapItemType.hotel,
-                subtitle: 'Check-in',
-              ));
+              items.add(
+                MapItem(
+                  title: data['name'] as String? ?? 'Hotel',
+                  address: address,
+                  type: MapItemType.hotel,
+                  subtitle: 'Check-in',
+                ),
+              );
             }
           }
           // Show on check-out day
           if (checkOut != null) {
             final date = DateTime.tryParse(checkOut);
             if (date != null && _isSameDay(date, _selectedDate)) {
-              items.add(MapItem(
-                title: data['name'] as String? ?? 'Hotel',
-                address: address,
-                type: MapItemType.hotel,
-                subtitle: 'Check-out',
-              ));
+              items.add(
+                MapItem(
+                  title: data['name'] as String? ?? 'Hotel',
+                  address: address,
+                  type: MapItemType.hotel,
+                  subtitle: 'Check-out',
+                ),
+              );
             }
           }
         }
@@ -118,20 +124,24 @@ class _TripMapScreenState extends State<TripMapScreen> {
             final arrivalCity = data['arrivalCity'] as String?;
 
             if (departureAirport != null && departureAirport.isNotEmpty) {
-              items.add(MapItem(
-                title: 'Departure: $departureAirport',
-                address: '$departureAirport Airport, ${departureCity ?? ''}',
-                type: MapItemType.flight,
-                time: data['departureTime'] as String?,
-              ));
+              items.add(
+                MapItem(
+                  title: 'Departure: $departureAirport',
+                  address: '$departureAirport Airport, ${departureCity ?? ''}',
+                  type: MapItemType.flight,
+                  time: data['departureTime'] as String?,
+                ),
+              );
             }
             if (arrivalAirport != null && arrivalAirport.isNotEmpty) {
-              items.add(MapItem(
-                title: 'Arrival: $arrivalAirport',
-                address: '$arrivalAirport Airport, ${arrivalCity ?? ''}',
-                type: MapItemType.flight,
-                time: data['arrivalTime'] as String?,
-              ));
+              items.add(
+                MapItem(
+                  title: 'Arrival: $arrivalAirport',
+                  address: '$arrivalAirport Airport, ${arrivalCity ?? ''}',
+                  type: MapItemType.flight,
+                  time: data['arrivalTime'] as String?,
+                ),
+              );
             }
           }
         }
@@ -182,7 +192,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
         }
         if (checkOut != null) {
           final date = DateTime.tryParse(checkOut);
-          final checkInDate = checkIn != null ? DateTime.tryParse(checkIn) : null;
+          final checkInDate = checkIn != null
+              ? DateTime.tryParse(checkIn)
+              : null;
           if (date != null &&
               (checkInDate == null ||
                   date.year != checkInDate.year ||
@@ -225,23 +237,39 @@ class _TripMapScreenState extends State<TripMapScreen> {
       ),
       body: Column(
         children: [
-          // Days Carousel
+          // Days Carousel with Hero transition
           Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
               children: [
                 const SizedBox(height: 12),
-                DaysCarousel(
-                  startDate: _startDate,
-                  endDate: _endDate,
-                  selectedDate: _selectedDate,
-                  eventCounts: _eventCountsPerDay,
-                  onDateSelected: (date) {
-                    setState(() {
-                      _selectedDate = date;
-                    });
-                    _updateMarkers();
-                  },
+                Hero(
+                  tag: 'days-carousel-${widget.trip.id}',
+                  flightShuttleBuilder:
+                      (
+                        flightContext,
+                        animation,
+                        flightDirection,
+                        fromHeroContext,
+                        toHeroContext,
+                      ) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: toHeroContext.widget,
+                        );
+                      },
+                  child: DaysCarousel(
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    selectedDate: _selectedDate,
+                    eventCounts: _eventCountsPerDay,
+                    onDateSelected: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                      _updateMarkers();
+                    },
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
@@ -260,7 +288,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.map_outlined, size: 64, color: Colors.grey.shade400),
+                          Icon(
+                            Icons.map_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Map unavailable',
@@ -273,7 +305,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
                           const SizedBox(height: 4),
                           Text(
                             'Check Google Maps API key configuration',
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
                         ],
                       ),
@@ -337,9 +372,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -349,8 +384,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFF7043)
-                                        .withValues(alpha: 0.15),
+                                    color: const Color(
+                                      0xFFFF7043,
+                                    ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -408,10 +444,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                           Icon(
                             Icons.location_off_outlined,
                             size: 48,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.4),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.4),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -419,10 +454,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -430,10 +464,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                             'Add addresses to activities to see them here',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -504,9 +537,7 @@ class _LocationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -517,11 +548,7 @@ class _LocationCard extends StatelessWidget {
               color: item.color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              item.icon,
-              color: item.color,
-              size: 20,
-            ),
+            child: Icon(item.icon, color: item.color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -578,4 +605,3 @@ class _LocationCard extends StatelessWidget {
     );
   }
 }
-
