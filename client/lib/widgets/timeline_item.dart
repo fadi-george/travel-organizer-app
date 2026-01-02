@@ -109,7 +109,12 @@ class TimelineItem extends StatelessWidget {
   Widget build(BuildContext context) {
     // Use special flight widget for flights
     if (type == 'flight') {
-      return FlightCard(data: data, onEdit: onEdit, onDelete: onDelete);
+      return FlightCard(
+        data: data,
+        viewType: FlightCardViewType.timeline,
+        onEdit: onEdit,
+        onDelete: onDelete,
+      );
     }
 
     // Use hotel card for accommodations

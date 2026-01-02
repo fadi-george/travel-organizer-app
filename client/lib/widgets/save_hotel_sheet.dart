@@ -15,6 +15,20 @@ class HotelOptionsSheet extends StatelessWidget {
     );
   }
 
+  static void showEditHotel(
+    BuildContext context, {
+    required String tripId,
+    required Map<String, dynamic> hotelData,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _ManualHotelFormSheet(tripId: tripId, existingHotel: hotelData),
+    );
+  }
+
   void _onAddHotelManually(BuildContext context) {
     Navigator.pop(context);
     showModalBottomSheet(
@@ -96,8 +110,9 @@ class HotelOptionsSheet extends StatelessWidget {
 
 class _ManualHotelFormSheet extends StatefulWidget {
   final String tripId;
+  final Map<String, dynamic>? existingHotel;
 
-  const _ManualHotelFormSheet({required this.tripId});
+  const _ManualHotelFormSheet({required this.tripId, this.existingHotel});
 
   @override
   State<_ManualHotelFormSheet> createState() => _ManualHotelFormSheetState();

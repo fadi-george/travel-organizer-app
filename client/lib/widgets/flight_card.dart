@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'swipe_action_card.dart';
+import 'timeline_styles.dart';
+
+enum FlightCardViewType { card, timeline }
 
 class FlightCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final FlightCardViewType viewType;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -10,6 +14,7 @@ class FlightCard extends StatelessWidget {
   const FlightCard({
     super.key,
     required this.data,
+    this.viewType = FlightCardViewType.timeline,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -49,6 +54,28 @@ class FlightCard extends StatelessWidget {
     return '${weekdays[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
   }
 
+  /// Format date as short form (e.g., "Jan 13")
+  String _formatShortDate(String? dateStr) {
+    if (dateStr == null) return '';
+    final dt = DateTime.tryParse(dateStr);
+    if (dt == null) return '';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[dt.month - 1]} ${dt.day}';
+  }
+
   /// Extract airport code from city string (e.g., "Newark (EWR)" -> "EWR")
   String _extractAirportCode(String city) {
     final match = RegExp(r'\(([A-Z]{3})\)').firstMatch(city);
@@ -63,6 +90,88 @@ class FlightCard extends StatelessWidget {
   String _extractCityName(String city) {
     // Remove airport code in parentheses if present
     return city.replaceAll(RegExp(r'\s*\([A-Z]{3}\)'), '').trim();
+  }
+
+  static const _accentColor = Color(0xFF5B9BD5);
+
+  Widget _buildTimelineView(
+    BuildContext context, {
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required String origin,
+    required String destination,
+    required String flightNumber,
+    required String? departureDate,
+    required String? arrivalDate,
+    required String? departureTime,
+    required String? arrivalTime,
+  }) {
+    return SwipeActionCard(
+      onTap: onTap,
+      onEdit: onEdit,
+      onDelete: onDelete,
+      margin: TimelineStyles.itemMargin,
+      child: Container(
+        padding: TimelineStyles.containerPadding,
+        decoration: TimelineStyles.containerDecoration(
+          colorScheme: colorScheme,
+          isDark: isDark,
+        ),
+        child: Row(
+          children: [
+            // Flight icon
+            TimelineStyles.iconContainer(
+              accentColor: _accentColor,
+              child: const RotatedBox(
+                quarterTurns: 1,
+                child: Icon(
+                  Icons.flight,
+                  color: _accentColor,
+                  size: TimelineStyles.iconSize,
+                ),
+              ),
+            ),
+            const SizedBox(width: TimelineStyles.contentSpacing),
+            // Route and flight number
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$origin — $destination',
+                    style: TimelineStyles.titleStyle(colorScheme),
+                  ),
+                  if (flightNumber.isNotEmpty)
+                    Text(
+                      flightNumber,
+                      style: TimelineStyles.subtitleStyle(colorScheme),
+                    ),
+                ],
+              ),
+            ),
+            // Date and times
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (departureDate != null)
+                  Text(
+                    arrivalDate != null &&
+                            _formatShortDate(departureDate) !=
+                                _formatShortDate(arrivalDate)
+                        ? '${_formatShortDate(departureDate)} – ${_formatShortDate(arrivalDate)}'
+                        : _formatShortDate(departureDate),
+                    style: TimelineStyles.subtitleStyle(colorScheme),
+                  ),
+                Text(
+                  '${_formatTime(departureTime)} – ${_formatTime(arrivalTime)}',
+                  style: TimelineStyles.subtitleStyle(colorScheme),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -81,6 +190,22 @@ class FlightCard extends StatelessWidget {
     final departureTime = data['departureTime'] as String?;
     final arrivalTime = data['arrivalTime'] as String?;
     final flightNumber = data['flightNumber'] as String? ?? '';
+
+    if (viewType == FlightCardViewType.timeline) {
+      final arrivalDate = data['arrivalDate'] as String?;
+      return _buildTimelineView(
+        context,
+        colorScheme: colorScheme,
+        isDark: isDark,
+        origin: origin,
+        destination: destination,
+        flightNumber: flightNumber,
+        departureDate: departureDate,
+        arrivalDate: arrivalDate,
+        departureTime: departureTime,
+        arrivalTime: arrivalTime,
+      );
+    }
 
     return SwipeActionCard(
       onTap: onTap,

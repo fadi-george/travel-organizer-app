@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'swipe_action_card.dart';
+import 'timeline_styles.dart';
 
 enum HotelCardType { checkIn, checkOut }
+
+enum HotelCardViewType { card, timeline }
 
 class HotelCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final HotelCardType type;
+  final HotelCardViewType viewType;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -14,6 +18,7 @@ class HotelCard extends StatelessWidget {
     super.key,
     required this.data,
     this.type = HotelCardType.checkIn,
+    this.viewType = HotelCardViewType.timeline,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -25,7 +30,88 @@ class HotelCard extends StatelessWidget {
   IconData get _typeIcon =>
       type == HotelCardType.checkIn ? Icons.login : Icons.logout;
 
-  Color get _accentColor => Colors.purple;
+  static const _accentColor = Color(0xFF9C27B0);
+
+  Widget _buildTimelineView(
+    BuildContext context, {
+    required ColorScheme colorScheme,
+    required bool isDark,
+    required String hotelName,
+    required String? roomType,
+    required String? city,
+  }) {
+    return SwipeActionCard(
+      onTap: onTap,
+      onEdit: onEdit,
+      onDelete: onDelete,
+      margin: TimelineStyles.itemMargin,
+      child: Container(
+        padding: TimelineStyles.containerPadding,
+        decoration: TimelineStyles.containerDecoration(
+          colorScheme: colorScheme,
+          isDark: isDark,
+        ),
+        child: Row(
+          children: [
+            // Hotel icon
+            TimelineStyles.iconContainer(
+              accentColor: _accentColor,
+              child: Icon(
+                Icons.hotel,
+                color: _accentColor,
+                size: TimelineStyles.iconSize,
+              ),
+            ),
+            const SizedBox(width: TimelineStyles.contentSpacing),
+            // Hotel name and room type
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hotelName,
+                    style: TimelineStyles.titleStyle(colorScheme),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (roomType != null)
+                    Text(
+                      roomType,
+                      style: TimelineStyles.subtitleStyle(colorScheme),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            // Check-in/out type and city
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_typeIcon, size: 14, color: _accentColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      _typeLabel,
+                      style: TextStyle(
+                        fontSize: TimelineStyles.subtitleFontSize,
+                        color: _accentColor,
+                        fontWeight: TimelineStyles.subtitleFontWeight,
+                      ),
+                    ),
+                  ],
+                ),
+                if (city != null)
+                  Text(city, style: TimelineStyles.subtitleStyle(colorScheme)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +122,17 @@ class HotelCard extends StatelessWidget {
     final hotelName = data['hotelName'] as String? ?? 'Hotel';
     final roomType = data['roomType'] as String?;
     final city = data['city'] as String?;
+
+    if (viewType == HotelCardViewType.timeline) {
+      return _buildTimelineView(
+        context,
+        colorScheme: colorScheme,
+        isDark: isDark,
+        hotelName: hotelName,
+        roomType: roomType,
+        city: city,
+      );
+    }
 
     return SwipeActionCard(
       onTap: onTap,
