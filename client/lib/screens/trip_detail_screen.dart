@@ -768,7 +768,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 final accommodationType = item['accommodationType'] as String?;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TimelineItem(
                     type: type,
                     data: data,

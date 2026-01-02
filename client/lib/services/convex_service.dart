@@ -305,6 +305,19 @@ class ConvexService {
     return Map<String, dynamic>.from(decoded as Map);
   }
 
+  /// Extract activities from PDF using Claude AI
+  Future<Map<String, dynamic>> extractActivitiesFromPdf({
+    required String tripId,
+    required String pdfBase64,
+  }) async {
+    final result = await client.action(
+      name: 'activityExtractor:extractActivitiesFromPdf',
+      args: {'tripId': tripId, 'pdfBase64': pdfBase64},
+    );
+    final decoded = jsonDecode(result);
+    return Map<String, dynamic>.from(decoded as Map);
+  }
+
   /// Create a new activity
   Future<Map<String, dynamic>?> createActivity({
     required String tripId,
