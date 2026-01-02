@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../models/trip.dart';
+import '../services/airports_service.dart';
 import '../widgets/days_carousel.dart';
 
 class TripMapScreen extends StatefulWidget {
@@ -21,10 +25,13 @@ class _TripMapScreenState extends State<TripMapScreen> {
   late DateTime _selectedDate;
   late DateTime _startDate;
   late DateTime _endDate;
-  // ignore: unused_field
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   bool _mapError = false;
+  bool _isLoadingMarkers = false;
+
+  // Cache geocoded addresses to avoid repeated API calls
+  final Map<String, LatLng?> _geocodeCache = {};
 
   static const _defaultCenter = LatLng(0, 0);
 
@@ -34,15 +41,61 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _selectedDate = widget.initialDate;
     _startDate = DateTime.parse(widget.trip.startDate);
     _endDate = DateTime.parse(widget.trip.endDate);
-    _updateMarkers();
+    _loadAirportsAndMarkers();
+  }
+
+  Future<void> _loadAirportsAndMarkers() async {
+    await AirportsService.instance.loadAirports();
+    await _updateMarkers();
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  /// Geocode an address to LatLng using Google Geocoding API
+  Future<LatLng?> _geocodeAddress(String address) async {
+    if (_geocodeCache.containsKey(address)) {
+      return _geocodeCache[address];
+    }
+
+    final apiKey = dotenv.env['GOOGLE_PLACES_API_KEY'] ?? '';
+    if (apiKey.isEmpty) return null;
+
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json'
+        '?address=${Uri.encodeComponent(address)}'
+        '&key=$apiKey',
+      );
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final location = data['results'][0]['geometry']['location'];
+          final latLng = LatLng(location['lat'], location['lng']);
+          _geocodeCache[address] = latLng;
+          return latLng;
+        }
+      }
+    } catch (_) {
+      // Geocoding failed
+    }
+    _geocodeCache[address] = null;
+    return null;
+  }
+
+  /// Get airport coordinates by IATA code
+  LatLng? _getAirportLocation(String iataCode) {
+    final airport = AirportsService.instance.getByIata(iataCode);
+    if (airport != null && airport.lat != null && airport.lon != null) {
+      return LatLng(airport.lat!, airport.lon!);
+    }
+    return null;
+  }
+
   /// Get items with locations for the selected date
-  List<MapItem> get _itemsForSelectedDate {
+  List<MapItem> _getItemsForSelectedDate() {
     final items = <MapItem>[];
 
     // Add activities
@@ -124,23 +177,31 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
             if (departureAirportCode != null &&
                 departureAirportCode.isNotEmpty) {
+              final airport = AirportsService.instance.getByIata(
+                departureAirportCode,
+              );
               items.add(
                 MapItem(
                   title: 'Departure: $departureAirportCode',
-                  address: '$departureAirportCode Airport',
+                  address: airport?.name ?? '$departureAirportCode Airport',
                   type: MapItemType.flight,
                   time: data['departureTime'] as String?,
+                  airportCode: departureAirportCode,
                 ),
               );
             }
 
             if (arrivalAirportCode != null && arrivalAirportCode.isNotEmpty) {
+              final airport = AirportsService.instance.getByIata(
+                arrivalAirportCode,
+              );
               items.add(
                 MapItem(
                   title: 'Arrival: $arrivalAirportCode',
-                  address: '$arrivalAirportCode Airport',
+                  address: airport?.name ?? '$arrivalAirportCode Airport',
                   type: MapItemType.flight,
                   time: data['arrivalTime'] as String?,
+                  airportCode: arrivalAirportCode,
                 ),
               );
             }
@@ -152,12 +213,99 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return items;
   }
 
-  void _updateMarkers() {
-    // Note: In a real app, you'd use geocoding to convert addresses to coordinates
-    // For now, we show the list of locations with addresses
+  Future<void> _updateMarkers() async {
+    setState(() => _isLoadingMarkers = true);
+
+    final items = _getItemsForSelectedDate();
+    final markers = <Marker>{};
+    final bounds = <LatLng>[];
+
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      LatLng? location;
+
+      // Get location based on item type
+      if (item.type == MapItemType.flight && item.airportCode != null) {
+        location = _getAirportLocation(item.airportCode!);
+      } else {
+        location = await _geocodeAddress(item.address);
+      }
+
+      if (location != null) {
+        bounds.add(location);
+
+        markers.add(
+          Marker(
+            markerId: MarkerId('${item.type.name}_$i'),
+            position: location,
+            icon: await _getMarkerIcon(item.type),
+            infoWindow: InfoWindow(
+              title: item.title,
+              snippet: item.time != null
+                  ? '${item.time} • ${item.address}'
+                  : item.address,
+            ),
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
+
     setState(() {
-      _markers = {};
+      _markers = markers;
+      _isLoadingMarkers = false;
     });
+
+    // Fit camera to show all markers
+    if (bounds.isNotEmpty && _mapController != null) {
+      _fitBounds(bounds);
+    }
+  }
+
+  Future<BitmapDescriptor> _getMarkerIcon(MapItemType type) async {
+    switch (type) {
+      case MapItemType.activity:
+        return BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueOrange,
+        );
+      case MapItemType.hotel:
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+      case MapItemType.flight:
+        return BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueViolet,
+        );
+    }
+  }
+
+  void _fitBounds(List<LatLng> points) {
+    if (points.isEmpty || _mapController == null) return;
+
+    if (points.length == 1) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(points.first, 14),
+      );
+      return;
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 60));
   }
 
   /// Get event counts per day for the carousel indicators
@@ -227,9 +375,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _itemsForSelectedDate;
-    final hasLocations = items.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.trip.name),
@@ -277,11 +422,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
               ],
             ),
           ),
-          // Map and locations
+          // Map
           Expanded(
             child: Stack(
               children: [
-                // Google Map (with error fallback)
                 if (_mapError)
                   Container(
                     color: Colors.grey.shade200,
@@ -324,107 +468,28 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     markers: _markers,
                     onMapCreated: (controller) {
                       _mapController = controller;
+                      // Re-fit bounds after map is created if we have markers
+                      if (_markers.isNotEmpty) {
+                        final points = _markers.map((m) => m.position).toList();
+                        _fitBounds(points);
+                      }
                     },
                     myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
+                    zoomControlsEnabled: true,
+                    mapToolbarEnabled: false,
                   ),
-                // Locations list overlay
-                if (hasLocations)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.35,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Handle
-                          Container(
-                            margin: const EdgeInsets.only(top: 12),
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Locations',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFFF7043,
-                                    ).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '${items.length}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFFFF7043),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Flexible(
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              padding: const EdgeInsets.only(
-                                left: 16,
-                                right: 16,
-                                bottom: 24,
-                              ),
-                              itemCount: items.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 8),
-                              itemBuilder: (context, index) {
-                                final item = items[index];
-                                return _LocationCard(item: item);
-                              },
-                            ),
-                          ),
-                        ],
+                // Loading indicator
+                if (_isLoadingMarkers)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF7043),
                       ),
                     ),
                   ),
-                // Empty state
-                if (!hasLocations)
+                // Empty state when no markers
+                if (!_isLoadingMarkers && _markers.isEmpty)
                   Center(
                     child: Container(
                       margin: const EdgeInsets.all(32),
@@ -462,7 +527,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Add addresses to activities to see them here',
+                            'Add flights, hotels, or activities to see them on the map',
                             style: TextStyle(
                               fontSize: 13,
                               color: Theme.of(
@@ -471,6 +536,39 @@ class _TripMapScreenState extends State<TripMapScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Legend
+                if (_markers.isNotEmpty)
+                  Positioned(
+                    left: 16,
+                    bottom: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _LegendItem(color: Colors.purple, label: 'Flight'),
+                          const SizedBox(width: 12),
+                          _LegendItem(color: Colors.blue, label: 'Hotel'),
+                          const SizedBox(width: 12),
+                          _LegendItem(color: Colors.orange, label: 'Activity'),
                         ],
                       ),
                     ),
@@ -484,6 +582,37 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 }
 
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 enum MapItemType { activity, hotel, flight }
 
 class MapItem {
@@ -492,6 +621,7 @@ class MapItem {
   final MapItemType type;
   final String? time;
   final String? subtitle;
+  final String? airportCode;
 
   const MapItem({
     required this.title,
@@ -499,110 +629,6 @@ class MapItem {
     required this.type,
     this.time,
     this.subtitle,
+    this.airportCode,
   });
-
-  IconData get icon {
-    switch (type) {
-      case MapItemType.activity:
-        return Icons.local_activity;
-      case MapItemType.hotel:
-        return Icons.hotel;
-      case MapItemType.flight:
-        return Icons.flight;
-    }
-  }
-
-  Color get color {
-    switch (type) {
-      case MapItemType.activity:
-        return Colors.orange;
-      case MapItemType.hotel:
-        return Colors.blue;
-      case MapItemType.flight:
-        return Colors.purple;
-    }
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  final MapItem item;
-
-  const _LocationCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(item.icon, color: item.color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (item.time != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        item.time!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle ?? item.address,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.open_in_new,
-            size: 18,
-            color: colorScheme.onSurface.withValues(alpha: 0.4),
-          ),
-        ],
-      ),
-    );
-  }
 }

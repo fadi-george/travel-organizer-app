@@ -9,6 +9,8 @@ class Airport {
   final String city;
   final String country;
   final String? state;
+  final double? lat;
+  final double? lon;
 
   const Airport({
     required this.iata,
@@ -17,6 +19,8 @@ class Airport {
     required this.city,
     required this.country,
     this.state,
+    this.lat,
+    this.lon,
   });
 
   /// Display format: "LAX - Los Angeles International"
@@ -33,6 +37,8 @@ class Airport {
       city: json['city'] as String? ?? '',
       country: json['country'] as String? ?? '',
       state: json['state'] as String?,
+      lat: (json['lat'] as num?)?.toDouble(),
+      lon: (json['lon'] as num?)?.toDouble(),
     );
   }
 }
