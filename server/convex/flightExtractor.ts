@@ -16,8 +16,8 @@ export const saveExtractedFlights = internalMutation({
       v.object({
         flightNumber: v.string(),
         airline: v.string(),
-        departureCity: v.string(),
-        arrivalCity: v.string(),
+        departureAirportCode: v.string(),
+        arrivalAirportCode: v.string(),
         departureDate: v.string(),
         departureTime: v.optional(v.string()),
         arrivalDate: v.optional(v.string()),
@@ -94,38 +94,26 @@ export const extractFlightsFromPdf = action({
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");
     }
 
-    const extractionPrompt = `Analyze this PDF document and extract all flight information. 
-For each flight found, extract the following details in JSON format:
-
-{
-  "flights": [
-    {
-      "flightNumber": "string (e.g., 'AA123')",
-      "airline": "string (e.g., 'American Airlines')",
-      "departureCity": "string (city name or airport code)",
-      "arrivalCity": "string (city name or airport code)",
-      "departureDate": "string (ISO format: YYYY-MM-DD)",
-      "departureTime": "string (24h format: HH:MM) or null",
-      "arrivalDate": "string (ISO format: YYYY-MM-DD) or null",
-      "arrivalTime": "string (24h format: HH:MM) or null",
-      "departureTerminal": "string or null",
-      "arrivalTerminal": "string or null",
-      "confirmationNumber": "string or null",
-      "seatNumber": "string or null",
-      "cabinClass": "string (e.g., 'Economy', 'Business', 'First') or null",
-      "baggageAllowance": "string (e.g., '2 x 23kg', '1 carry-on') or null",
-      "aircraft": "string (e.g., 'Boeing 737 MAX 8', 'Airbus A350') or null",
-      "duration": "string (e.g., '01:35', '2h 30m', 'Non-stop') or null"
-    }
-  ]
-}
-
-Important:
-- Return ONLY valid JSON, no additional text
-- If no flights are found, return {"flights": []}
-- Convert all dates to ISO format (YYYY-MM-DD)
-- Convert times to 24-hour format (HH:MM)
-- Use null for any fields that cannot be determined`;
+    const extractionPrompt = `Extract flights from this PDF. Return JSON only:
+{"flights":[{
+  "flightNumber":"AA123",
+  "airline":"American Airlines",
+  "departureAirportCode":"LAX",
+  "arrivalAirportCode":"SIN",
+  "departureDate":"YYYY-MM-DD",
+  "departureTime":"HH:MM"|null,
+  "arrivalDate":"YYYY-MM-DD"|null,
+  "arrivalTime":"HH:MM"|null,
+  "departureTerminal":string|null,
+  "arrivalTerminal":string|null,
+  "confirmationNumber":string|null,
+  "seatNumber":string|null,
+  "cabinClass":"Economy"|"Business"|"First"|null,
+  "baggageAllowance":string|null,
+  "aircraft":string|null,
+  "duration":string|null
+}]}
+Rules: JSON only. Dates=YYYY-MM-DD. Times=HH:MM 24h. Airport codes=3-letter IATA (required). No flights={"flights":[]}`;
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -188,15 +176,15 @@ Important:
           (f: Record<string, unknown>) =>
             f.flightNumber &&
             f.airline &&
-            f.departureCity &&
-            f.arrivalCity &&
+            f.departureAirportCode &&
+            f.arrivalAirportCode &&
             f.departureDate
         )
         .map((f: Record<string, unknown>) => ({
           flightNumber: String(f.flightNumber),
           airline: String(f.airline),
-          departureCity: String(f.departureCity),
-          arrivalCity: String(f.arrivalCity),
+          departureAirportCode: String(f.departureAirportCode).toUpperCase(),
+          arrivalAirportCode: String(f.arrivalAirportCode).toUpperCase(),
           departureDate: String(f.departureDate),
           departureTime: f.departureTime ? String(f.departureTime) : undefined,
           arrivalDate: f.arrivalDate ? String(f.arrivalDate) : undefined,

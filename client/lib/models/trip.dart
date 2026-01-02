@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class Trip {
   final String id;
   final String name;
@@ -121,7 +123,32 @@ class Trip {
             final bDate = b['departureDate'] as String? ?? '';
             return aDate.compareTo(bDate);
           });
-      return sorted.first['arrivalCity'] as String?;
+      final arrivalCity = sorted.first['arrivalCity'] as String?;
+      if (arrivalCity != null && arrivalCity.isNotEmpty) return arrivalCity;
+    }
+
+    // Fall back to first activity with a valid location
+    if (activities != null && activities!.isNotEmpty) {
+      final sorted =
+          List<Map<String, dynamic>>.from(
+            activities!.map((a) => a as Map<String, dynamic>),
+          )..sort((a, b) {
+            final aDate = a['date'] as String? ?? '';
+            final bDate = b['date'] as String? ?? '';
+            return aDate.compareTo(bDate);
+          });
+      for (final activity in sorted) {
+        final location = activity['location'] as String?;
+        if (location != null && location.isNotEmpty) {
+          // Extract country from full address (e.g., "Place, Address, City, Country")
+          final parts = location.split(',').map((p) => p.trim()).toList();
+          if (parts.isNotEmpty) {
+            // Return last part (typically the country)
+            return parts.last;
+          }
+          return location;
+        }
+      }
     }
 
     return null;

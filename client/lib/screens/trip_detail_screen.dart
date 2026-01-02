@@ -9,8 +9,10 @@ import '../widgets/hotel_card.dart';
 import '../widgets/save_activity_sheet.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
+import '../theme/app_theme.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
+import 'trip_map_screen.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -294,6 +296,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
+    debugPrint('Primary place: ${widget.primaryPlace}');
     return PlacesImages.getImageUrl(widget.primaryPlace);
   }
 
@@ -546,9 +549,20 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return allItems;
   }
 
+  void _openMapScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            TripMapScreen(trip: _trip, initialDate: _selectedDate),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: AppFab.map(onPressed: _openMapScreen),
       body: CustomScrollView(
         slivers: [
           // Hero header with image
@@ -740,21 +754,37 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             ),
           ),
 
-          // Days Carousel
+          // Days Carousel with Hero transition
           SliverToBoxAdapter(
             child: Column(
               children: [
                 const SizedBox(height: 16),
-                DaysCarousel(
-                  startDate: _startDate,
-                  endDate: _endDate,
-                  selectedDate: _selectedDate,
-                  eventCounts: _eventCountsPerDay,
-                  onDateSelected: (date) {
-                    setState(() {
-                      _selectedDate = date;
-                    });
-                  },
+                Hero(
+                  tag: 'days-carousel-${_trip.id}',
+                  flightShuttleBuilder:
+                      (
+                        flightContext,
+                        animation,
+                        flightDirection,
+                        fromHeroContext,
+                        toHeroContext,
+                      ) {
+                        return Material(
+                          color: Colors.transparent,
+                          child: toHeroContext.widget,
+                        );
+                      },
+                  child: DaysCarousel(
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    selectedDate: _selectedDate,
+                    eventCounts: _eventCountsPerDay,
+                    onDateSelected: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Divider(height: 1),

@@ -277,7 +277,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                             },
                             child: IgnorePointer(
                               child: ModelViewer(
-                                src: 'assets/models/toy_airplane.glb',
+                                src: 'assets/models/toy_airplane2.glb',
                                 alt: 'Toy airplane',
                                 autoRotate: false,
                                 cameraControls: false,

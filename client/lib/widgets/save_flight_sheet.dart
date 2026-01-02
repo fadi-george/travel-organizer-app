@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'airport_autocomplete.dart';
 import 'pdf_upload_dialog.dart';
 
 class FlightOptionsSheet extends StatelessWidget {
@@ -134,8 +135,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _airlineController = TextEditingController();
   final _flightNumberController = TextEditingController();
-  final _departureCityController = TextEditingController();
-  final _arrivalCityController = TextEditingController();
+  final _departureAirportCodeController = TextEditingController();
+  final _arrivalAirportCodeController = TextEditingController();
   final _confirmationController = TextEditingController();
   final _seatController = TextEditingController();
   final _cabinClassController = TextEditingController();
@@ -155,8 +156,10 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
       final flight = widget.existingFlight!;
       _airlineController.text = flight['airline'] as String? ?? '';
       _flightNumberController.text = flight['flightNumber'] as String? ?? '';
-      _departureCityController.text = flight['departureCity'] as String? ?? '';
-      _arrivalCityController.text = flight['arrivalCity'] as String? ?? '';
+      _departureAirportCodeController.text =
+          flight['departureAirportCode'] as String? ?? '';
+      _arrivalAirportCodeController.text =
+          flight['arrivalAirportCode'] as String? ?? '';
       _confirmationController.text =
           flight['confirmationNumber'] as String? ?? '';
       _seatController.text = flight['seatNumber'] as String? ?? '';
@@ -200,8 +203,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
   void dispose() {
     _airlineController.dispose();
     _flightNumberController.dispose();
-    _departureCityController.dispose();
-    _arrivalCityController.dispose();
+    _departureAirportCodeController.dispose();
+    _arrivalAirportCodeController.dispose();
     _confirmationController.dispose();
     _seatController.dispose();
     _cabinClassController.dispose();
@@ -304,14 +307,24 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
 
       final seatNumber = _seatController.text.trim();
       final cabinClass = _cabinClassController.text.trim();
+      final departureAirportCode = _departureAirportCodeController.text
+          .trim()
+          .toUpperCase();
+      final arrivalAirportCode = _arrivalAirportCodeController.text
+          .trim()
+          .toUpperCase();
 
       if (isEditing) {
         await convexService.updateFlight(
           id: widget.existingFlight!['_id'] as String,
           airline: _airlineController.text.trim(),
           flightNumber: flightNumber,
-          departureCity: _departureCityController.text.trim(),
-          arrivalCity: _arrivalCityController.text.trim(),
+          departureAirportCode: departureAirportCode.isNotEmpty
+              ? departureAirportCode
+              : null,
+          arrivalAirportCode: arrivalAirportCode.isNotEmpty
+              ? arrivalAirportCode
+              : null,
           departureDate: _departureDate!.toIso8601String().split('T').first,
           departureTime: departureTimeStr,
           arrivalDate: _arrivalDate?.toIso8601String().split('T').first,
@@ -327,8 +340,8 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
           tripId: widget.tripId,
           airline: _airlineController.text.trim(),
           flightNumber: flightNumber,
-          departureCity: _departureCityController.text.trim(),
-          arrivalCity: _arrivalCityController.text.trim(),
+          departureAirportCode: departureAirportCode,
+          arrivalAirportCode: arrivalAirportCode,
           departureDate: _departureDate!.toIso8601String().split('T').first,
           departureTime: departureTimeStr,
           arrivalDate: _arrivalDate?.toIso8601String().split('T').first,
@@ -448,19 +461,22 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Departure City
-                  TextFormField(
-                    controller: _departureCityController,
-                    decoration: _inputDecoration('From', 'e.g. Newark (EWR)'),
+                  // From Airport
+                  AirportAutocomplete(
+                    controller: _departureAirportCodeController,
+                    label: 'From',
+                    hint: 'Search departure airport',
                     validator: (v) =>
                         v?.trim().isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
 
-                  // Arrival City
-                  TextFormField(
-                    controller: _arrivalCityController,
-                    decoration: _inputDecoration('To', 'e.g. Tokyo (NRT)'),
+                  // To Airport
+                  AirportAutocomplete(
+                    controller: _arrivalAirportCodeController,
+                    label: 'To',
+                    hint: 'Search arrival airport',
+                    isDeparture: false,
                     validator: (v) =>
                         v?.trim().isEmpty == true ? 'Required' : null,
                   ),
