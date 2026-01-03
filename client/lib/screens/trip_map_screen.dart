@@ -109,6 +109,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
             address: location!,
             type: MapItemType.activity,
             time: data['time'] as String?,
+            activityType: data['type'] as String?,
           ),
         );
       }
@@ -122,7 +123,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
       final checkIn = DateTime.tryParse(data['checkIn'] as String? ?? '');
       final checkOut = DateTime.tryParse(data['checkOut'] as String? ?? '');
-      final name = data['name'] as String? ?? 'Hotel';
+      final name = data['hotelName'] as String? ?? 'Hotel';
 
       if (checkIn != null && _isSameDay(checkIn, _selectedDate)) {
         items.add(
@@ -165,6 +166,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
             type: MapItemType.flight,
             time: depTime,
             airportCode: depCode,
+            isDeparture: true,
             sortOrder: 0,
           ),
         );
@@ -178,6 +180,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
             type: MapItemType.flight,
             time: depTime,
             airportCode: arrCode,
+            isDeparture: false,
             sortOrder: 1,
           ),
         );
@@ -232,7 +235,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       final bounds = <LatLng>[];
       final orderedLocations = <(LatLng, MapItem)>[];
 
-      // Create numbered markers
+      // Create icon markers
       for (int i = 0; i < items.length; i++) {
         if (!mounted) return;
         final item = items[i];
@@ -243,7 +246,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
         if (location != null) {
           bounds.add(location);
           orderedLocations.add((location, item));
-          markers.add(_buildNumberedMarker(location, i + 1, item));
+          markers.add(_buildIconMarker(location, item));
         }
       }
 
@@ -319,7 +322,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
   }
 
-  Marker _buildNumberedMarker(LatLng location, int number, MapItem item) {
+  Marker _buildIconMarker(LatLng location, MapItem item) {
     final color = _getMarkerColor(item.type);
     final subtitle = item.time != null
         ? '${item.time} • ${item.address}'
@@ -327,8 +330,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
     return Marker(
       point: location,
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
       child: GestureDetector(
         onTap: () => ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -351,16 +354,17 @@ class _TripMapScreenState extends State<TripMapScreen> {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
-          child: Text(
-            number.toString(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: Icon(item.icon, color: Colors.white, size: 20),
         ),
       ),
     );
@@ -807,6 +811,8 @@ class MapItem {
   final String? time;
   final String? subtitle;
   final String? airportCode;
+  final String? activityType;
+  final bool isDeparture;
   final int sortOrder;
 
   const MapItem({
@@ -816,8 +822,35 @@ class MapItem {
     this.time,
     this.subtitle,
     this.airportCode,
+    this.activityType,
+    this.isDeparture = true,
     this.sortOrder = 0,
   });
+
+  static const Map<String, IconData> activityTypeIcons = {
+    'Sightseeing': Icons.photo_camera_outlined,
+    'Food & Dining': Icons.restaurant_outlined,
+    'Entertainment': Icons.theater_comedy_outlined,
+    'Shopping': Icons.shopping_bag_outlined,
+    'Tour': Icons.tour_outlined,
+    'Transportation': Icons.directions_car_outlined,
+    'Relaxation': Icons.spa_outlined,
+    'Adventure': Icons.paragliding_outlined,
+    'Cultural': Icons.museum_outlined,
+    'Nature': Icons.park_outlined,
+    'Other': Icons.more_horiz_outlined,
+  };
+
+  IconData get icon {
+    switch (type) {
+      case MapItemType.flight:
+        return isDeparture ? Icons.flight_takeoff : Icons.flight_land;
+      case MapItemType.hotel:
+        return Icons.hotel;
+      case MapItemType.activity:
+        return activityTypeIcons[activityType] ?? Icons.place;
+    }
+  }
 }
 
 class _FlightRoute {
