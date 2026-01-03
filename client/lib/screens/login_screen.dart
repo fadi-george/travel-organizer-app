@@ -57,20 +57,6 @@ class LoginScreen extends StatelessWidget {
               // Google sign-in button
               _GoogleSignInButton(onPressed: () => _signInWithGoogle(context)),
 
-              const SizedBox(height: 16),
-
-              // Email magic link option
-              TextButton(
-                onPressed: () => _showEmailSignIn(context),
-                child: Text(
-                  'Or continue with email',
-                  style: TextStyle(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-
               const Spacer(),
             ],
           ),
@@ -100,17 +86,6 @@ class LoginScreen extends StatelessWidget {
         ).showSnackBar(SnackBar(content: Text('Sign in failed: $e')));
       }
     }
-  }
-
-  void _showEmailSignIn(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => const _EmailSignInSheet(),
-    );
   }
 }
 
@@ -155,130 +130,6 @@ class _GoogleSignInButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmailSignInSheet extends StatefulWidget {
-  const _EmailSignInSheet();
-
-  @override
-  State<_EmailSignInSheet> createState() => _EmailSignInSheetState();
-}
-
-class _EmailSignInSheetState extends State<_EmailSignInSheet> {
-  final _emailController = TextEditingController();
-  bool _isLoading = false;
-  bool _linkSent = false;
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _sendMagicLink() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final authState = ClerkAuth.of(context);
-      await authState.attemptSignIn(
-        strategy: clerk.Strategy.emailLink,
-        identifier: email,
-      );
-      setState(() => _linkSent = true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to send link: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        24,
-        24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _linkSent ? 'Check your email' : 'Sign in with email',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          if (_linkSent) ...[
-            Text(
-              'We sent a magic link to ${_emailController.text}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Done'),
-            ),
-          ] else ...[
-            Text(
-              'We\'ll send you a magic link to sign in',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                hintText: 'you@example.com',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            FilledButton(
-              onPressed: _isLoading ? null : _sendMagicLink,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Send magic link'),
-            ),
-          ],
-        ],
       ),
     );
   }
