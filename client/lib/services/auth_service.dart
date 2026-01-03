@@ -109,11 +109,16 @@ class AuthService extends ChangeNotifier {
       _error = null;
       _currentToken = sessionToken;
 
-      // Sync token to Convex
-      await _syncTokenToConvex(sessionToken);
-
-      // Store/update user in Convex database
-      await _storeUserInConvex();
+      // Only sync to Convex if we have a valid token
+      if (sessionToken != null && sessionToken.isNotEmpty) {
+        debugPrint('Syncing token to Convex (${sessionToken.length} chars)...');
+        await _syncTokenToConvex(sessionToken);
+        debugPrint('Token synced, storing user in Convex...');
+        await _storeUserInConvex();
+        debugPrint('User stored in Convex successfully');
+      } else {
+        debugPrint('Skipping Convex sync - no session token yet');
+      }
     } else {
       _user = null;
       _state = AuthState.unauthenticated;

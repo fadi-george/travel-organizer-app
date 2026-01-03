@@ -191,8 +191,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
     items.sort((a, b) {
       final timeA = parseTimeToMinutes(a.time);
       final timeB = parseTimeToMinutes(b.time);
-      if (timeA == null && timeB == null)
+      if (timeA == null && timeB == null) {
         return a.sortOrder.compareTo(b.sortOrder);
+      }
       if (timeA == null) return 1;
       if (timeB == null) return -1;
       final cmp = timeA.compareTo(timeB);
@@ -591,8 +592,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
     void addDate(String? dateStr) {
       final date = DateTime.tryParse(dateStr ?? '');
-      if (date != null)
+      if (date != null) {
         counts[_normalizeDate(date)] = (counts[_normalizeDate(date)] ?? 0) + 1;
+      }
     }
 
     for (final f in widget.trip.flights ?? []) {
@@ -638,7 +640,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
           const SizedBox(height: 12),
           Hero(
             tag: 'days-carousel-${widget.trip.id}',
-            flightShuttleBuilder: (_, __, ___, ____, toCtx) =>
+            flightShuttleBuilder: (flightContext, animation, direction, fromCtx, toCtx) =>
                 Material(color: Colors.transparent, child: toCtx.widget),
             child: DaysCarousel(
               startDate: _startDate,

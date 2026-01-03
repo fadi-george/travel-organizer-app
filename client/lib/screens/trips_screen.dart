@@ -326,7 +326,7 @@ class _TripsScreenState extends State<TripsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
         existingTrip: trip,
-        onTripCreated: (name, _, __, ___) =>
+        onTripCreated: (name, startDate, endDate, notes) =>
             _showSnackBar('Updated trip: $name'),
       ),
     );
@@ -355,7 +355,7 @@ class _TripsScreenState extends State<TripsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
-        onTripCreated: (name, _, __, ___) =>
+        onTripCreated: (name, startDate, endDate, notes) =>
             _showSnackBar('Created trip: $name'),
       ),
     );

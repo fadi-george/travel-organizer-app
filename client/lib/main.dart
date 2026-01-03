@@ -86,33 +86,19 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    AuthService.instance.addListener(_onAuthStateChanged);
-  }
-
-  @override
-  void dispose() {
-    AuthService.instance.removeListener(_onAuthStateChanged);
-    super.dispose();
-  }
-
-  void _onAuthStateChanged() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  String? _lastSyncedUserId;
+  String? _lastSyncedToken;
+  bool _lastSyncedSignedIn = false;
 
   @override
   Widget build(BuildContext context) {
     return ClerkAuthBuilder(
       builder: (context, authState) {
-        // Sync auth state with our AuthService
+        // Sync auth state with our AuthService (only when state changes)
         _syncAuthState(context, authState);
 
-        // Show loading while Clerk initializes
-        if (authState.isNotAvailable) {
+        // Show loading only during initial Clerk initialization
+        if (authState.isNotAvailable && authState.user == null) {
           return const _LoadingScreen();
         }
 
@@ -128,13 +114,46 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _syncAuthState(BuildContext context, ClerkAuthState authState) {
-    // Update our AuthService with Clerk's auth state
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (authState.isSignedIn) {
-        final user = authState.user;
-        // Get the session token for Convex
-        final token = authState.session?.lastActiveToken?.jwt;
+    final user = authState.user;
+    final isSignedIn = authState.isSignedIn;
+    final session = authState.session;
 
+    // Get token from session's lastActiveToken
+    final token = session?.lastActiveToken?.jwt;
+
+    // Debug: log session details
+    if (isSignedIn && session != null) {
+      debugPrint(
+        'Session details: id=${session.id}, '
+        'lastActiveToken=${session.lastActiveToken}, '
+        'status=${session.status}',
+      );
+    }
+
+    // Only sync if state has actually changed
+    final stateChanged =
+        isSignedIn != _lastSyncedSignedIn ||
+        user?.id != _lastSyncedUserId ||
+        token != _lastSyncedToken;
+
+    if (!stateChanged) return;
+
+    // Update tracking variables
+    _lastSyncedSignedIn = isSignedIn;
+    _lastSyncedUserId = user?.id;
+    _lastSyncedToken = token;
+
+    debugPrint(
+      'Auth state changed: isSignedIn=$isSignedIn, '
+      'user=${user?.id}, '
+      'token=${token != null ? 'present (${token.length} chars)' : 'null'}',
+    );
+
+    // Schedule the sync after the current frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      if (isSignedIn) {
         AuthService.instance.onAuthStateChanged(
           isSignedIn: true,
           userId: user?.id,
