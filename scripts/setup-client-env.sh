@@ -111,108 +111,28 @@ ln -s ../.env.local .env.local
 echo "✓ Created client/.env → ../.env"
 echo "✓ Created client/.env.local → ../.env.local"
 
-# Set up iOS Google Maps secrets file
-IOS_SECRETS="ios/Flutter/Secrets.xcconfig"
-IOS_EXAMPLE="ios/Flutter/Secrets.xcconfig.example"
-NEEDS_API_KEY=false
-
-# Create iOS secrets file if it doesn't exist
-if [ ! -f "$IOS_SECRETS" ]; then
-  if [ -f "$IOS_EXAMPLE" ]; then
-    cp "$IOS_EXAMPLE" "$IOS_SECRETS"
-    echo "✓ Created $IOS_SECRETS from example"
-  else
-    # Create minimal secrets file
-    echo "GOOGLE_MAPS_API_KEY=" > "$IOS_SECRETS"
-    echo "✓ Created $IOS_SECRETS"
-  fi
-fi
-
-# Check current iOS API key
-IOS_KEY=$(grep "^GOOGLE_MAPS_API_KEY=" "$IOS_SECRETS" 2>/dev/null | cut -d'=' -f2)
-
-# Update iOS API key if we have one from env and current is invalid
+# Check if API key is configured
 if is_valid_api_key "$GOOGLE_API_KEY"; then
-  if ! is_valid_api_key "$IOS_KEY"; then
-    # Replace the API key line
-    sed -i '' "s|^GOOGLE_MAPS_API_KEY=.*|GOOGLE_MAPS_API_KEY=$GOOGLE_API_KEY|" "$IOS_SECRETS"
-    echo "✓ Updated $IOS_SECRETS with API key from .env"
-  else
-    echo "✓ $IOS_SECRETS has valid API key"
-  fi
+  echo "✓ GOOGLE_PLACES_API_KEY found in $SELECTED_ENV"
 else
-  if ! is_valid_api_key "$IOS_KEY"; then
-    NEEDS_API_KEY=true
-    echo "⚠️  $IOS_SECRETS needs API key configuration"
-  else
-    echo "✓ $IOS_SECRETS has valid API key"
-  fi
-fi
-
-# Set up Android local.properties
-ANDROID_PROPS="android/local.properties"
-ANDROID_EXAMPLE="android/local.properties.example"
-
-# Create Android properties file if it doesn't exist
-if [ ! -f "$ANDROID_PROPS" ]; then
-  if [ -f "$ANDROID_EXAMPLE" ]; then
-    cp "$ANDROID_EXAMPLE" "$ANDROID_PROPS"
-    echo "✓ Created $ANDROID_PROPS from example"
-  fi
-fi
-
-# Ensure GOOGLE_MAPS_API_KEY line exists in Android properties
-if [ -f "$ANDROID_PROPS" ]; then
-  if ! grep -q "^GOOGLE_MAPS_API_KEY=" "$ANDROID_PROPS"; then
-    echo "" >> "$ANDROID_PROPS"
-    echo "# Google Maps API Key" >> "$ANDROID_PROPS"
-    echo "GOOGLE_MAPS_API_KEY=" >> "$ANDROID_PROPS"
-  fi
-  
-  # Check current Android API key
-  ANDROID_KEY=$(grep "^GOOGLE_MAPS_API_KEY=" "$ANDROID_PROPS" 2>/dev/null | cut -d'=' -f2)
-  
-  # Update Android API key if we have one from env and current is invalid
-  if is_valid_api_key "$GOOGLE_API_KEY"; then
-    if ! is_valid_api_key "$ANDROID_KEY"; then
-      sed -i '' "s|^GOOGLE_MAPS_API_KEY=.*|GOOGLE_MAPS_API_KEY=$GOOGLE_API_KEY|" "$ANDROID_PROPS"
-      echo "✓ Updated $ANDROID_PROPS with API key from .env"
-    else
-      echo "✓ $ANDROID_PROPS has valid API key"
-    fi
-  else
-    if ! is_valid_api_key "$ANDROID_KEY"; then
-      NEEDS_API_KEY=true
-      echo "⚠️  $ANDROID_PROPS needs API key configuration"
-    else
-      echo "✓ $ANDROID_PROPS has valid API key"
-    fi
-  fi
-fi
-
-if [ "$NEEDS_API_KEY" = true ]; then
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "⚠️  ACTION REQUIRED: Configure your Google Maps API key!"
+  echo "⚠️  ACTION REQUIRED: Configure your Google Places API key!"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   echo "1. Get an API key from:"
   echo "   https://console.cloud.google.com/apis/credentials"
   echo ""
   echo "2. Enable these APIs in Google Cloud Console:"
-  echo "   • Maps SDK for iOS"
-  echo "   • Maps SDK for Android"
   echo "   • Geocoding API"
   echo "   • Places API"
   echo ""
-  echo "3. Add your API key to:"
-  echo "   • iOS:     client/$IOS_SECRETS"
-  echo "   • Android: client/$ANDROID_PROPS"
+  echo "3. Add to your .env or .env.local file:"
+  echo "   GOOGLE_PLACES_API_KEY=your-api-key-here"
   echo ""
-  echo "Replace YOUR_API_KEY_HERE with your actual key."
+  echo "Note: Map tiles use free OpenStreetMap/CARTO - no API key needed!"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 
 echo ""
 echo "Done! Client environment is configured."
-

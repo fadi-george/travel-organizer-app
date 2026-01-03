@@ -8,6 +8,7 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 - Track accommodations per destination
 - Store flight details with full booking info
 - Organize daily activities and itinerary
+- Interactive map view with flutter_map (OpenStreetMap tiles)
 
 ## Setup
 
@@ -46,23 +47,18 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    bun run setup:client
    ```
 
-2. **Configure Google Maps API Key** (required for map features):
+2. **Configure Google Places API Key** (required for address autocomplete and geocoding):
 
-   ```bash
-   # Copy the example config
-   cp client/ios/Flutter/Secrets.xcconfig.example client/ios/Flutter/Secrets.xcconfig
-   ```
-
-   Then edit `client/ios/Flutter/Secrets.xcconfig` and add your API key:
+   Add your API key to `.env` or `.env.local` in the project root:
 
    ```
-   GOOGLE_MAPS_API_KEY=your-actual-api-key-here
+   GOOGLE_PLACES_API_KEY=your-actual-api-key-here
    ```
 
    To get an API key:
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
    - Create a new API key
-   - Enable these APIs: **Maps SDK for iOS**, **Maps SDK for Android**, **Geocoding API**, **Places API**
+   - Enable these APIs: **Geocoding API**, **Places API**
 
 3. Install Flutter dependencies:
 
@@ -78,6 +74,14 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    ```
 
 > **Note:** The client uses `convex_flutter` which requires Rust. Make sure your Rust toolchain is up to date: `rustup update stable`
+
+## Map Features
+
+This app uses [flutter_map](https://pub.dev/packages/flutter_map) with free OpenStreetMap/CARTO tiles — no Google Maps API key required for map display!
+
+- **Light mode:** CARTO Voyager tiles
+- **Dark mode:** CARTO Dark Matter tiles
+- **Geocoding:** Uses Google Geocoding API (requires `GOOGLE_PLACES_API_KEY`)
 
 ## Convex Functions
 
@@ -124,22 +128,19 @@ Ensure you're logged in:
 bunx convex login
 ```
 
-### Gray screen instead of Google Maps
+### Map markers not showing / Geocoding not working
 
-This means the Google Maps API key is missing or invalid:
+This means the Google Places API key is missing or invalid:
 
-1. Check that `client/ios/Flutter/Secrets.xcconfig` exists and has a valid API key
-2. Check that `client/android/local.properties` has `GOOGLE_MAPS_API_KEY` set
-3. Ensure the API key has these APIs enabled in Google Cloud Console:
-   - Maps SDK for iOS
-   - Maps SDK for Android
+1. Check that `.env` or `.env.local` has `GOOGLE_PLACES_API_KEY` set
+2. Ensure the API key has these APIs enabled in Google Cloud Console:
    - Geocoding API
    - Places API
-4. **Restart the app** (not hot reload) after changing native config files
+3. **Restart the app** (not hot reload) after changing env files
 
-### "API key not found" or map loads but shows errors
+### "API key not found" errors
 
 Check the Google Cloud Console to ensure:
-- The API key is not restricted to wrong bundle IDs/package names
+- The API key is not restricted incorrectly
 - Billing is enabled on the Google Cloud project
 - The required APIs are enabled
