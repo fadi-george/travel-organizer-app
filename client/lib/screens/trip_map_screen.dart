@@ -264,8 +264,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
         // Add airplane icon at midpoint
         final midIndex = routePoints.length ~/ 2;
         final midPoint = routePoints[midIndex];
+
+        // Calculate angle accounting for antimeridian crossing
+        var lngDiff = route.arrival.longitude - route.departure.longitude;
+        if (lngDiff > 180) lngDiff -= 360;
+        if (lngDiff < -180) lngDiff += 360;
+
         final angle = math.atan2(
-          route.arrival.longitude - route.departure.longitude,
+          lngDiff,
           route.arrival.latitude - route.departure.latitude,
         );
         arrowMarkers.add(
@@ -447,7 +453,19 @@ class _TripMapScreenState extends State<TripMapScreen> {
         final baseArrowCount = (dist * arrowsPerKm).round();
         final minArrows = _getMinArrows(zoom);
         final maxArrows = _getMaxArrows(zoom, dist);
-        final arrowCount = baseArrowCount.clamp(minArrows, maxArrows);
+        // Ensure maxArrows >= minArrows to avoid clamp error
+        final arrowCount = baseArrowCount.clamp(
+          math.min(minArrows, maxArrows),
+          math.max(minArrows, maxArrows),
+        );
+
+        debugPrint(
+          'Marker pair $i→${i + 1}: '
+          '${currItem.title} → ${nextItem.title} | '
+          'dist: ${dist.toStringAsFixed(1)}km | '
+          'zoom: ${zoom.toStringAsFixed(1)} | '
+          'arrows: $arrowCount (base: $baseArrowCount, min: $minArrows, max: $maxArrows)',
+        );
 
         final angle = math.atan2(
           next.longitude - curr.longitude,
@@ -488,10 +506,22 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final distance = const Distance();
     final totalDist = distance.as(LengthUnit.Kilometer, start, end);
 
+    // Check if crossing the antimeridian (date line) is shorter
+    var lngDiff = end.longitude - start.longitude;
+    if (lngDiff > 180) {
+      lngDiff -= 360;
+    } else if (lngDiff < -180) {
+      lngDiff += 360;
+    }
+
     return List.generate(segments + 1, (i) {
       final t = i / segments;
       final lat = start.latitude + (end.latitude - start.latitude) * t;
-      final lng = start.longitude + (end.longitude - start.longitude) * t;
+      var lng = start.longitude + lngDiff * t;
+
+      // Normalize longitude to -180 to 180
+      if (lng > 180) lng -= 360;
+      if (lng < -180) lng += 360;
 
       if (totalDist < 500) return LatLng(lat, lng);
 
@@ -513,13 +543,47 @@ class _TripMapScreenState extends State<TripMapScreen> {
       _mapController.move(points.first, 12);
       return;
     }
-    _mapController.fitCamera(
-      CameraFit.coordinates(
-        coordinates: points,
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
-        maxZoom: 15,
-      ),
-    );
+
+    // Check if points cross the antimeridian (date line)
+    final lngs = points.map((p) => p.longitude).toList();
+    final minLng = lngs.reduce(math.min);
+    final maxLng = lngs.reduce(math.max);
+    final crossesAntimeridian = (maxLng - minLng) > 180;
+
+    if (crossesAntimeridian) {
+      // Shift points so they're all on the same side (shift positive to negative)
+      final shiftedPoints = points.map((p) {
+        final lng = p.longitude > 0 ? p.longitude - 360 : p.longitude;
+        return LatLng(p.latitude, lng);
+      }).toList();
+
+      // Calculate center and zoom manually
+      final lats = shiftedPoints.map((p) => p.latitude);
+      final shiftedLngs = shiftedPoints.map((p) => p.longitude);
+      final centerLat = (lats.reduce(math.min) + lats.reduce(math.max)) / 2;
+      var centerLng =
+          (shiftedLngs.reduce(math.min) + shiftedLngs.reduce(math.max)) / 2;
+
+      // Normalize longitude back to -180 to 180
+      if (centerLng < -180) centerLng += 360;
+
+      // Calculate appropriate zoom based on latitude span
+      final latSpan = lats.reduce(math.max) - lats.reduce(math.min);
+      final lngSpan =
+          shiftedLngs.reduce(math.max) - shiftedLngs.reduce(math.min);
+      final span = math.max(latSpan, lngSpan * 0.5);
+      final zoom = (math.log(360 / span) / math.ln2).clamp(1.0, 15.0);
+
+      _mapController.move(LatLng(centerLat, centerLng), zoom - 0.5);
+    } else {
+      _mapController.fitCamera(
+        CameraFit.coordinates(
+          coordinates: points,
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+          maxZoom: 15,
+        ),
+      );
+    }
   }
 
   Map<DateTime, int> get _eventCountsPerDay {
