@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/dialogs.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/trip_card.dart';
 import 'trip_detail_screen.dart';
@@ -35,8 +36,6 @@ class _TripsScreenState extends State<TripsScreen> {
   Future<void> _initializeConvex() async {
     try {
       final convexService = await ConvexService.getInstance();
-
-      // Subscribe to real-time updates
       _subscription = await convexService.subscribeToTrips(
         onUpdate: (tripsData) {
           if (!mounted) return;
@@ -67,24 +66,24 @@ class _TripsScreenState extends State<TripsScreen> {
 
   List<Trip> get _upcomingTrips =>
       _trips.where((t) => t.isUpcoming).toList()
-        ..sort((a, b) => (a.startDate ?? '').compareTo(b.startDate ?? ''));
+        ..sort((a, b) => a.startDate.compareTo(b.startDate));
 
   List<Trip> get _pastTrips =>
       _trips.where((t) => t.isPast).toList()
-        ..sort((a, b) => (b.startDate ?? '').compareTo(a.startDate ?? ''));
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
   String get _tripsSummary {
     final upcoming = _upcomingTrips.length;
     final past = _pastTrips.length;
-
-    if (upcoming > 0 && past > 0) {
-      return '$upcoming upcoming · $past past';
-    } else if (upcoming > 0) {
-      return '$upcoming upcoming';
-    } else if (past > 0) {
-      return '$past past ${past == 1 ? 'trip' : 'trips'}';
-    }
+    if (upcoming > 0 && past > 0) return '$upcoming upcoming · $past past';
+    if (upcoming > 0) return '$upcoming upcoming';
+    if (past > 0) return '$past past ${past == 1 ? 'trip' : 'trips'}';
     return 'No trips yet';
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    showAppSnackBar(context, message, isError: isError);
   }
 
   @override
@@ -190,62 +189,8 @@ class _TripsScreenState extends State<TripsScreen> {
                     ),
                   ],
 
-                  // Empty state
                   if (_trips.isEmpty)
-                    SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFFF7043,
-                                ).withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.flight_takeoff_rounded,
-                                size: 48,
-                                color: Color(0xFFFF7043),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              'No trips yet',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Start planning your next adventure!',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade500,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                              onPressed: _onAddTrip,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add your first trip'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF7043),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    SliverFillRemaining(child: _buildEmptyState()),
 
                   // Bottom padding
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -258,6 +203,44 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _CircleIcon(
+            icon: Icons.flight_takeoff_rounded,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No trips yet',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start planning your next adventure!',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _onAddTrip,
+            icon: const Icon(Icons.add),
+            label: const Text('Add your first trip'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -265,19 +248,7 @@ class _TripsScreenState extends State<TripsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.cloud_off_rounded,
-                size: 48,
-                color: Colors.red,
-              ),
-            ),
+            _CircleIcon(icon: Icons.cloud_off_rounded, color: Colors.red),
             const SizedBox(height: 24),
             Text(
               'Connection Error',
@@ -304,9 +275,7 @@ class _TripsScreenState extends State<TripsScreen> {
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7043),
-              ),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             ),
           ],
         ),
@@ -331,67 +300,26 @@ class _TripsScreenState extends State<TripsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
         existingTrip: trip,
-        onTripCreated: (name, startDate, endDate, notes) {
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(
-              content: Text('Updated trip: $name'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        },
+        onTripCreated: (name, _, __, ___) =>
+            _showSnackBar('Updated trip: $name'),
       ),
     );
   }
 
   Future<void> _onDeleteTrip(Trip trip) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Trip'),
-        content: Text('Are you sure you want to delete "${trip.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Trip',
+      message: 'Are you sure you want to delete "${trip.name}"?',
     );
+    if (!confirmed) return;
 
-    if (confirmed == true) {
-      try {
-        final convexService = await ConvexService.getInstance();
-        await convexService.deleteTrip(trip.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Deleted: ${trip.name}'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete trip: $e'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteTrip(trip.id);
+      _showSnackBar('Deleted: ${trip.name}');
+    } catch (e) {
+      _showSnackBar('Failed to delete trip: $e', isError: true);
     }
   }
 
@@ -401,18 +329,8 @@ class _TripsScreenState extends State<TripsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTripSheet(
-        onTripCreated: (name, startDate, endDate, notes) {
-          // No need to reload - the subscription will automatically update
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(
-              content: Text('Created trip: $name'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        },
+        onTripCreated: (name, _, __, ___) =>
+            _showSnackBar('Created trip: $name'),
       ),
     );
   }
@@ -443,7 +361,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: const Color(0xFFFF7043).withValues(alpha: 0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -451,11 +369,31 @@ class _SectionHeader extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFFFF7043),
+              color: AppColors.primary,
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CircleIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _CircleIcon({required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 48, color: color),
     );
   }
 }

@@ -445,10 +445,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
         final maxArrows = _getMaxArrows(zoom, dist);
         final arrowCount = baseArrowCount.clamp(minArrows, maxArrows);
 
-        debugPrint(
-          'Segment ${i + 1}→${i + 2}: ${dist.toStringAsFixed(2)}km → $arrowCount arrows (z${zoom.toStringAsFixed(1)})',
-        );
-
         final angle = math.atan2(
           next.longitude - curr.longitude,
           next.latitude - curr.latitude,

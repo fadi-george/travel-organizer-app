@@ -6,14 +6,30 @@ import 'pdf_upload_dialog.dart';
 
 class FlightOptionsSheet extends StatelessWidget {
   final String tripId;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const FlightOptionsSheet({super.key, required this.tripId});
+  const FlightOptionsSheet({
+    super.key,
+    required this.tripId,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
-  static void show(BuildContext context, {required String tripId}) {
+  static void show(
+    BuildContext context, {
+    required String tripId,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => FlightOptionsSheet(tripId: tripId),
+      builder: (context) => FlightOptionsSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -23,7 +39,11 @@ class FlightOptionsSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ManualFlightFormSheet(tripId: tripId),
+      builder: (context) => _ManualFlightFormSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -31,13 +51,19 @@ class FlightOptionsSheet extends StatelessWidget {
     BuildContext context, {
     required String tripId,
     required Map<String, dynamic> flightData,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
   }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _ManualFlightFormSheet(tripId: tripId, existingFlight: flightData),
+      builder: (context) => _ManualFlightFormSheet(
+        tripId: tripId,
+        existingFlight: flightData,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -124,8 +150,15 @@ class FlightOptionsSheet extends StatelessWidget {
 class _ManualFlightFormSheet extends StatefulWidget {
   final String tripId;
   final Map<String, dynamic>? existingFlight;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const _ManualFlightFormSheet({required this.tripId, this.existingFlight});
+  const _ManualFlightFormSheet({
+    required this.tripId,
+    this.existingFlight,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
   @override
   State<_ManualFlightFormSheet> createState() => _ManualFlightFormSheetState();
@@ -224,15 +257,22 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
   }
 
   Future<void> _selectDate(bool isDeparture) async {
-    final initialDate = isDeparture
+    final firstDate = widget.tripStartDate ?? DateTime(1900);
+    final lastDate = widget.tripEndDate ?? DateTime(3000);
+
+    var initialDate = isDeparture
         ? (_departureDate ?? DateTime.now())
         : (_arrivalDate ?? _departureDate ?? DateTime.now());
+
+    // Ensure initial date is within bounds
+    if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+    if (initialDate.isAfter(lastDate)) initialDate = lastDate;
 
     final date = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
 
     if (date != null) {

@@ -6,14 +6,30 @@ import 'pdf_upload_dialog.dart';
 
 class ActivityOptionsSheet extends StatelessWidget {
   final String tripId;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const ActivityOptionsSheet({super.key, required this.tripId});
+  const ActivityOptionsSheet({
+    super.key,
+    required this.tripId,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
-  static void show(BuildContext context, {required String tripId}) {
+  static void show(
+    BuildContext context, {
+    required String tripId,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => ActivityOptionsSheet(tripId: tripId),
+      builder: (context) => ActivityOptionsSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -21,6 +37,8 @@ class ActivityOptionsSheet extends StatelessWidget {
     BuildContext context, {
     required String tripId,
     required Map<String, dynamic> activityData,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
   }) {
     showModalBottomSheet(
       context: context,
@@ -29,6 +47,8 @@ class ActivityOptionsSheet extends StatelessWidget {
       builder: (context) => _ManualActivityFormSheet(
         tripId: tripId,
         existingActivity: activityData,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
       ),
     );
   }
@@ -39,7 +59,11 @@ class ActivityOptionsSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ManualActivityFormSheet(tripId: tripId),
+      builder: (context) => _ManualActivityFormSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -126,8 +150,15 @@ class ActivityOptionsSheet extends StatelessWidget {
 class _ManualActivityFormSheet extends StatefulWidget {
   final String tripId;
   final Map<String, dynamic>? existingActivity;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const _ManualActivityFormSheet({required this.tripId, this.existingActivity});
+  const _ManualActivityFormSheet({
+    required this.tripId,
+    this.existingActivity,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
   @override
   State<_ManualActivityFormSheet> createState() =>
@@ -210,11 +241,19 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
   }
 
   Future<void> _selectDate() async {
+    final firstDate = widget.tripStartDate ?? DateTime(1900);
+    final lastDate = widget.tripEndDate ?? DateTime(3000);
+
+    // Ensure initial date is within bounds
+    DateTime initialDate = _date ?? DateTime.now();
+    if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+    if (initialDate.isAfter(lastDate)) initialDate = lastDate;
+
     final date = await showDatePicker(
       context: context,
-      initialDate: _date ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime(3000),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(

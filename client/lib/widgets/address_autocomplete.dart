@@ -38,10 +38,7 @@ class AddressAutocomplete extends StatelessWidget {
 
     return GooglePlacesAutoCompleteTextFormField(
       textEditingController: controller,
-      config: GoogleApiConfig(
-        apiKey: apiKey,
-        debounceTime: debounceTime,
-      ),
+      config: GoogleApiConfig(apiKey: apiKey, debounceTime: debounceTime),
       minInputLength: minInputLength,
       decoration: _buildDecoration(context),
       validator: validator,
@@ -49,10 +46,7 @@ class AddressAutocomplete extends StatelessWidget {
         elevation: 4,
         borderRadius: BorderRadius.circular(12),
         color: Theme.of(context).colorScheme.surface,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: child,
-        ),
+        child: ClipRRect(borderRadius: BorderRadius.circular(12), child: child),
       ),
       onSuggestionClicked: (prediction) {
         final address = prediction.description ?? '';
@@ -101,4 +95,3 @@ class AddressAutocomplete extends StatelessWidget {
     );
   }
 }
-

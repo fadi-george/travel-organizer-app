@@ -6,14 +6,30 @@ import 'pdf_upload_dialog.dart';
 
 class HotelOptionsSheet extends StatelessWidget {
   final String tripId;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const HotelOptionsSheet({super.key, required this.tripId});
+  const HotelOptionsSheet({
+    super.key,
+    required this.tripId,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
-  static void show(BuildContext context, {required String tripId}) {
+  static void show(
+    BuildContext context, {
+    required String tripId,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => HotelOptionsSheet(tripId: tripId),
+      builder: (context) => HotelOptionsSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -21,13 +37,19 @@ class HotelOptionsSheet extends StatelessWidget {
     BuildContext context, {
     required String tripId,
     required Map<String, dynamic> hotelData,
+    DateTime? tripStartDate,
+    DateTime? tripEndDate,
   }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _ManualHotelFormSheet(tripId: tripId, existingHotel: hotelData),
+      builder: (context) => _ManualHotelFormSheet(
+        tripId: tripId,
+        existingHotel: hotelData,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -37,7 +59,11 @@ class HotelOptionsSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ManualHotelFormSheet(tripId: tripId),
+      builder: (context) => _ManualHotelFormSheet(
+        tripId: tripId,
+        tripStartDate: tripStartDate,
+        tripEndDate: tripEndDate,
+      ),
     );
   }
 
@@ -124,8 +150,15 @@ class HotelOptionsSheet extends StatelessWidget {
 class _ManualHotelFormSheet extends StatefulWidget {
   final String tripId;
   final Map<String, dynamic>? existingHotel;
+  final DateTime? tripStartDate;
+  final DateTime? tripEndDate;
 
-  const _ManualHotelFormSheet({required this.tripId, this.existingHotel});
+  const _ManualHotelFormSheet({
+    required this.tripId,
+    this.existingHotel,
+    this.tripStartDate,
+    this.tripEndDate,
+  });
 
   @override
   State<_ManualHotelFormSheet> createState() => _ManualHotelFormSheetState();
@@ -222,15 +255,22 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   }
 
   Future<void> _selectDate(bool isCheckIn) async {
-    final initialDate = isCheckIn
+    final firstDate = widget.tripStartDate ?? DateTime(1900);
+    final lastDate = widget.tripEndDate ?? DateTime(3000);
+
+    var initialDate = isCheckIn
         ? (_checkInDate ?? DateTime.now())
         : (_checkOutDate ?? _checkInDate ?? DateTime.now());
+
+    // Ensure initial date is within bounds
+    if (initialDate.isBefore(firstDate)) initialDate = firstDate;
+    if (initialDate.isAfter(lastDate)) initialDate = lastDate;
 
     final date = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
 
     if (date != null) {
@@ -239,7 +279,8 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
           _checkInDate = date;
           // Auto-set check-out date if not set or if it's before check-in
           if (_checkOutDate == null || _checkOutDate!.isBefore(date)) {
-            _checkOutDate = date.add(const Duration(days: 1));
+            final nextDay = date.add(const Duration(days: 1));
+            _checkOutDate = nextDay.isAfter(lastDate) ? lastDate : nextDay;
           }
         } else {
           _checkOutDate = date;

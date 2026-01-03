@@ -3,6 +3,7 @@ import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
+import '../utils/dialogs.dart';
 import '../utils/places_images.dart';
 import '../utils/time_format.dart';
 import '../widgets/days_carousel.dart';
@@ -90,7 +91,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final newStart = DateTime.parse(trip.startDate);
     final newEnd = DateTime.parse(trip.endDate);
 
-    // Check if current selected date is still valid in the new range
     final selectedStillValid =
         !_selectedDate.isBefore(newStart) && !_selectedDate.isAfter(newEnd);
 
@@ -102,49 +102,25 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
-  Future<void> _onDeleteFlight(String flightId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Flight'),
-        content: const Text('Are you sure you want to delete this flight?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    showAppSnackBar(context, message, isError: isError);
+  }
 
-    if (confirmed == true) {
-      try {
-        final convexService = await ConvexService.getInstance();
-        await convexService.deleteFlight(flightId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Flight deleted'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting flight: $e'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+  Future<void> _onDeleteFlight(String flightId) async {
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Flight',
+      message: 'Are you sure you want to delete this flight?',
+    );
+    if (!confirmed) return;
+
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteFlight(flightId);
+      _showSnackBar('Flight deleted');
+    } catch (e) {
+      _showSnackBar('Error deleting flight: $e', isError: true);
     }
   }
 
@@ -153,6 +129,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       context,
       tripId: trip.id,
       flightData: flightData,
+      tripStartDate: _startDate,
+      tripEndDate: _endDate,
     );
   }
 
@@ -161,6 +139,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       context,
       tripId: trip.id,
       hotelData: hotelData,
+      tripStartDate: _startDate,
+      tripEndDate: _endDate,
     );
   }
 
@@ -169,54 +149,34 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       context,
       tripId: trip.id,
       activityData: activityData,
+      tripStartDate: _startDate,
+      tripEndDate: _endDate,
     );
   }
 
   void _onAddActivity() {
-    ActivityOptionsSheet.show(context, tripId: trip.id);
+    ActivityOptionsSheet.show(
+      context,
+      tripId: trip.id,
+      tripStartDate: _startDate,
+      tripEndDate: _endDate,
+    );
   }
 
   Future<void> _onDeleteActivity(String id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Activity'),
-        content: const Text('Are you sure you want to delete this activity?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Activity',
+      message: 'Are you sure you want to delete this activity?',
     );
+    if (!confirmed) return;
 
-    if (confirm == true) {
-      try {
-        final convexService = await ConvexService.getInstance();
-        await convexService.deleteActivity(id);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Activity deleted'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting activity: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteActivity(id);
+      _showSnackBar('Activity deleted');
+    } catch (e) {
+      _showSnackBar('Error deleting activity: $e', isError: true);
     }
   }
 
@@ -250,48 +210,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _onDeleteAccommodation(String accommodationId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Hotel'),
-        content: const Text('Are you sure you want to delete this hotel?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Hotel',
+      message: 'Are you sure you want to delete this hotel?',
     );
+    if (!confirmed) return;
 
-    if (confirmed == true) {
-      try {
-        final convexService = await ConvexService.getInstance();
-        await convexService.deleteAccommodation(accommodationId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Hotel deleted'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting hotel: $e'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteAccommodation(accommodationId);
+      _showSnackBar('Hotel deleted');
+    } catch (e) {
+      _showSnackBar('Error deleting hotel: $e', isError: true);
     }
   }
 
@@ -311,123 +242,65 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Future<void> _onDeleteTrip() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Trip'),
-        content: Text(
+    final confirmed = await showDeleteConfirmation(
+      context,
+      title: 'Delete Trip',
+      message:
           'Are you sure you want to delete "${_trip.name}"? This will also delete all flights, hotels, and activities associated with this trip.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
     );
+    if (!confirmed) return;
 
-    if (confirmed == true) {
-      try {
-        final convexService = await ConvexService.getInstance();
-        await convexService.deleteTrip(_trip.id);
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Trip deleted'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting trip: $e'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteTrip(_trip.id);
+      if (mounted) {
+        Navigator.pop(context);
+        _showSnackBar('Trip deleted');
       }
+    } catch (e) {
+      _showSnackBar('Error deleting trip: $e', isError: true);
     }
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) => DateUtils.isSameDay(a, b);
+
+  void _incrementCount(Map<DateTime, int> counts, String? dateStr) {
+    if (dateStr == null) return;
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return;
+    final normalized = DateUtils.dateOnly(date);
+    counts[normalized] = (counts[normalized] ?? 0) + 1;
   }
 
-  /// Get event counts per day for the carousel indicators
   Map<DateTime, int> get _eventCountsPerDay {
     final counts = <DateTime, int>{};
 
-    // Count flights
-    if (trip.flights != null) {
-      for (final flight in trip.flights!) {
-        final flightData = flight as Map<String, dynamic>;
-        final departureDate = flightData['departureDate'] as String?;
-        if (departureDate != null) {
-          final date = DateTime.tryParse(departureDate);
-          if (date != null) {
-            final normalized = DateTime(date.year, date.month, date.day);
-            counts[normalized] = (counts[normalized] ?? 0) + 1;
-          }
+    for (final flight in trip.flights ?? []) {
+      final flightData = flight as Map<String, dynamic>;
+      _incrementCount(counts, flightData['departureDate'] as String?);
+    }
+
+    for (final acc in trip.accommodations ?? []) {
+      final accData = acc as Map<String, dynamic>;
+      final checkIn = accData['checkIn'] as String?;
+      final checkOut = accData['checkOut'] as String?;
+
+      _incrementCount(counts, checkIn);
+
+      // Only count check-out if on a different day than check-in
+      if (checkOut != null) {
+        final checkOutDate = DateTime.tryParse(checkOut);
+        final checkInDate = checkIn != null ? DateTime.tryParse(checkIn) : null;
+        if (checkOutDate != null &&
+            (checkInDate == null || !_isSameDay(checkOutDate, checkInDate))) {
+          _incrementCount(counts, checkOut);
         }
       }
     }
 
-    // Count accommodations (check-in and check-out dates)
-    if (trip.accommodations != null) {
-      for (final acc in trip.accommodations!) {
-        final accData = acc as Map<String, dynamic>;
-        final checkIn = accData['checkIn'] as String?;
-        final checkOut = accData['checkOut'] as String?;
-
-        if (checkIn != null) {
-          final date = DateTime.tryParse(checkIn);
-          if (date != null) {
-            final normalized = DateTime(date.year, date.month, date.day);
-            counts[normalized] = (counts[normalized] ?? 0) + 1;
-          }
-        }
-
-        if (checkOut != null) {
-          final date = DateTime.tryParse(checkOut);
-          final checkInDate = checkIn != null
-              ? DateTime.tryParse(checkIn)
-              : null;
-          // Only count if check-out is on a different day than check-in
-          if (date != null &&
-              (checkInDate == null ||
-                  date.year != checkInDate.year ||
-                  date.month != checkInDate.month ||
-                  date.day != checkInDate.day)) {
-            final normalized = DateTime(date.year, date.month, date.day);
-            counts[normalized] = (counts[normalized] ?? 0) + 1;
-          }
-        }
-      }
-    }
-
-    // Count activities
-    if (trip.activities != null) {
-      for (final activity in trip.activities!) {
-        final activityData = activity as Map<String, dynamic>;
-        final dateStr = activityData['date'] as String?;
-        if (dateStr != null) {
-          final date = DateTime.tryParse(dateStr);
-          if (date != null) {
-            final normalized = DateTime(date.year, date.month, date.day);
-            counts[normalized] = (counts[normalized] ?? 0) + 1;
-          }
-        }
-      }
+    for (final activity in trip.activities ?? []) {
+      final activityData = activity as Map<String, dynamic>;
+      _incrementCount(counts, activityData['date'] as String?);
     }
 
     return counts;
@@ -719,6 +592,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 onTap: () => FlightOptionsSheet.show(
                                   context,
                                   tripId: trip.id,
+                                  tripStartDate: _startDate,
+                                  tripEndDate: _endDate,
                                 ),
                               ),
                             ),
@@ -730,6 +605,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 onTap: () => HotelOptionsSheet.show(
                                   context,
                                   tripId: trip.id,
+                                  tripStartDate: _startDate,
+                                  tripEndDate: _endDate,
                                 ),
                               ),
                             ),
