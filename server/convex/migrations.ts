@@ -38,3 +38,24 @@ export const backfillTripUserId = migrations.define({
     }
   },
 });
+
+// Migration: Convert trip.userId from Clerk ID string to Convex user document Id
+// After running: change schema.ts trips.userId back to v.id("users")
+export const migrateTripsUserIdToRef = migrations.define({
+  table: "trips",
+  migrateOne: async (ctx, trip) => {
+    const userId = trip.userId;
+    // Skip if already a Convex ID (starts with typical Convex ID pattern)
+    if (!userId || userId.startsWith("j")) {
+      return;
+    }
+    // Look up user by clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .unique();
+    if (user) {
+      await ctx.db.patch(trip._id, { userId: user._id });
+    }
+  },
+});

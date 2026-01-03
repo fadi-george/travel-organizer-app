@@ -4,17 +4,24 @@ import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 /**
- * Helper to get the authenticated user's ID.
- * Throws an error if not authenticated.
+ * Helper to get the authenticated user's Convex document ID.
+ * Throws an error if not authenticated or user not found.
  */
 async function getAuthenticatedUserId(
   ctx: QueryCtx | MutationCtx
-): Promise<string> {
+): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  return identity.subject;
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user._id;
 }
 
 /**
@@ -24,7 +31,7 @@ async function getAuthenticatedUserId(
 async function verifyTripOwnership(
   ctx: QueryCtx | MutationCtx,
   tripId: Id<"trips">,
-  userId: string
+  userId: Id<"users">
 ) {
   const trip = await ctx.db.get(tripId);
   if (!trip) {
@@ -42,14 +49,20 @@ export const list = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      // Return empty array for unauthenticated users
       return [];
     }
 
-    const userId = identity.subject;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) {
+      return [];
+    }
+
     const trips = await ctx.db
       .query("trips")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect();
 
     // Fetch related data for each trip
@@ -92,11 +105,19 @@ export const get = query({
       return null;
     }
 
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) {
+      return null;
+    }
+
     const trip = await ctx.db.get(args.id);
     if (!trip) return null;
 
     // Verify ownership
-    if (trip.userId !== identity.subject) {
+    if (trip.userId !== user._id) {
       return null;
     }
 

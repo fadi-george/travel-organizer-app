@@ -11,7 +11,7 @@ export default defineSchema({
   }).index("by_clerk_id", ["clerkId"]),
 
   trips: defineTable({
-    userId: v.string(),
+    userId: v.id("users"),
     name: v.string(),
     startDate: v.string(),
     endDate: v.string(),
@@ -29,7 +29,9 @@ export default defineSchema({
     address: v.optional(v.string()),
     confirmationNumber: v.optional(v.string()),
     notes: v.optional(v.string()),
-  }).index("by_trip", ["tripId"]),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_trip_and_checkin", ["tripId", "checkIn"]),
 
   flights: defineTable({
     tripId: v.id("trips"),
@@ -51,7 +53,9 @@ export default defineSchema({
     confirmationNumber: v.optional(v.string()),
     eTicketNumber: v.optional(v.string()),
     notes: v.optional(v.string()),
-  }).index("by_trip", ["tripId"]),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_trip_and_date", ["tripId", "departureDate"]),
 
   activities: defineTable({
     tripId: v.id("trips"),
@@ -61,5 +65,7 @@ export default defineSchema({
     location: v.optional(v.string()),
     type: v.optional(v.string()),
     notes: v.optional(v.string()),
-  }).index("by_trip", ["tripId"]),
+  })
+    .index("by_trip", ["tripId"])
+    .index("by_trip_and_date", ["tripId", "date"]),
 });
