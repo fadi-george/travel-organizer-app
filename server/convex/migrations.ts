@@ -23,3 +23,18 @@ export const backfillTripDates = migrations.define({
     }
   },
 });
+
+// Migration: Backfill userId for existing trips (assigns to a default/anonymous user)
+// After running this migration, you can make userId required again in schema.ts
+export const backfillTripUserId = migrations.define({
+  table: "trips",
+  migrateOne: async (ctx, trip) => {
+    if (trip.userId === undefined) {
+      // Assign to a placeholder user ID for legacy trips
+      // These trips will be accessible to anyone until claimed or deleted
+      await ctx.db.patch(trip._id, {
+        userId: "legacy_user",
+      });
+    }
+  },
+});

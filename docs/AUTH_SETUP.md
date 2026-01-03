@@ -5,6 +5,7 @@ This guide explains how to complete the Clerk authentication setup for the Trave
 ## Overview
 
 The app is configured to use **Clerk** for authentication with:
+
 - **Google OAuth** - Sign in with Google
 - **Magic Links** - Passwordless email sign-in
 
@@ -51,6 +52,7 @@ export default {
 ```
 
 Then in the Convex Dashboard:
+
 1. Go to Settings > Authentication
 2. Add your Clerk provider configuration
 
@@ -59,11 +61,13 @@ Then in the Convex Dashboard:
 When the `clerk_flutter` package is stable, you can integrate it:
 
 1. Uncomment in `client/pubspec.yaml`:
+
    ```yaml
    clerk_flutter: ^0.0.13-beta
    ```
 
 2. Update `client/lib/main.dart` to wrap with ClerkAuth:
+
    ```dart
    return ClerkAuth(
      publishableKey: publishableKey,
@@ -77,25 +81,25 @@ When the `clerk_flutter` package is stable, you can integrate it:
 
 ### Backend (Convex)
 
-| File | Purpose |
-|------|---------|
-| `server/convex/auth.config.ts` | Clerk JWT verification config |
-| `server/convex/schema.ts` | Added `users` table and `userId` to trips |
-| `server/convex/users.ts` | User management functions |
-| `server/convex/trips.ts` | Auth checks and user filtering |
-| `server/convex/flights.ts` | Auth checks for trip ownership |
-| `server/convex/accommodations.ts` | Auth checks for trip ownership |
-| `server/convex/activities.ts` | Auth checks for trip ownership |
-| `server/convex/lib/auth.ts` | Shared auth helper functions |
+| File                              | Purpose                                   |
+| --------------------------------- | ----------------------------------------- |
+| `server/convex/auth.config.ts`    | Clerk JWT verification config             |
+| `server/convex/schema.ts`         | Added `users` table and `userId` to trips |
+| `server/convex/users.ts`          | User management functions                 |
+| `server/convex/trips.ts`          | Auth checks and user filtering            |
+| `server/convex/flights.ts`        | Auth checks for trip ownership            |
+| `server/convex/accommodations.ts` | Auth checks for trip ownership            |
+| `server/convex/activities.ts`     | Auth checks for trip ownership            |
+| `server/convex/lib/auth.ts`       | Shared auth helper functions              |
 
 ### Flutter Client
 
-| File | Purpose |
-|------|---------|
-| `client/lib/services/auth_service.dart` | Auth state management |
-| `client/lib/screens/login_screen.dart` | Login UI |
-| `client/lib/main.dart` | Auth initialization and routing |
-| `client/lib/screens/trips_screen.dart` | Profile menu with sign-out |
+| File                                    | Purpose                         |
+| --------------------------------------- | ------------------------------- |
+| `client/lib/services/auth_service.dart` | Auth state management           |
+| `client/lib/screens/login_screen.dart`  | Login UI                        |
+| `client/lib/main.dart`                  | Auth initialization and routing |
+| `client/lib/screens/trips_screen.dart`  | Profile menu with sign-out      |
 
 ## How Auth Works
 
@@ -138,6 +142,7 @@ trips: defineTable({
 ## Testing Without Clerk
 
 If you haven't configured Clerk yet, the app will:
+
 1. Skip authentication checks
 2. Show the trips screen directly
 3. All trips will be shared (no user isolation)
@@ -147,15 +152,17 @@ To enable auth, complete the setup steps above and add `CLERK_PUBLISHABLE_KEY` t
 ## Troubleshooting
 
 ### "Not authenticated" errors
+
 - Ensure `CLERK_PUBLISHABLE_KEY` is set in `.env`
 - Check that Clerk is properly configured in the Convex dashboard
 - Verify the domain in `auth.config.ts` matches your Clerk issuer URL
 
 ### Token not syncing to Convex
+
 - Check the console for "Error syncing token to Convex" messages
 - Ensure ConvexService is initialized before AuthService
 
 ### User data not saving
+
 - Check the Convex dashboard for errors in the `users:store` mutation
 - Verify the `users` table schema matches the expected format
-

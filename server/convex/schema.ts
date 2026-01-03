@@ -11,7 +11,7 @@ export default defineSchema({
   }).index("by_clerk_id", ["clerkId"]),
 
   trips: defineTable({
-    userId: v.string(), // Clerk user ID for ownership
+    userId: v.string(),
     name: v.string(),
     startDate: v.string(),
     endDate: v.string(),
