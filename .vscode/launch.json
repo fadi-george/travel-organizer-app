@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Dev)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/client"
+    },
+    {
+      "name": "Flutter (Prod)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/client",
+      "args": ["--dart-define=ENV=prod"]
+    },
+    {
+      "name": "Flutter (Prod - Release)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/client",
+      "flutterMode": "release"
+    }
+  ]
+}

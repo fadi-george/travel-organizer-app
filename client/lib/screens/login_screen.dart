@@ -66,22 +66,24 @@ class LoginScreen extends StatelessWidget {
   }
 
   Future<void> _signInWithGoogle(BuildContext context) async {
-    void showError(String message) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Sign in failed: $message')));
-      }
-    }
+    final clerkAuth = ClerkAuth.of(context);
 
     try {
-      await ClerkAuth.of(context).ssoSignIn(
+      await clerkAuth.ssoSignIn(
         context,
         clerk.Strategy.oauthGoogle,
-        onError: (error) => showError(error.message),
+        onError: (error) {
+          debugPrint('SignIn onError: ${error.message}');
+        },
       );
     } catch (e) {
-      showError('$e');
+      debugPrint('SSO Error: $e');
+      // Only show error if user is still not signed in
+      if (!clerkAuth.isSignedIn && context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign in failed: $e')));
+      }
     }
   }
 }

@@ -73,6 +73,7 @@ flutter:
   assets:
     - .env
     - .env.local
+    - .env.prod
     - assets/mocks/
     - assets/models/
     - assets/airports.json

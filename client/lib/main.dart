@@ -10,11 +10,17 @@ import 'services/auth_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables based on build mode
-  // - Release builds: .env (production)
+  // Load environment variables based on build mode or --dart-define=ENV=prod
+  // - Release builds OR ENV=prod: .env.prod (production)
   // - Debug/Profile builds: .env.local (development)
-  await dotenv.load(fileName: '.env');
-  if (!kReleaseMode) {
+  const envOverride = String.fromEnvironment('ENV');
+  final useProd = kReleaseMode || envOverride == 'prod';
+
+  if (useProd) {
+    debugPrint('Loading production environment (.env.prod)');
+    await dotenv.load(fileName: '.env.prod');
+  } else {
+    debugPrint('Loading development environment (.env.local)');
     await dotenv.load(fileName: '.env.local').catchError((error) {
       debugPrint('Error loading .env.local: $error');
     });

@@ -13,12 +13,7 @@ class AuthUser {
   final String? name;
   final String? imageUrl;
 
-  const AuthUser({
-    required this.id,
-    this.email,
-    this.name,
-    this.imageUrl,
-  });
+  const AuthUser({required this.id, this.email, this.name, this.imageUrl});
 }
 
 /// Singleton service for managing authentication and syncing with Convex.
@@ -71,21 +66,12 @@ class AuthService extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       _publishableKey = dotenv.env['CLERK_PUBLISHABLE_KEY'];
-      if (_publishableKey == null || _publishableKey!.isEmpty) {
-        debugPrint(
-          'CLERK_PUBLISHABLE_KEY not found in .env file. '
-          'Add your Clerk publishable key to enable authentication.',
-        );
-      }
-
-      // Set initial state to unauthenticated
       _state = AuthState.unauthenticated;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       _state = AuthState.unauthenticated;
       notifyListeners();
-      debugPrint('AuthService initialization error: $e');
     }
   }
 
@@ -128,7 +114,9 @@ class AuthService extends ChangeNotifier {
   Future<void> setAuthToken(String? token, {AuthUser? user}) async {
     _currentToken = token;
     _user = user;
-    _state = token != null ? AuthState.authenticated : AuthState.unauthenticated;
+    _state = token != null
+        ? AuthState.authenticated
+        : AuthState.unauthenticated;
     await _syncTokenToConvex(token);
     if (token != null) {
       await _storeUserInConvex();

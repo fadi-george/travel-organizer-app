@@ -32,12 +32,21 @@ This app uses **Google SSO via Clerk** with **Convex** as the backend.
 
 ### 2. Environment Variables
 
-**Flutter Client** (`client/.env`):
+**Flutter Client - Development** (`client/.env.local`):
 
 ```
 CLERK_PUBLISHABLE_KEY=pk_test_xxx
-CONVEX_URL=https://your-deployment.convex.cloud
+CONVEX_URL=https://your-dev-deployment.convex.cloud
 ```
+
+**Flutter Client - Production** (`client/.env.prod`):
+
+```
+CLERK_PUBLISHABLE_KEY=pk_live_xxx
+CONVEX_URL=https://your-prod-deployment.convex.cloud
+```
+
+> **Note:** The app loads `.env.local` for debug builds and `.env.prod` for release builds (or when using `--dart-define=ENV=prod`).
 
 **Convex** (set via `bunx convex env set`):
 
@@ -78,7 +87,49 @@ Add to `android/app/src/main/AndroidManifest.xml` inside the `<activity>` tag:
 </intent-filter>
 ```
 
+## Production Setup
+
+Production requires additional configuration beyond development:
+
+### 1. Clerk Production Instance
+
+1. **Enable Native API**: Go to **Configure** → **Settings** and enable **"Native applications"** checkbox. This is required for Flutter/mobile apps.
+
+2. **Add Mobile SSO Redirect URL**: Go to **Configure** → **SSO Connections** → scroll to **"Allowlist for mobile SSO redirect"** and add:
+
+   ```
+   com.clerk.flutter://callback
+   ```
+
+3. **Set up JWT Template**: Ensure the `convex` JWT template exists in your production instance (same as dev).
+
+### 2. Convex Production Deployment
+
+Set the production `CLERK_ISSUER_URL`:
+
+```bash
+bunx convex env set CLERK_ISSUER_URL "https://clerk.yourdomain.com" --prod
+```
+
+### 3. Deploy Convex
+
+```bash
+bunx convex deploy
+```
+
 ## Common Pitfalls & Fixes
+
+### ❌ "Native API disabled" error (Production)
+
+**Cause**: The Clerk production instance doesn't have Native API enabled. This is required for Flutter/mobile apps.
+
+**Fix**: In Clerk Dashboard → **Configure** → **Settings** → Enable **"Native applications"**.
+
+### ❌ "Redirect url does not match" error (Production)
+
+**Cause**: The mobile SSO redirect URL is not allowlisted in the production Clerk instance.
+
+**Fix**: In Clerk Dashboard → **Configure** → **SSO Connections** → **"Allowlist for mobile SSO redirect"** → Add `com.clerk.flutter://callback`.
 
 ### ❌ "Frame load interrupted" error
 

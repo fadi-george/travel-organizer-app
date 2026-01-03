@@ -102,14 +102,16 @@ echo ""
 cd client || exit 1
 
 # Remove existing files/symlinks if they exist
-rm -f .env .env.local 2>/dev/null
+rm -f .env .env.local .env.prod 2>/dev/null
 
 # Create symlinks
 ln -s ../.env .env
 ln -s ../.env.local .env.local
+ln -s ../.env.prod .env.prod
 
 echo "✓ Created client/.env → ../.env"
 echo "✓ Created client/.env.local → ../.env.local"
+echo "✓ Created client/.env.prod → ../.env.prod"
 
 # Check if API key is configured
 if is_valid_api_key "$GOOGLE_API_KEY"; then
