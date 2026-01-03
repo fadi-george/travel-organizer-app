@@ -10,6 +10,20 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 - Organize daily activities and itinerary
 - Interactive map view with flutter_map (OpenStreetMap tiles)
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/trips-screen.png" width="250" alt="Trips Screen" />
+  <img src="screenshots/create-trip.png" width="250" alt="Create Trip" />
+  <img src="screenshots/itinerary-screen.png" width="250" alt="Itinerary Screen" />
+</p>
+
+<p align="center">
+  <img src="screenshots/add-activity-options.png" width="250" alt="Add Activity Options" />
+  <img src="screenshots/upload-pdf.png" width="250" alt="Upload PDF" />
+  <img src="screenshots/itinerary-map.png" width="250" alt="Itinerary Map" />
+</p>
+
 ## Setup
 
 ### Prerequisites
@@ -141,6 +155,7 @@ This means the Google Places API key is missing or invalid:
 ### "API key not found" errors
 
 Check the Google Cloud Console to ensure:
+
 - The API key is not restricted incorrectly
 - Billing is enabled on the Google Cloud project
 - The required APIs are enabled
