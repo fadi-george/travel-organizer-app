@@ -366,6 +366,55 @@ class _TripMapScreenState extends State<TripMapScreen> {
     );
   }
 
+  /// Get arrows per km based on zoom level
+  double _getArrowsPerKm(double zoom) {
+    if (zoom < 8) return 0.3;
+    if (zoom < 10) return 0.5;
+    if (zoom < 12) return 0.8;
+    if (zoom < 14) return 1.2;
+    if (zoom < 15) return 2.5;
+    if (zoom < 16) return 6.0;
+    if (zoom < 17) return 14.0;
+    return 30.0; // zoom 17-18
+  }
+
+  /// Get minimum arrows per segment based on zoom level
+  int _getMinArrows(double zoom) {
+    if (zoom < 10) return 2;
+    if (zoom < 12) return 2;
+    if (zoom < 14) return 3;
+    if (zoom < 15) return 4;
+    if (zoom < 16) return 6;
+    if (zoom < 17) return 10;
+    return 18; // zoom 17-18
+  }
+
+  /// Get max arrows based on zoom and distance
+  int _getMaxArrows(double zoom, double distKm) {
+    // Zoom-based max - higher at zoom 17+
+    final zoomMax = (zoom < 14)
+        ? (zoom * 2).clamp(10, 25)
+        : (zoom < 17)
+        ? (zoom * 4).clamp(25, 60)
+        : (zoom * 10).clamp(120, 180);
+
+    // Distance-based max: scale with both distance and zoom
+    final distScale = math.pow(distKm.clamp(0.2, 20), 1.1);
+    // Higher per-km cap at high zoom levels
+    final perKmCap = (zoom < 14)
+        ? 2 +
+              zoom *
+                  0.5 // ~8 at zoom 12
+        : (zoom < 16)
+        ? 3 +
+              zoom *
+                  0.8 // ~16 at zoom 15
+        : 8 + zoom * 2.0; // ~44 at zoom 18
+    final distanceMax = (distScale * perKmCap).round();
+
+    return math.min(zoomMax, distanceMax).toInt().clamp(3, 180);
+  }
+
   /// Build arrow markers with count based on zoom level and distance
   List<Marker> _buildArrowMarkers(
     List<(LatLng, MapItem)> orderedLocations,
@@ -375,6 +424,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     if (_currentZoom < 6) return arrows;
 
     final distance = const Distance();
+    final zoom = _currentZoom.clamp(6.0, 18.0);
 
     for (int i = 0; i < orderedLocations.length - 1; i++) {
       final (curr, currItem) = orderedLocations[i];
@@ -387,14 +437,17 @@ class _TripMapScreenState extends State<TripMapScreen> {
           nextItem.sortOrder == 1;
 
       if (!isFlightPair) {
-        // Calculate distance between markers in km
-        final dist = distance.as(LengthUnit.Kilometer, curr, next);
+        final dist = distance.distance(curr, next) / 1000; // meters to km
 
-        // Scale arrows: more arrows for longer distances, scaled by zoom
-        // At zoom 6: ~2-5 arrows, at zoom 14+: up to 20 arrows
-        final zoomFactor = ((_currentZoom - 4) * 0.8).clamp(1, 4);
-        final distFactor = (dist / 2).clamp(1, 10); // 1 arrow per 2km, max 10x
-        final arrowCount = (zoomFactor * distFactor).clamp(2, 20).toInt();
+        final arrowsPerKm = _getArrowsPerKm(zoom);
+        final baseArrowCount = (dist * arrowsPerKm).round();
+        final minArrows = _getMinArrows(zoom);
+        final maxArrows = _getMaxArrows(zoom, dist);
+        final arrowCount = baseArrowCount.clamp(minArrows, maxArrows);
+
+        debugPrint(
+          'Segment ${i + 1}→${i + 2}: ${dist.toStringAsFixed(2)}km → $arrowCount arrows (z${zoom.toStringAsFixed(1)})',
+        );
 
         final angle = math.atan2(
           next.longitude - curr.longitude,
@@ -531,6 +584,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
               onDateSelected: (date) {
                 setState(() => _selectedDate = date);
                 _updateMarkers();
+                // Reset map rotation when day changes
+                _mapController.rotate(0);
               },
             ),
           ),
@@ -557,19 +612,24 @@ class _TripMapScreenState extends State<TripMapScreen> {
             onPositionChanged: (position, hasGesture) {
               if (position.zoom != _currentZoom) {
                 final oldZoom = _currentZoom;
-                _currentZoom = position.zoom;
-                // Rebuild arrows if zoom changed by 1+ level or crossed threshold
-                final crossedThreshold = (oldZoom < 6) != (_currentZoom < 6);
-                final zoomChanged = (oldZoom - _currentZoom).abs() >= 1;
-                if ((crossedThreshold || zoomChanged) &&
-                    _orderedLocations.isNotEmpty) {
-                  setState(() {
+                final zoomDelta = (oldZoom - position.zoom).abs();
+                // Rebuild when crossing integer zoom levels or delta threshold
+                final crossedZoomLevel =
+                    oldZoom.floor() != position.zoom.floor();
+                final crossedThreshold = (oldZoom < 6) != (position.zoom < 6);
+                final zoomChanged = zoomDelta >= 0.5;
+                final shouldRebuildArrows =
+                    (crossedThreshold || crossedZoomLevel || zoomChanged) &&
+                    _orderedLocations.isNotEmpty;
+                setState(() {
+                  _currentZoom = position.zoom;
+                  if (shouldRebuildArrows) {
                     _arrowMarkers = _buildArrowMarkers(
                       _orderedLocations,
                       _flightIconMarkers,
                     );
-                  });
-                }
+                  }
+                });
               }
             },
           ),
@@ -601,6 +661,22 @@ class _TripMapScreenState extends State<TripMapScreen> {
         if (_isLoadingMarkers) _buildLoadingOverlay(),
         if (!_isLoadingMarkers && _markers.isEmpty) _buildEmptyState(),
         if (_markers.isNotEmpty) _buildLegend(),
+        // Debug zoom label
+        Positioned(
+          right: 16,
+          top: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Zoom: ${_currentZoom.toStringAsFixed(1)}',
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ),
       ],
     );
   }
