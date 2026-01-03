@@ -1,6 +1,7 @@
 import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../services/auth_service.dart';
 import '../services/convex_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/dialogs.dart';
@@ -125,6 +126,8 @@ class _TripsScreenState extends State<TripsScreen> {
                               ),
                             ],
                           ),
+                          // Profile menu button
+                          _buildProfileButton(context),
                         ],
                       ),
                     ),
@@ -238,6 +241,97 @@ class _TripsScreenState extends State<TripsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileButton(BuildContext context) {
+    final authService = AuthService.instance;
+    final user = authService.user;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 48),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: colorScheme.primaryContainer,
+              backgroundImage: user?.imageUrl != null
+                  ? NetworkImage(user!.imageUrl!)
+                  : null,
+              child: user?.imageUrl == null
+                  ? Icon(
+                      Icons.person_rounded,
+                      size: 18,
+                      color: colorScheme.onPrimaryContainer,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user?.name ?? 'User',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              if (user?.email != null)
+                Text(
+                  user!.email!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'sign_out',
+          child: Row(
+            children: [
+              Icon(
+                Icons.logout_rounded,
+                size: 20,
+                color: colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Sign out',
+                style: TextStyle(color: colorScheme.error),
+              ),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) async {
+        if (value == 'sign_out') {
+          await authService.signOut();
+        }
+      },
     );
   }
 

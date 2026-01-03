@@ -1,11 +1,56 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 
-// Get all trips with related data
+/**
+ * Helper to get the authenticated user's ID.
+ * Throws an error if not authenticated.
+ */
+async function getAuthenticatedUserId(
+  ctx: QueryCtx | MutationCtx
+): Promise<string> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+  return identity.subject;
+}
+
+/**
+ * Helper to verify the user owns a trip.
+ * Returns the trip if authorized, throws if not.
+ */
+async function verifyTripOwnership(
+  ctx: QueryCtx | MutationCtx,
+  tripId: Id<"trips">,
+  userId: string
+) {
+  const trip = await ctx.db.get(tripId);
+  if (!trip) {
+    throw new Error("Trip not found");
+  }
+  if (trip.userId !== userId) {
+    throw new Error("Not authorized to access this trip");
+  }
+  return trip;
+}
+
+// Get all trips for the authenticated user with related data
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const trips = await ctx.db.query("trips").collect();
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      // Return empty array for unauthenticated users
+      return [];
+    }
+
+    const userId = identity.subject;
+    const trips = await ctx.db
+      .query("trips")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
     // Fetch related data for each trip
     const tripsWithRelations = await Promise.all(
@@ -38,12 +83,22 @@ export const list = query({
   },
 });
 
-// Get a single trip by ID
+// Get a single trip by ID (must be owned by authenticated user)
 export const get = query({
   args: { id: v.id("trips") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
     const trip = await ctx.db.get(args.id);
     if (!trip) return null;
+
+    // Verify ownership
+    if (trip.userId !== identity.subject) {
+      return null;
+    }
 
     const accommodations = await ctx.db
       .query("accommodations")
@@ -69,7 +124,7 @@ export const get = query({
   },
 });
 
-// Create a new trip
+// Create a new trip for the authenticated user
 export const create = mutation({
   args: {
     name: v.string(),
@@ -78,12 +133,17 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const tripId = await ctx.db.insert("trips", args);
+    const userId = await getAuthenticatedUserId(ctx);
+
+    const tripId = await ctx.db.insert("trips", {
+      ...args,
+      userId,
+    });
     return await ctx.db.get(tripId);
   },
 });
 
-// Update a trip
+// Update a trip (must be owned by authenticated user)
 export const update = mutation({
   args: {
     id: v.id("trips"),
@@ -93,11 +153,11 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
     const { id, ...updates } = args;
-    const existing = await ctx.db.get(id);
-    if (!existing) {
-      throw new Error("Trip not found");
-    }
+
+    await verifyTripOwnership(ctx, id, userId);
+
     await ctx.db.patch(id, updates);
     return await ctx.db.get(id);
   },
@@ -107,10 +167,8 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("trips") },
   handler: async (ctx, args) => {
-    const trip = await ctx.db.get(args.id);
-    if (!trip) {
-      throw new Error("Trip not found");
-    }
+    const userId = await getAuthenticatedUserId(ctx);
+    await verifyTripOwnership(ctx, args.id, userId);
 
     // Delete related accommodations
     const accommodations = await ctx.db
