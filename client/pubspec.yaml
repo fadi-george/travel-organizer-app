@@ -46,8 +46,7 @@ dependencies:
   latlong2: ^0.9.1
   
   # Authentication
-  # clerk_flutter: ^0.0.13-beta  # Uncomment when ready to integrate Clerk
-  # For now, using manual auth token management with ConvexService.setAuth()
+  clerk_flutter: ^0.0.13-beta
 
 dev_dependencies:
   flutter_test:

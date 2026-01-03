@@ -1,3 +1,4 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,21 @@ class TravelOrganizerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final publishableKey = AuthService.instance.publishableKey;
+
+    // If no Clerk key is configured, show the app without auth
+    if (publishableKey == null || publishableKey.isEmpty) {
+      return _buildMaterialApp(child: const TripsScreen());
+    }
+
+    // Wrap with Clerk authentication
+    return ClerkAuth(
+      config: ClerkAuthConfig(publishableKey: publishableKey),
+      child: _buildMaterialApp(child: const AuthWrapper()),
+    );
+  }
+
+  MaterialApp _buildMaterialApp({required Widget child}) {
     return MaterialApp(
       title: 'Travel Organizer',
       debugShowCheckedModeBanner: false,
@@ -56,7 +72,7 @@ class TravelOrganizerApp extends StatelessWidget {
         fontFamily: 'SF Pro Display',
       ),
       themeMode: ThemeMode.system,
-      home: const AuthWrapper(),
+      home: child,
     );
   }
 }
@@ -90,25 +106,47 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService.instance;
+    return ClerkAuthBuilder(
+      builder: (context, authState) {
+        // Sync auth state with our AuthService
+        _syncAuthState(context, authState);
 
-    // If Clerk is not configured, skip auth and show main app
-    if (!authService.isClerkConfigured) {
-      return const TripsScreen();
-    }
+        // Show loading while Clerk initializes
+        if (authState.isNotAvailable) {
+          return const _LoadingScreen();
+        }
 
-    // Show loading screen while auth is initializing
-    if (authService.isLoading) {
-      return const _LoadingScreen();
-    }
+        // Show sign-in screen if not authenticated
+        if (!authState.isSignedIn) {
+          return const LoginScreen();
+        }
 
-    // Show login screen if not authenticated
-    if (!authService.isAuthenticated) {
-      return const LoginScreen();
-    }
+        // Show main app if authenticated
+        return const TripsScreen();
+      },
+    );
+  }
 
-    // Show main app if authenticated
-    return const TripsScreen();
+  void _syncAuthState(BuildContext context, ClerkAuthState authState) {
+    // Update our AuthService with Clerk's auth state
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (authState.isSignedIn) {
+        final user = authState.user;
+        // Get the session token for Convex
+        final token = authState.session?.lastActiveToken?.jwt;
+
+        AuthService.instance.onAuthStateChanged(
+          isSignedIn: true,
+          userId: user?.id,
+          email: user?.email,
+          name: '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
+          imageUrl: user?.imageUrl,
+          sessionToken: token,
+        );
+      } else if (!authState.isNotAvailable) {
+        AuthService.instance.onAuthStateChanged(isSignedIn: false);
+      }
+    });
   }
 }
 
