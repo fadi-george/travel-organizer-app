@@ -1,8 +1,11 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'screens/login_screen.dart';
 import 'screens/trips_screen.dart';
+import 'services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +19,9 @@ Future<void> main() async {
       debugPrint('Error loading .env.local: $error');
     });
   }
+
+  // Initialize authentication service
+  await AuthService.instance.initialize();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -31,6 +37,21 @@ class TravelOrganizerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final publishableKey = AuthService.instance.publishableKey;
+
+    // If no Clerk key is configured, show the app without auth
+    if (publishableKey == null || publishableKey.isEmpty) {
+      return _buildMaterialApp(child: const TripsScreen());
+    }
+
+    // Wrap with Clerk authentication
+    return ClerkAuth(
+      config: ClerkAuthConfig(publishableKey: publishableKey),
+      child: _buildMaterialApp(child: const AuthWrapper()),
+    );
+  }
+
+  MaterialApp _buildMaterialApp({required Widget child}) {
     return MaterialApp(
       title: 'Travel Organizer',
       debugShowCheckedModeBanner: false,
@@ -51,7 +72,130 @@ class TravelOrganizerApp extends StatelessWidget {
         fontFamily: 'SF Pro Display',
       ),
       themeMode: ThemeMode.system,
-      home: const TripsScreen(),
+      home: child,
+    );
+  }
+}
+
+/// Widget that wraps the app with authentication state
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  String? _lastSyncedUserId;
+  bool _lastSyncedSignedIn = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClerkAuthBuilder(
+      builder: (context, authState) {
+        // Sync auth state with our AuthService (only when state changes)
+        _syncAuthState(context, authState);
+
+        // Show loading only during initial Clerk initialization
+        if (authState.isNotAvailable && authState.user == null) {
+          return const _LoadingScreen();
+        }
+
+        // Show sign-in screen if not authenticated
+        if (!authState.isSignedIn) {
+          return const LoginScreen();
+        }
+
+        // Show main app if authenticated
+        return const TripsScreen();
+      },
+    );
+  }
+
+  void _syncAuthState(BuildContext context, ClerkAuthState authState) {
+    final user = authState.user;
+    final isSignedIn = authState.isSignedIn;
+
+    // Only sync if signed-in state or user changed
+    final stateChanged =
+        isSignedIn != _lastSyncedSignedIn || user?.id != _lastSyncedUserId;
+
+    if (!stateChanged) return;
+
+    // Update tracking variables
+    _lastSyncedSignedIn = isSignedIn;
+    _lastSyncedUserId = user?.id;
+
+    // Schedule the sync after the current frame
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      if (isSignedIn) {
+        // Get token from the "convex" JWT template (has correct audience)
+        String? token;
+        try {
+          final sessionToken = await authState.sessionToken(
+            templateName: 'convex',
+          );
+          token = sessionToken.jwt;
+        } catch (e) {
+          // Fallback to default token
+          token = authState.session?.lastActiveToken?.jwt;
+        }
+
+        AuthService.instance.onAuthStateChanged(
+          isSignedIn: true,
+          userId: user?.id,
+          email: user?.email,
+          name: '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
+          imageUrl: user?.imageUrl,
+          sessionToken: token,
+        );
+      } else if (!authState.isNotAvailable) {
+        AuthService.instance.onAuthStateChanged(isSignedIn: false);
+      }
+    });
+  }
+}
+
+/// Loading screen shown while authentication is initializing
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.flight_takeoff_rounded,
+              size: 64,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Travel Organizer',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

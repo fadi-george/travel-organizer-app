@@ -150,7 +150,7 @@ class _TripCardState extends State<TripCard>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      widget.trip.daysUntilTrip!,
+                      widget.trip.daysUntilTrip,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -265,7 +265,7 @@ class _TripCardState extends State<TripCard>
                 ...[
                   const SizedBox(height: 2),
                   Text(
-                    widget.trip.daysUntilTrip!,
+                    widget.trip.daysUntilTrip,
                     style: TextStyle(
                       color: widget.trip.isPast
                           ? Theme.of(

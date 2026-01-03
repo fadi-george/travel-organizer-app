@@ -23,3 +23,39 @@ export const backfillTripDates = migrations.define({
     }
   },
 });
+
+// Migration: Backfill userId for existing trips (assigns to a default/anonymous user)
+// After running this migration, you can make userId required again in schema.ts
+export const backfillTripUserId = migrations.define({
+  table: "trips",
+  migrateOne: async (ctx, trip) => {
+    if (trip.userId === undefined) {
+      // Assign to a placeholder user ID for legacy trips
+      // These trips will be accessible to anyone until claimed or deleted
+      await ctx.db.patch(trip._id, {
+        userId: "legacy_user",
+      });
+    }
+  },
+});
+
+// Migration: Convert trip.userId from Clerk ID string to Convex user document Id
+// After running: change schema.ts trips.userId back to v.id("users")
+export const migrateTripsUserIdToRef = migrations.define({
+  table: "trips",
+  migrateOne: async (ctx, trip) => {
+    const userId = trip.userId;
+    // Skip if already a Convex ID (starts with typical Convex ID pattern)
+    if (!userId || userId.startsWith("j")) {
+      return;
+    }
+    // Look up user by clerkId
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", userId))
+      .unique();
+    if (user) {
+      await ctx.db.patch(trip._id, { userId: user._id });
+    }
+  },
+});

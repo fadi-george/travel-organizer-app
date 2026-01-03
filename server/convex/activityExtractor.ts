@@ -82,6 +82,12 @@ export const extractActivitiesFromPdf = action({
     activities?: unknown[];
     error?: string;
   }> => {
+    // Verify user is authenticated
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { success: false, error: "Not authenticated" };
+    }
+
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicApiKey) {
       throw new Error("ANTHROPIC_API_KEY environment variable is not set");

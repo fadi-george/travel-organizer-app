@@ -44,6 +44,10 @@ dependencies:
   google_places_autocomplete_text_field: ^3.0.0
   flutter_map: ^8.1.1
   latlong2: ^0.9.1
+  
+  # Authentication
+  clerk_flutter: ^0.0.13-beta
+  clerk_auth: ^0.0.13-beta
 
 dev_dependencies:
   flutter_test:
