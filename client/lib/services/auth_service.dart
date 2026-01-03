@@ -111,13 +111,8 @@ class AuthService extends ChangeNotifier {
 
       // Only sync to Convex if we have a valid token
       if (sessionToken != null && sessionToken.isNotEmpty) {
-        debugPrint('Syncing token to Convex (${sessionToken.length} chars)...');
         await _syncTokenToConvex(sessionToken);
-        debugPrint('Token synced, storing user in Convex...');
         await _storeUserInConvex();
-        debugPrint('User stored in Convex successfully');
-      } else {
-        debugPrint('Skipping Convex sync - no session token yet');
       }
     } else {
       _user = null;
@@ -145,7 +140,7 @@ class AuthService extends ChangeNotifier {
   Future<void> _syncTokenToConvex(String? token) async {
     try {
       final convexService = await ConvexService.getInstance();
-      convexService.client.setAuth(token: token);
+      await convexService.client.setAuth(token: token);
     } catch (e) {
       debugPrint('Error syncing token to Convex: $e');
     }

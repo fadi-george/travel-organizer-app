@@ -87,7 +87,6 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   String? _lastSyncedUserId;
-  String? _lastSyncedToken;
   bool _lastSyncedSignedIn = false;
 
   @override
@@ -116,44 +115,34 @@ class _AuthWrapperState extends State<AuthWrapper> {
   void _syncAuthState(BuildContext context, ClerkAuthState authState) {
     final user = authState.user;
     final isSignedIn = authState.isSignedIn;
-    final session = authState.session;
 
-    // Get token from session's lastActiveToken
-    final token = session?.lastActiveToken?.jwt;
-
-    // Debug: log session details
-    if (isSignedIn && session != null) {
-      debugPrint(
-        'Session details: id=${session.id}, '
-        'lastActiveToken=${session.lastActiveToken}, '
-        'status=${session.status}',
-      );
-    }
-
-    // Only sync if state has actually changed
+    // Only sync if signed-in state or user changed
     final stateChanged =
-        isSignedIn != _lastSyncedSignedIn ||
-        user?.id != _lastSyncedUserId ||
-        token != _lastSyncedToken;
+        isSignedIn != _lastSyncedSignedIn || user?.id != _lastSyncedUserId;
 
     if (!stateChanged) return;
 
     // Update tracking variables
     _lastSyncedSignedIn = isSignedIn;
     _lastSyncedUserId = user?.id;
-    _lastSyncedToken = token;
-
-    debugPrint(
-      'Auth state changed: isSignedIn=$isSignedIn, '
-      'user=${user?.id}, '
-      'token=${token != null ? 'present (${token.length} chars)' : 'null'}',
-    );
 
     // Schedule the sync after the current frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
       if (isSignedIn) {
+        // Get token from the "convex" JWT template (has correct audience)
+        String? token;
+        try {
+          final sessionToken = await authState.sessionToken(
+            templateName: 'convex',
+          );
+          token = sessionToken.jwt;
+        } catch (e) {
+          // Fallback to default token
+          token = authState.session?.lastActiveToken?.jwt;
+        }
+
         AuthService.instance.onAuthStateChanged(
           isSignedIn: true,
           userId: user?.id,
