@@ -380,12 +380,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
   double _getArrowsPerKm(double zoom) {
     if (zoom < 8) return 0.3;
     if (zoom < 10) return 0.5;
-    if (zoom < 12) return 0.8;
-    if (zoom < 14) return 1.2;
-    if (zoom < 15) return 2.5;
-    if (zoom < 16) return 6.0;
-    if (zoom < 17) return 14.0;
-    return 30.0; // zoom 17-18
+    if (zoom < 12) return 1.0;
+    if (zoom < 14) return 1.8;
+    if (zoom < 15) return 3.5;
+    if (zoom < 16) return 8.0;
+    if (zoom < 17) return 18.0;
+    return 40.0; // zoom 17-18
   }
 
   /// Get minimum arrows per segment based on zoom level
@@ -725,22 +725,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
         if (_isLoadingMarkers) _buildLoadingOverlay(),
         if (!_isLoadingMarkers && _markers.isEmpty) _buildEmptyState(),
         if (_markers.isNotEmpty) _buildLegend(),
-        // Debug zoom label
-        Positioned(
-          right: 16,
-          top: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'Zoom: ${_currentZoom.toStringAsFixed(1)}',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ),
       ],
     );
   }
