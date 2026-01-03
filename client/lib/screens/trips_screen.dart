@@ -251,7 +251,8 @@ class _TripsScreenState extends State<TripsScreen> {
 
     return PopupMenuButton<String>(
       offset: const Offset(0, 48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(12),
       onSelected: (value) async {
         if (value == 'sign_out') {
           try {
@@ -300,16 +301,14 @@ class _TripsScreenState extends State<TripsScreen> {
           ),
         ),
       ],
-      child: Container(
-        padding: const EdgeInsets.all(8),
+      child: Ink(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          Icons.settings_rounded,
-          size: 24,
-          color: colorScheme.onSurfaceVariant,
+        child: const Padding(
+          padding: EdgeInsets.all(10),
+          child: Icon(Icons.settings_rounded, size: 20),
         ),
       ),
     );
