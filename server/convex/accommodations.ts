@@ -25,8 +25,6 @@ export const create = mutation({
   args: {
     tripId: v.id("trips"),
     hotelName: v.string(),
-    city: v.optional(v.string()),
-    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkInTime: v.optional(v.string()),
@@ -52,8 +50,6 @@ export const update = mutation({
   args: {
     id: v.id("accommodations"),
     hotelName: v.optional(v.string()),
-    city: v.optional(v.string()),
-    country: v.optional(v.string()),
     roomType: v.optional(v.string()),
     checkIn: v.optional(v.string()),
     checkInTime: v.optional(v.string()),

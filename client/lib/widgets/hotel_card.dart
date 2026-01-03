@@ -32,13 +32,24 @@ class HotelCard extends StatelessWidget {
 
   static const _accentColor = Color(0xFF9C27B0);
 
+  /// Extract a short location (city, country) from a full address
+  static String? _getShortLocation(String? address) {
+    if (address == null || address.isEmpty) return null;
+    final parts = address.split(',').map((p) => p.trim()).toList();
+    if (parts.length >= 2) {
+      // Return last 2 parts (typically city, country)
+      return parts.sublist(parts.length - 2).join(', ');
+    }
+    return parts.last;
+  }
+
   Widget _buildTimelineView(
     BuildContext context, {
     required ColorScheme colorScheme,
     required bool isDark,
     required String hotelName,
     required String? roomType,
-    required String? city,
+    required String? location,
   }) {
     return SwipeActionCard(
       onTap: onTap,
@@ -103,8 +114,8 @@ class HotelCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (city != null)
-                  Text(city, style: TimelineStyles.subtitleStyle(colorScheme)),
+                if (location != null)
+                  Text(location, style: TimelineStyles.subtitleStyle(colorScheme)),
               ],
             ),
           ],
@@ -121,7 +132,8 @@ class HotelCard extends StatelessWidget {
 
     final hotelName = data['hotelName'] as String? ?? 'Hotel';
     final roomType = data['roomType'] as String?;
-    final city = data['city'] as String?;
+    final address = data['address'] as String?;
+    final location = _getShortLocation(address);
 
     if (viewType == HotelCardViewType.timeline) {
       return _buildTimelineView(
@@ -130,7 +142,7 @@ class HotelCard extends StatelessWidget {
         isDark: isDark,
         hotelName: hotelName,
         roomType: roomType,
-        city: city,
+        location: location,
       );
     }
 
@@ -229,10 +241,10 @@ class HotelCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (city != null) ...[
+                  if (location != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      city,
+                      location,
                       style: TextStyle(
                         fontSize: 12,
                         color: colorScheme.onSurface.withValues(alpha: 0.5),

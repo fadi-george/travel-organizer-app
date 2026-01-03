@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Represents an airport with IATA code
@@ -41,12 +42,56 @@ class Airport {
       lon: (json['lon'] as num?)?.toDouble(),
     );
   }
+
+  /// Create from a list representation (for isolate transfer)
+  factory Airport.fromList(List<dynamic> data) {
+    return Airport(
+      iata: data[0] as String,
+      icao: data[1] as String,
+      name: data[2] as String,
+      city: data[3] as String,
+      country: data[4] as String,
+      state: data[5] as String?,
+      lat: data[6] as double?,
+      lon: data[7] as double?,
+    );
+  }
+}
+
+/// Parse airports JSON in a background isolate
+List<List<dynamic>> _parseAirportsJson(String jsonString) {
+  final Map<String, dynamic> data = json.decode(jsonString);
+  final airports = <List<dynamic>>[];
+
+  for (final entry in data.entries) {
+    final airportData = entry.value as Map<String, dynamic>;
+    final iata = airportData['iata'] as String?;
+
+    // Only include airports with IATA codes
+    if (iata != null && iata.isNotEmpty && iata.length == 3) {
+      airports.add([
+        iata,
+        entry.key,
+        airportData['name'] as String? ?? '',
+        airportData['city'] as String? ?? '',
+        airportData['country'] as String? ?? '',
+        airportData['state'] as String?,
+        (airportData['lat'] as num?)?.toDouble(),
+        (airportData['lon'] as num?)?.toDouble(),
+      ]);
+    }
+  }
+
+  // Sort by IATA code
+  airports.sort((a, b) => (a[0] as String).compareTo(b[0] as String));
+  return airports;
 }
 
 /// Service for searching airports
 class AirportsService {
   static AirportsService? _instance;
   static List<Airport>? _airports;
+  static Map<String, Airport>? _airportsByIata;
   static bool _isLoading = false;
 
   AirportsService._();
@@ -57,27 +102,21 @@ class AirportsService {
   }
 
   /// Load airports from JSON asset (only airports with IATA codes)
+  /// Parsing is done in a background isolate to prevent UI freeze
   Future<void> loadAirports() async {
     if (_airports != null || _isLoading) return;
 
     _isLoading = true;
     try {
       final jsonString = await rootBundle.loadString('assets/airports.json');
-      final Map<String, dynamic> data = json.decode(jsonString);
-
-      _airports = [];
-      for (final entry in data.entries) {
-        final airportData = entry.value as Map<String, dynamic>;
-        final iata = airportData['iata'] as String?;
-
-        // Only include airports with IATA codes
-        if (iata != null && iata.isNotEmpty && iata.length == 3) {
-          _airports!.add(Airport.fromJson(entry.key, airportData));
-        }
-      }
-
-      // Sort by IATA code for consistent results
-      _airports!.sort((a, b) => a.iata.compareTo(b.iata));
+      
+      // Parse in background isolate to prevent UI freeze
+      final parsedData = await compute(_parseAirportsJson, jsonString);
+      
+      _airports = parsedData.map(Airport.fromList).toList();
+      
+      // Build lookup map for fast IATA searches
+      _airportsByIata = {for (final a in _airports!) a.iata: a};
     } finally {
       _isLoading = false;
     }
@@ -136,15 +175,10 @@ class AirportsService {
     return results;
   }
 
-  /// Get airport by IATA code
+  /// Get airport by IATA code (O(1) lookup)
   Airport? getByIata(String iata) {
-    if (_airports == null) return null;
-    final code = iata.toUpperCase();
-    try {
-      return _airports!.firstWhere((a) => a.iata == code);
-    } catch (_) {
-      return null;
-    }
+    if (_airportsByIata == null) return null;
+    return _airportsByIata![iata.toUpperCase()];
   }
 
   /// Check if airports are loaded

@@ -138,27 +138,26 @@ class _TripCardState extends State<TripCard>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.trip.daysUntilTrip != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.trip.isUpcoming
-                            ? const Color(0xFFFF7043)
-                            : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        widget.trip.daysUntilTrip!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.trip.isUpcoming
+                          ? const Color(0xFFFF7043)
+                          : Colors.grey.shade600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      widget.trip.daysUntilTrip!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ),
                   const Spacer(),
                   Text(
                     widget.trip.name,
@@ -263,7 +262,7 @@ class _TripCardState extends State<TripCard>
                     fontSize: 13,
                   ),
                 ),
-                if (widget.trip.daysUntilTrip != null) ...[
+                ...[
                   const SizedBox(height: 2),
                   Text(
                     widget.trip.daysUntilTrip!,

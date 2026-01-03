@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import 'address_autocomplete.dart';
 import 'pdf_upload_dialog.dart';
 
 class HotelOptionsSheet extends StatelessWidget {
@@ -133,8 +134,6 @@ class _ManualHotelFormSheet extends StatefulWidget {
 class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   final _formKey = GlobalKey<FormState>();
   final _hotelNameController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _countryController = TextEditingController();
   final _addressController = TextEditingController();
   final _roomTypeController = TextEditingController();
   final _confirmationController = TextEditingController();
@@ -160,8 +159,6 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
     if (isEditing) {
       final hotel = widget.existingHotel!;
       _hotelNameController.text = hotel['hotelName'] as String? ?? '';
-      _cityController.text = hotel['city'] as String? ?? '';
-      _countryController.text = hotel['country'] as String? ?? '';
       _addressController.text = hotel['address'] as String? ?? '';
       _roomTypeController.text = hotel['roomType'] as String? ?? '';
       _confirmationController.text =
@@ -202,8 +199,6 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
   @override
   void dispose() {
     _hotelNameController.dispose();
-    _cityController.dispose();
-    _countryController.dispose();
     _addressController.dispose();
     _roomTypeController.dispose();
     _confirmationController.dispose();
@@ -294,12 +289,6 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
         await convexService.updateAccommodation(
           id: widget.existingHotel!['_id'] as String,
           hotelName: _hotelNameController.text.trim(),
-          city: _cityController.text.trim().isNotEmpty
-              ? _cityController.text.trim()
-              : null,
-          country: _countryController.text.trim().isNotEmpty
-              ? _countryController.text.trim()
-              : null,
           address: _addressController.text.trim().isNotEmpty
               ? _addressController.text.trim()
               : null,
@@ -321,12 +310,6 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
         await convexService.createAccommodation(
           tripId: widget.tripId,
           hotelName: _hotelNameController.text.trim(),
-          city: _cityController.text.trim().isNotEmpty
-              ? _cityController.text.trim()
-              : null,
-          country: _countryController.text.trim().isNotEmpty
-              ? _countryController.text.trim()
-              : null,
           address: _addressController.text.trim().isNotEmpty
               ? _addressController.text.trim()
               : null,
@@ -439,33 +422,11 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // City & Country row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _cityController,
-                          decoration: _inputDecoration('City', 'e.g. Tokyo'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _countryController,
-                          decoration: _inputDecoration('Country', 'e.g. Japan'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Address
-                  TextFormField(
+                  // Address with autocomplete
+                  AddressAutocomplete(
                     controller: _addressController,
-                    decoration: _inputDecoration(
-                      'Address (optional)',
-                      'e.g. 123 Main Street',
-                    ),
+                    label: 'Address',
+                    hint: 'e.g. 123 Main Street, Tokyo, Japan',
                   ),
                   const SizedBox(height: 20),
 
