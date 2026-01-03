@@ -1,9 +1,10 @@
-# Travel Organizer App (Work in Progress)
+# Travel Organizer App
 
 A travel itinerary organizer with a Flutter client and Convex backend.
 
 ## Features
 
+- Upload PDFs and let AI automatically parse and extract flights, accommodations, or activities
 - Manage trips with multiple destinations
 - Track accommodations per destination
 - Store flight details with full booking info
