@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
@@ -18,192 +20,196 @@ class TripsScreen extends StatefulWidget {
 }
 
 class _TripsScreenState extends State<TripsScreen> {
-  List<Trip> _trips = [];
+  List<Trip> _upcomingTrips = [];
+  List<Trip> _pastTrips = [];
   bool _isLoading = true;
   String? _error;
   SubscriptionHandle? _subscription;
+  Timer? _emptyFallbackTimer;
 
   @override
   void initState() {
     super.initState();
-    _initializeConvex();
+    _startTripsSubscription();
   }
 
   @override
   void dispose() {
+    _emptyFallbackTimer?.cancel();
     _subscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _initializeConvex() async {
+  bool get _hasTrips => _upcomingTrips.isNotEmpty || _pastTrips.isNotEmpty;
+
+  Future<void> _startTripsSubscription({bool showLoading = false}) async {
+    _subscription?.cancel();
+    _emptyFallbackTimer?.cancel();
+
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
     try {
       final convexService = await ConvexService.getInstance();
       _subscription = await convexService.subscribeToTrips(
         onUpdate: (tripsData) {
           if (!mounted) return;
+          _emptyFallbackTimer?.cancel();
+
+          final trips = tripsData.map(Trip.fromJson).toList();
+
+          // Avoid "No trips yet" flash on hot-restart: Convex can emit an
+          // initial empty update before hydrating cached/remote data.
+          if (_isLoading && trips.isEmpty) {
+            _emptyFallbackTimer ??= Timer(
+              const Duration(milliseconds: 250),
+              () {
+                if (mounted) setState(() => _isLoading = false);
+              },
+            );
+            return;
+          }
+
+          // Single-pass partition into upcoming/past
+          final upcoming = <Trip>[];
+          final past = <Trip>[];
+          for (final t in trips) {
+            (t.isUpcoming ? upcoming : past).add(t);
+          }
+          upcoming.sort((a, b) => a.startDate.compareTo(b.startDate));
+          past.sort((a, b) => b.startDate.compareTo(a.startDate));
+
           setState(() {
-            _trips = tripsData.map((json) => Trip.fromJson(json)).toList();
+            _upcomingTrips = upcoming;
+            _pastTrips = past;
             _isLoading = false;
             _error = null;
           });
         },
         onError: (message, value) {
           if (!mounted) return;
-          setState(() {
-            _error = message;
-            _isLoading = false;
-          });
+          _emptyFallbackTimer?.cancel();
           debugPrint('Convex subscription error: $message $value');
+
+          if (_hasTrips) {
+            showAppSnackBar(context, message, isError: true);
+          } else {
+            setState(() {
+              _error = message;
+              _isLoading = false;
+            });
+          }
         },
       );
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Error initializing Convex: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
-      debugPrint('Error initializing Convex: $e');
     }
   }
 
-  List<Trip> get _upcomingTrips =>
-      _trips.where((t) => t.isUpcoming).toList()
-        ..sort((a, b) => a.startDate.compareTo(b.startDate));
-
-  List<Trip> get _pastTrips =>
-      _trips.where((t) => t.isPast).toList()
-        ..sort((a, b) => b.startDate.compareTo(a.startDate));
-
   String get _tripsSummary {
-    final upcoming = _upcomingTrips.length;
-    final past = _pastTrips.length;
-    if (upcoming > 0 && past > 0) return '$upcoming upcoming · $past past';
-    if (upcoming > 0) return '$upcoming upcoming';
-    if (past > 0) return '$past past ${past == 1 ? 'trip' : 'trips'}';
+    final (u, p) = (_upcomingTrips.length, _pastTrips.length);
+    if (u > 0 && p > 0) return '$u upcoming · $p past';
+    if (u > 0) return '$u upcoming';
+    if (p > 0) return '$p past ${p == 1 ? 'trip' : 'trips'}';
     return 'No trips yet';
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return;
-    showAppSnackBar(context, message, isError: isError);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-            ? _buildErrorState()
-            : CustomScrollView(
-                slivers: [
-                  // Header
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'My Trips',
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _tripsSummary,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Profile menu button
-                          _buildProfileButton(context),
-                        ],
-                      ),
-                    ),
-                  ),
+      body: SafeArea(child: _buildBody(context)),
+      floatingActionButton: _hasTrips
+          ? AppFab.add(onPressed: _onAddTrip)
+          : null,
+    );
+  }
 
-                  // Upcoming section
-                  if (_upcomingTrips.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                        child: _SectionHeader(
-                          title: 'Upcoming',
-                          count: _upcomingTrips.length,
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final trip = _upcomingTrips[index];
-                          return TripCard(
-                            trip: trip,
-                            primaryPlace: trip.primaryPlace,
-                            index: index,
-                            onTap: () => _onTripTapped(trip),
-                            onEdit: () => _onEditTrip(trip),
-                            onDelete: () => _onDeleteTrip(trip),
-                          );
-                        }, childCount: _upcomingTrips.length),
-                      ),
-                    ),
-                  ],
+  Widget _buildBody(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return _buildErrorState();
 
-                  // Past trips section
-                  if (_pastTrips.isNotEmpty) ...[
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                        child: _SectionHeader(
-                          title: 'Past Trips',
-                          count: _pastTrips.length,
-                        ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final trip = _pastTrips[index];
-                          return TripCard(
-                            trip: trip,
-                            primaryPlace: trip.primaryPlace,
-                            index: index,
-                            isCompact: true,
-                            onTap: () => _onTripTapped(trip),
-                            onEdit: () => _onEditTrip(trip),
-                            onDelete: () => _onDeleteTrip(trip),
-                          );
-                        }, childCount: _pastTrips.length),
-                      ),
-                    ),
-                  ],
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildHeader(context)),
+        ..._buildTripSection('Upcoming', _upcomingTrips, isCompact: false),
+        ..._buildTripSection('Past Trips', _pastTrips, isCompact: true),
+        if (!_hasTrips) SliverFillRemaining(child: _buildEmptyState()),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+      ],
+    );
+  }
 
-                  if (_trips.isEmpty)
-                    SliverFillRemaining(child: _buildEmptyState()),
-
-                  // Bottom padding
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
-              ),
+  List<Widget> _buildTripSection(
+    String title,
+    List<Trip> trips, {
+    required bool isCompact,
+  }) {
+    if (trips.isEmpty) return const [];
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          child: _SectionHeader(title: title, count: trips.length),
+        ),
       ),
-      floatingActionButton: _trips.isEmpty
-          ? null
-          : AppFab.add(onPressed: _onAddTrip),
+      SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: isCompact ? 20 : 16),
+        sliver: SliverList.builder(
+          itemCount: trips.length,
+          itemBuilder: (context, index) {
+            final trip = trips[index];
+            return TripCard(
+              trip: trip,
+              primaryPlace: trip.primaryPlace,
+              index: index,
+              isCompact: isCompact,
+              onTap: () => _onTripTapped(trip),
+              onEdit: () => _onEditTrip(trip),
+              onDelete: () => _onDeleteTrip(trip),
+            );
+          },
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'My Trips',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _tripsSummary,
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          _buildProfileButton(context),
+        ],
+      ),
     );
   }
 
@@ -212,7 +218,7 @@ class _TripsScreenState extends State<TripsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _CircleIcon(
+          const _CircleIcon(
             icon: Icons.flight_takeoff_rounded,
             color: AppColors.primary,
           ),
@@ -249,23 +255,14 @@ class _TripsScreenState extends State<TripsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final user = AuthService.instance.user;
 
-    return PopupMenuButton<String>(
+    return PopupMenuButton<VoidCallback>(
       offset: const Offset(0, 48),
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(12),
-      onSelected: (value) async {
-        if (value == 'sign_out') {
-          try {
-            final clerkAuth = ClerkAuth.of(context);
-            await clerkAuth.signOut();
-          } catch (e) {
-            debugPrint('Error signing out: $e');
-          }
-        }
-      },
-      itemBuilder: (context) => [
+      onSelected: (callback) => callback(),
+      itemBuilder: (_) => [
         if (user != null) ...[
-          PopupMenuItem<String>(
+          PopupMenuItem(
             enabled: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,8 +287,8 @@ class _TripsScreenState extends State<TripsScreen> {
           ),
           const PopupMenuDivider(),
         ],
-        PopupMenuItem<String>(
-          value: 'sign_out',
+        PopupMenuItem(
+          value: () => ClerkAuth.of(context).signOut(),
           child: Row(
             children: [
               Icon(Icons.logout_rounded, size: 20, color: colorScheme.error),
@@ -321,7 +318,7 @@ class _TripsScreenState extends State<TripsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _CircleIcon(icon: Icons.cloud_off_rounded, color: Colors.red),
+            const _CircleIcon(icon: Icons.cloud_off_rounded, color: Colors.red),
             const SizedBox(height: 24),
             Text(
               'Connection Error',
@@ -339,13 +336,7 @@ class _TripsScreenState extends State<TripsScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _error = null;
-                });
-                _initializeConvex();
-              },
+              onPressed: () => _startTripsSubscription(showLoading: true),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
@@ -366,15 +357,21 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
-  void _onEditTrip(Trip trip) {
+  void _onEditTrip(Trip trip) => _showTripSheet(trip);
+
+  void _onAddTrip() => _showTripSheet(null);
+
+  void _showTripSheet(Trip? trip) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CreateTripSheet(
+      builder: (_) => CreateTripSheet(
         existingTrip: trip,
-        onTripCreated: (name, startDate, endDate, notes) =>
-            _showSnackBar('Updated trip: $name'),
+        onTripCreated: (name, _, __, ___) => showAppSnackBar(
+          context,
+          '${trip == null ? 'Created' : 'Updated'} trip: $name',
+        ),
       ),
     );
   }
@@ -390,22 +387,10 @@ class _TripsScreenState extends State<TripsScreen> {
     try {
       final convexService = await ConvexService.getInstance();
       await convexService.deleteTrip(trip.id);
-      _showSnackBar('Deleted: ${trip.name}');
+      showAppSnackBar(context, 'Deleted: ${trip.name}');
     } catch (e) {
-      _showSnackBar('Failed to delete trip: $e', isError: true);
+      showAppSnackBar(context, 'Failed to delete trip: $e', isError: true);
     }
-  }
-
-  void _onAddTrip() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => CreateTripSheet(
-        onTripCreated: (name, startDate, endDate, notes) =>
-            _showSnackBar('Created trip: $name'),
-      ),
-    );
   }
 }
 
@@ -452,10 +437,9 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _CircleIcon extends StatelessWidget {
+  const _CircleIcon({required this.icon, required this.color});
   final IconData icon;
   final Color color;
-
-  const _CircleIcon({required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
