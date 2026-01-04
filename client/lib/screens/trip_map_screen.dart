@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../models/trip.dart';
@@ -37,6 +39,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
   double _currentZoom = 2;
   List<(LatLng, MapItem)> _orderedLocations = [];
   final Map<String, LatLng?> _geocodeCache = {};
+  LatLng? _currentLocation;
+  bool _isLoadingLocation = false;
+  bool _isTrackingLocation = false;
+  StreamSubscription<Position>? _locationSubscription;
 
   @override
   void initState() {
@@ -47,9 +53,141 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _loadAirportsAndMarkers();
   }
 
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _locationSubscription = null;
+    super.dispose();
+  }
+
   Future<void> _loadAirportsAndMarkers() async {
     await AirportsService.instance.loadAirports();
     await _updateMarkers();
+  }
+
+  void _toggleLocationTracking() {
+    if (_isTrackingLocation) {
+      _stopLocationTracking();
+    } else {
+      _startLocationTracking();
+    }
+  }
+
+  void _stopLocationTracking() {
+    _locationSubscription?.cancel();
+    _locationSubscription = null;
+    if (mounted) {
+      setState(() => _isTrackingLocation = false);
+    }
+  }
+
+  Future<void> _startLocationTracking() async {
+    if (_isLoadingLocation || !mounted) return;
+
+    setState(() => _isLoadingLocation = true);
+
+    try {
+      // Check if location services are enabled
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location services are disabled. Please enable them in settings.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Check and request permission
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location permission denied.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location permission permanently denied. Please enable in settings.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Get initial position and move map
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      final location = LatLng(position.latitude, position.longitude);
+
+      if (mounted) {
+        setState(() {
+          _currentLocation = location;
+          _isTrackingLocation = true;
+        });
+        _mapController.move(location, 15);
+      }
+
+      // Start continuous tracking
+      if (!mounted) return;
+      _locationSubscription =
+          Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 5, // Update every 5 meters
+            ),
+          ).listen(
+            (Position pos) {
+              if (!mounted) {
+                _locationSubscription?.cancel();
+                return;
+              }
+              setState(() {
+                _currentLocation = LatLng(pos.latitude, pos.longitude);
+              });
+            },
+            onError: (e) {
+              debugPrint('TripMapScreen: Location stream error: $e');
+              if (mounted) _stopLocationTracking();
+            },
+          );
+    } catch (e) {
+      debugPrint('TripMapScreen: Error getting location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to get current location.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingLocation = false);
+    }
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>
@@ -534,7 +672,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Color _getMarkerColor(MapItemType type) => switch (type) {
     MapItemType.activity => Colors.orange,
-    MapItemType.hotel => Colors.blue,
+    MapItemType.hotel => const Color(0xFF00BCD4), // Cyan/teal
     MapItemType.flight => Colors.purple,
   };
 
@@ -640,8 +778,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
           const SizedBox(height: 12),
           Hero(
             tag: 'days-carousel-${widget.trip.id}',
-            flightShuttleBuilder: (flightContext, animation, direction, fromCtx, toCtx) =>
-                Material(color: Colors.transparent, child: toCtx.widget),
+            flightShuttleBuilder:
+                (flightContext, animation, direction, fromCtx, toCtx) =>
+                    Material(color: Colors.transparent, child: toCtx.widget),
             child: DaysCarousel(
               startDate: _startDate,
               endDate: _endDate,
@@ -711,23 +850,70 @@ class _TripMapScreenState extends State<TripMapScreen> {
             PolylineLayer(polylines: _polylines),
             MarkerLayer(markers: _arrowMarkers),
             MarkerLayer(markers: _markers),
-            RichAttributionWidget(
-              popupInitialDisplayDuration: Duration.zero,
-              animationConfig: const ScaleRAWA(),
-              attributions: [
-                TextSourceAttribution('CARTO', onTap: () {}),
-                TextSourceAttribution(
-                  'OpenStreetMap contributors',
-                  onTap: () {},
-                ),
-              ],
-            ),
+            if (_currentLocation != null)
+              MarkerLayer(markers: [_buildCurrentLocationMarker()!]),
           ],
         ),
         if (_isLoadingMarkers) _buildLoadingOverlay(),
         if (!_isLoadingMarkers && _markers.isEmpty) _buildEmptyState(),
         if (_markers.isNotEmpty) _buildLegend(),
+        _buildAttribution(),
+        _buildLocationFab(),
       ],
+    );
+  }
+
+  Widget _buildLocationFab() {
+    return Positioned(
+      right: 16,
+      bottom: 24,
+      child: FloatingActionButton(
+        onPressed: _isLoadingLocation ? null : _toggleLocationTracking,
+        backgroundColor: _isTrackingLocation
+            ? Colors.blue
+            : const Color(0xFFFF7043),
+        foregroundColor: Colors.white,
+        mini: true,
+        child: _isLoadingLocation
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Icon(_isTrackingLocation ? Icons.gps_fixed : Icons.gps_off),
+      ),
+    );
+  }
+
+  Marker? _buildCurrentLocationMarker() {
+    if (_currentLocation == null) return null;
+    final isLive = _isTrackingLocation;
+    const liveColor = Colors.blue;
+    final fadedColor = liveColor.withValues(alpha: 0.5);
+    return Marker(
+      point: _currentLocation!,
+      width: 28,
+      height: 28,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isLive ? liveColor : fadedColor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: isLive ? 1.0 : 0.7),
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: liveColor.withValues(alpha: isLive ? 0.4 : 0.2),
+              blurRadius: 8,
+              spreadRadius: isLive ? 2 : 0,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -812,10 +998,24 @@ class _TripMapScreenState extends State<TripMapScreen> {
           children: [
             _LegendItem(color: Colors.purple, label: 'Flight'),
             SizedBox(width: 12),
-            _LegendItem(color: Colors.blue, label: 'Hotel'),
+            _LegendItem(color: Color(0xFF00BCD4), label: 'Hotel'),
             SizedBox(width: 12),
             _LegendItem(color: Colors.orange, label: 'Activity'),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttribution() {
+    return Positioned(
+      left: 24,
+      bottom: 60,
+      child: Text(
+        '© CARTO · OSM',
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.black.withValues(alpha: 0.4),
         ),
       ),
     );
