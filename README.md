@@ -75,18 +75,27 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    - Create a new API key
    - Enable these APIs: **Geocoding API**, **Places API**
 
-3. **Configure OpenWeatherMap API Key** (optional, for hourly weather forecast):
+3. **Configure Weather API Key** (optional, for hourly weather forecast):
 
-   Add your API key to `.env` or `.env.local` in the project root:
+   Add one of the following API keys to `.env` or `.env.local` in the project root:
+
+   **Option A: OpenWeatherMap** (default)
 
    ```
    OPENWEATHERMAP_API_KEY=your-openweathermap-api-key
    ```
 
-   To get an API key:
    - Sign up at [OpenWeatherMap](https://openweathermap.org/api)
-   - Subscribe to the **One Call API 3.0** (free tier available with 1000 calls/day)
-   - Copy your API key from the account dashboard
+   - Subscribe to the **One Call API 3.0** (free tier: 1000 calls/day)
+
+   **Option B: Tomorrow.io**
+
+   ```
+   TOMORROWIO_API_KEY=your-tomorrowio-api-key
+   ```
+
+   - Sign up at [Tomorrow.io](https://www.tomorrow.io/weather-api/)
+   - Free tier: 500 calls/day, 25/hour
 
 4. Install Flutter dependencies:
 

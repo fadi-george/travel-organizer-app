@@ -6,12 +6,13 @@ import '../models/trip.dart';
 import '../utils/time_format.dart';
 import 'airports_service.dart';
 import 'openweathermap_service.dart';
+import 'tomorrowio_service.dart';
 
 // Re-export HourlyWeather for consumers
 export 'openweathermap_service.dart' show HourlyWeather;
 
 /// Supported weather API providers
-enum WeatherApiType { openWeather }
+enum WeatherApiType { openWeather, tomorrowIo }
 
 /// Location coordinates
 class LatLng {
@@ -57,7 +58,12 @@ class WeatherService {
           lng: lng,
           date: date,
         );
-      // Add other cases here when new providers are added
+      case WeatherApiType.tomorrowIo:
+        return TomorrowIoService.instance.getHourlyWeather(
+          lat: lat,
+          lng: lng,
+          date: date,
+        );
     }
   }
 
