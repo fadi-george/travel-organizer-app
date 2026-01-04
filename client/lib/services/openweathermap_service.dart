@@ -20,6 +20,25 @@ class HourlyWeather {
   });
 }
 
+/// Represents daily weather data
+class DailyWeather {
+  final DateTime date;
+  final double tempHigh; // Fahrenheit
+  final double tempLow; // Fahrenheit
+  final String condition;
+  final String iconCode;
+  final int precipitationChance; // 0-100
+
+  const DailyWeather({
+    required this.date,
+    required this.tempHigh,
+    required this.tempLow,
+    required this.condition,
+    required this.iconCode,
+    required this.precipitationChance,
+  });
+}
+
 /// Service for fetching weather data from OpenWeatherMap API
 class OpenWeatherMapService {
   static OpenWeatherMapService? _instance;
@@ -41,6 +60,7 @@ class OpenWeatherMapService {
     required DateTime date,
   }) async {
     final apiKey = _apiKey;
+    debugPrint('OpenWeatherMapService: apiKey: $apiKey');
     if (apiKey == null || apiKey.isEmpty) {
       debugPrint('OpenWeatherMapService: API key not configured');
       return null;
@@ -56,9 +76,11 @@ class OpenWeatherMapService {
         '&appid=$apiKey',
       );
 
+      debugPrint('OpenWeatherMapService: Calling $url');
       final response = await http.get(url);
       if (response.statusCode != 200) {
         debugPrint('OpenWeatherMapService: API error ${response.statusCode}');
+        debugPrint('OpenWeatherMapService: Response: ${response.body}');
         return null;
       }
 
@@ -118,4 +140,3 @@ class OpenWeatherMapService {
     );
   }
 }
-

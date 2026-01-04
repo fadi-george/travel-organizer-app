@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'openweathermap_service.dart' show HourlyWeather;
+import 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
 
 /// Service for fetching weather data from Tomorrow.io API
 class TomorrowIoService {
@@ -19,6 +19,7 @@ class TomorrowIoService {
 
   /// Fetch hourly weather for a location and date
   /// Returns weather for 8am, 10am, 12pm, 2pm, 4pm, 6pm, 8pm, 10pm, 12am
+  /// Note: Free tier limited to 5 days ahead
   Future<List<HourlyWeather>?> getHourlyWeather({
     required double lat,
     required double lng,
@@ -30,9 +31,20 @@ class TomorrowIoService {
       return null;
     }
 
+    // Free tier limitation: max 5 days ahead
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDate = DateTime(date.year, date.month, date.day);
+    final daysAhead = targetDate.difference(today).inDays;
+
+    // Free tier: hourly up to 5 days, daily up to 14 days
+    if (daysAhead > 5) {
+      debugPrint('TomorrowIoService: Falling back to daily forecast ($daysAhead days ahead)');
+      return _getDailyAsFallback(lat: lat, lng: lng, date: date);
+    }
+
     try {
       // Use Timeline API for hourly forecast
-      final targetDate = DateTime(date.year, date.month, date.day);
       final startTime = targetDate.toUtc().toIso8601String();
       final endTime = targetDate
           .add(const Duration(days: 1, hours: 1))
@@ -171,5 +183,101 @@ class TomorrowIoService {
       8000 => '11d', // Thunderstorm
       _ => '01d',
     };
+  }
+
+  /// Fallback: fetch daily forecast and convert to hourly-like format
+  /// Used when date is beyond hourly forecast limit
+  Future<List<HourlyWeather>?> _getDailyAsFallback({
+    required double lat,
+    required double lng,
+    required DateTime date,
+  }) async {
+    final daily = await getDailyWeather(lat: lat, lng: lng, date: date);
+    if (daily == null) return null;
+
+    // Return single entry with daily high temp at noon
+    return [
+      HourlyWeather(
+        time: DateTime(date.year, date.month, date.day, 12),
+        temperature: daily.tempHigh,
+        condition: daily.condition,
+        iconCode: daily.iconCode,
+        precipitationChance: daily.precipitationChance,
+      ),
+    ];
+  }
+
+  /// Fetch daily weather for a specific date using the forecast endpoint
+  /// Note: Free tier limited to 5 days for daily as well
+  Future<DailyWeather?> getDailyWeather({
+    required double lat,
+    required double lng,
+    required DateTime date,
+  }) async {
+    final apiKey = _apiKey;
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('TomorrowIoService: API key not configured');
+      return null;
+    }
+
+    try {
+      // Use the forecast endpoint which provides daily forecasts
+      final url = Uri.parse(
+        'https://api.tomorrow.io/v4/weather/forecast'
+        '?location=$lat,$lng'
+        '&units=imperial'
+        '&apikey=$apiKey',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {'accept': 'application/json'},
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint('TomorrowIoService: Forecast API error ${response.statusCode}');
+        debugPrint('TomorrowIoService: ${response.body}');
+        return null;
+      }
+
+      final data = json.decode(response.body);
+      final dailyData = data['timelines']?['daily'] as List<dynamic>?;
+      if (dailyData == null || dailyData.isEmpty) return null;
+
+      // Find the matching day in the forecast
+      final targetDate = DateTime(date.year, date.month, date.day);
+      for (final day in dailyData) {
+        final dayData = day as Map<String, dynamic>;
+        final timeStr = dayData['time'] as String?;
+        if (timeStr == null) continue;
+
+        final dayTime = DateTime.parse(timeStr).toLocal();
+        final dayDate = DateTime(dayTime.year, dayTime.month, dayTime.day);
+
+        if (dayDate == targetDate) {
+          final values = dayData['values'] as Map<String, dynamic>;
+          final tempHigh = (values['temperatureMax'] as num?)?.toDouble() ?? 0;
+          final tempLow = (values['temperatureMin'] as num?)?.toDouble() ?? 0;
+          final weatherCode = values['weatherCodeMax'] as int? ?? 1000;
+          final precipProb =
+              (values['precipitationProbabilityMax'] as num?)?.toDouble() ?? 0;
+
+          return DailyWeather(
+            date: targetDate,
+            tempHigh: tempHigh,
+            tempLow: tempLow,
+            condition: _getConditionFromCode(weatherCode),
+            iconCode: _getIconCodeFromWeatherCode(weatherCode),
+            precipitationChance: precipProb.round(),
+          );
+        }
+      }
+
+      debugPrint('TomorrowIoService: Date not found in forecast range');
+      return null;
+    } catch (e) {
+      debugPrint('TomorrowIoService: Error fetching daily weather: $e');
+      return null;
+    }
   }
 }

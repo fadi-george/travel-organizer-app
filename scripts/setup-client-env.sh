@@ -67,32 +67,11 @@ else
     elif [ -f ".env" ]; then
       SELECTED_ENV=".env"
     fi
-  elif [ ${#ENV_FILES[@]} -eq 1 ]; then
-    # Only one file with valid key
+  else
+    # Use first file with valid key (prefers .env.local due to search order)
     SELECTED_ENV="${ENV_FILES[0]}"
     GOOGLE_API_KEY=$(get_api_key_from_file "$SELECTED_ENV")
     echo "Using environment: $SELECTED_ENV"
-  else
-    # Multiple files with valid keys - prompt user
-    echo "Multiple environment files found with API keys:"
-    echo ""
-    for i in "${!ENV_FILES[@]}"; do
-      echo "  $((i+1))) ${ENV_FILES[$i]}"
-    done
-    echo ""
-    read -p "Select environment [1-${#ENV_FILES[@]}] (default: 1): " choice
-    choice=${choice:-1}
-    
-    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#ENV_FILES[@]} ]; then
-      SELECTED_ENV="${ENV_FILES[$((choice-1))]}"
-      GOOGLE_API_KEY=$(get_api_key_from_file "$SELECTED_ENV")
-      echo ""
-      echo "Using environment: $SELECTED_ENV"
-    else
-      echo "Invalid selection. Using ${ENV_FILES[0]}"
-      SELECTED_ENV="${ENV_FILES[0]}"
-      GOOGLE_API_KEY=$(get_api_key_from_file "$SELECTED_ENV")
-    fi
   fi
 fi
 
@@ -104,14 +83,21 @@ cd client || exit 1
 # Remove existing files/symlinks if they exist
 rm -f .env .env.local .env.prod 2>/dev/null
 
-# Create symlinks
-ln -s ../.env .env
-ln -s ../.env.local .env.local
-ln -s ../.env.prod .env.prod
+# Only create symlinks for env files that exist in root
+if [ -f "../.env" ]; then
+  ln -s ../.env .env
+  echo "✓ Created client/.env → ../.env"
+fi
 
-echo "✓ Created client/.env → ../.env"
-echo "✓ Created client/.env.local → ../.env.local"
-echo "✓ Created client/.env.prod → ../.env.prod"
+if [ -f "../.env.local" ]; then
+  ln -s ../.env.local .env.local
+  echo "✓ Created client/.env.local → ../.env.local"
+fi
+
+if [ -f "../.env.prod" ]; then
+  ln -s ../.env.prod .env.prod
+  echo "✓ Created client/.env.prod → ../.env.prod"
+fi
 
 # Check if API key is configured
 if is_valid_api_key "$GOOGLE_API_KEY"; then

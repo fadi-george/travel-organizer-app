@@ -8,8 +8,8 @@ import 'airports_service.dart';
 import 'openweathermap_service.dart';
 import 'tomorrowio_service.dart';
 
-// Re-export HourlyWeather for consumers
-export 'openweathermap_service.dart' show HourlyWeather;
+// Re-export weather models for consumers
+export 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
 
 /// Supported weather API providers
 enum WeatherApiType { openWeather, tomorrowIo }
