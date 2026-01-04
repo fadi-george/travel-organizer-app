@@ -82,8 +82,8 @@ class _TripCardState extends State<TripCard>
           onEdit: widget.onEdit,
           onDelete: widget.onDelete,
           margin: widget.isCompact
-              ? const EdgeInsets.only(bottom: 12)
-              : const EdgeInsets.fromLTRB(4, 8, 4, 32),
+              ? const EdgeInsets.only(bottom: 24)
+              : const EdgeInsets.only(bottom: 16),
           child: widget.isCompact
               ? _buildCompactCardContent(context)
               : _buildFullCardContent(context),
@@ -98,7 +98,7 @@ class _TripCardState extends State<TripCard>
 
   Widget _buildFullCardContent(BuildContext context) {
     return Container(
-      height: 220,
+      height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [

@@ -77,21 +77,29 @@ class Trip {
     }
   }
 
-  bool get isUpcoming {
-    final end = DateTime.parse(endDate);
+  bool get isActive {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate);
+    final startDay = DateTime(start.year, start.month, start.day);
     final endDay = DateTime(end.year, end.month, end.day);
-    // Trip is upcoming if it hasn't ended yet (end date is today or in the future)
-    return !endDay.isBefore(today);
+    return !startDay.isAfter(today) && !endDay.isBefore(today);
+  }
+
+  bool get isUpcoming {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime.parse(startDate);
+    final startDay = DateTime(start.year, start.month, start.day);
+    return startDay.isAfter(today);
   }
 
   bool get isPast {
-    final end = DateTime.parse(endDate);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final end = DateTime.parse(endDate);
     final endDay = DateTime(end.year, end.month, end.day);
-    // Trip is past if end date is before today
     return endDay.isBefore(today);
   }
 

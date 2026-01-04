@@ -20,8 +20,7 @@ class TripsScreen extends StatefulWidget {
 }
 
 class _TripsScreenState extends State<TripsScreen> {
-  List<Trip> _upcomingTrips = [];
-  List<Trip> _pastTrips = [];
+  List<Trip> _trips = [];
   bool _isLoading = true;
   String? _error;
   SubscriptionHandle? _subscription;
@@ -40,7 +39,19 @@ class _TripsScreenState extends State<TripsScreen> {
     super.dispose();
   }
 
-  bool get _hasTrips => _upcomingTrips.isNotEmpty || _pastTrips.isNotEmpty;
+  bool get _hasTrips => _trips.isNotEmpty;
+
+  List<Trip> get _activeTrips =>
+      _trips.where((t) => t.isActive).toList()
+        ..sort((a, b) => a.endDate.compareTo(b.endDate));
+
+  List<Trip> get _upcomingTrips =>
+      _trips.where((t) => t.isUpcoming).toList()
+        ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+  List<Trip> get _pastTrips =>
+      _trips.where((t) => t.isPast).toList()
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
   Future<void> _startTripsSubscription({bool showLoading = false}) async {
     _subscription?.cancel();
@@ -74,18 +85,8 @@ class _TripsScreenState extends State<TripsScreen> {
             return;
           }
 
-          // Single-pass partition into upcoming/past
-          final upcoming = <Trip>[];
-          final past = <Trip>[];
-          for (final t in trips) {
-            (t.isUpcoming ? upcoming : past).add(t);
-          }
-          upcoming.sort((a, b) => a.startDate.compareTo(b.startDate));
-          past.sort((a, b) => b.startDate.compareTo(a.startDate));
-
           setState(() {
-            _upcomingTrips = upcoming;
-            _pastTrips = past;
+            _trips = trips;
             _isLoading = false;
             _error = null;
           });
@@ -116,11 +117,12 @@ class _TripsScreenState extends State<TripsScreen> {
   }
 
   String get _tripsSummary {
-    final (u, p) = (_upcomingTrips.length, _pastTrips.length);
-    if (u > 0 && p > 0) return '$u upcoming · $p past';
-    if (u > 0) return '$u upcoming';
-    if (p > 0) return '$p past ${p == 1 ? 'trip' : 'trips'}';
-    return 'No trips yet';
+    final parts = <String>[
+      if (_activeTrips.isNotEmpty) '${_activeTrips.length} active',
+      if (_upcomingTrips.isNotEmpty) '${_upcomingTrips.length} upcoming',
+      if (_pastTrips.isNotEmpty) '${_pastTrips.length} past',
+    ];
+    return parts.isEmpty ? 'No trips yet' : parts.join(' · ');
   }
 
   @override
@@ -141,6 +143,7 @@ class _TripsScreenState extends State<TripsScreen> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(child: _buildHeader(context)),
+        ..._buildTripSection('Active Now', _activeTrips, isCompact: false),
         ..._buildTripSection('Upcoming', _upcomingTrips, isCompact: false),
         ..._buildTripSection('Past Trips', _pastTrips, isCompact: true),
         if (!_hasTrips) SliverFillRemaining(child: _buildEmptyState()),
@@ -158,7 +161,7 @@ class _TripsScreenState extends State<TripsScreen> {
     return [
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
           child: _SectionHeader(title: title, count: trips.length),
         ),
       ),
