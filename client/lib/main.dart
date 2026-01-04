@@ -10,23 +10,17 @@ import 'services/auth_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables based on build mode or --dart-define=ENV=prod
-  // - Release builds OR ENV=prod: .env.prod (production)
-  // - Debug/Profile builds: .env.local (development)
-  const envOverride = String.fromEnvironment('ENV');
-  final useProd = kReleaseMode || envOverride == 'prod';
+  // Load environment: production for release builds or ENV=prod override
+  final useProd = kReleaseMode || const String.fromEnvironment('ENV') == 'prod';
+  final envFile = useProd ? '.env.prod' : '.env.local';
 
-  if (useProd) {
-    debugPrint('Loading production environment (.env.prod)');
-    await dotenv.load(fileName: '.env.prod');
-  } else {
-    debugPrint('Loading development environment (.env.local)');
-    await dotenv.load(fileName: '.env.local').catchError((error) {
-      debugPrint('Error loading .env.local: $error');
-    });
-  }
+  debugPrint(
+    'Loading ${useProd ? 'production' : 'development'} environment ($envFile)',
+  );
+  await dotenv
+      .load(fileName: envFile)
+      .catchError((e) => debugPrint('Error loading $envFile: $e'));
 
-  // Initialize authentication service
   await AuthService.instance.initialize();
 
   SystemChrome.setSystemUIOverlayStyle(
@@ -35,6 +29,7 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+
   runApp(const TravelOrganizerApp());
 }
 
@@ -43,16 +38,10 @@ class TravelOrganizerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final publishableKey = AuthService.instance.publishableKey;
-
-    // If no Clerk key is configured, show the app without auth
-    if (publishableKey == null || publishableKey.isEmpty) {
-      return _buildMaterialApp(child: const TripsScreen());
-    }
-
-    // Wrap with Clerk authentication
     return ClerkAuth(
-      config: ClerkAuthConfig(publishableKey: publishableKey),
+      config: ClerkAuthConfig(
+        publishableKey: AuthService.instance.publishableKey!,
+      ),
       child: _buildMaterialApp(child: const AuthWrapper()),
     );
   }
@@ -61,29 +50,23 @@ class TravelOrganizerApp extends StatelessWidget {
     return MaterialApp(
       title: 'Travel Organizer',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF7043),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        fontFamily: 'SF Pro Display',
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF7043),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        fontFamily: 'SF Pro Display',
-      ),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
       home: child,
     );
   }
+
+  ThemeData _buildTheme(Brightness brightness) => ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFFFF7043),
+      brightness: brightness,
+    ),
+    useMaterial3: true,
+    fontFamily: 'SF Pro Display',
+  );
 }
 
-/// Widget that wraps the app with authentication state
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -92,60 +75,39 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  String? _lastSyncedUserId;
-  bool _lastSyncedSignedIn = false;
+  (bool, String?) _lastSyncState = (false, null);
 
   @override
   Widget build(BuildContext context) {
     return ClerkAuthBuilder(
       builder: (context, authState) {
-        // Sync auth state with our AuthService (only when state changes)
-        _syncAuthState(context, authState);
+        _syncAuthState(authState);
 
-        // Show loading only during initial Clerk initialization
+        // Loading during initial Clerk initialization
         if (authState.isNotAvailable && authState.user == null) {
           return const _LoadingScreen();
         }
 
-        // Show sign-in screen if not authenticated
-        if (!authState.isSignedIn) {
-          return const LoginScreen();
-        }
-
-        // Show main app if authenticated
-        return const TripsScreen();
+        return authState.isSignedIn ? const TripsScreen() : const LoginScreen();
       },
     );
   }
 
-  void _syncAuthState(BuildContext context, ClerkAuthState authState) {
+  void _syncAuthState(ClerkAuthState authState) {
     final user = authState.user;
-    final isSignedIn = authState.isSignedIn;
+    final currentState = (authState.isSignedIn, user?.id);
 
-    // Only sync if signed-in state or user changed
-    final stateChanged =
-        isSignedIn != _lastSyncedSignedIn || user?.id != _lastSyncedUserId;
+    if (currentState == _lastSyncState) return;
+    _lastSyncState = currentState;
 
-    if (!stateChanged) return;
-
-    // Update tracking variables
-    _lastSyncedSignedIn = isSignedIn;
-    _lastSyncedUserId = user?.id;
-
-    // Schedule the sync after the current frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      if (isSignedIn) {
-        // Get token from the "convex" JWT template (has correct audience)
+      if (authState.isSignedIn) {
         String? token;
         try {
-          final sessionToken = await authState.sessionToken(
-            templateName: 'convex',
-          );
-          token = sessionToken.jwt;
-        } catch (e) {
-          // Fallback to default token
+          token = (await authState.sessionToken(templateName: 'convex')).jwt;
+        } catch (_) {
           token = authState.session?.lastActiveToken?.jwt;
         }
 
@@ -153,7 +115,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           isSignedIn: true,
           userId: user?.id,
           email: user?.email,
-          name: '${user?.firstName ?? ''} ${user?.lastName ?? ''}'.trim(),
+          name: [user?.firstName, user?.lastName].whereType<String>().join(' '),
           imageUrl: user?.imageUrl,
           sessionToken: token,
         );
@@ -164,44 +126,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 }
 
-/// Loading screen shown while authentication is initializing
 class _LoadingScreen extends StatelessWidget {
   const _LoadingScreen();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.flight_takeoff_rounded,
-              size: 64,
-              color: colorScheme.primary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Travel Organizer',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
