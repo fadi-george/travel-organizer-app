@@ -1,6 +1,7 @@
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Login screen with custom Clerk authentication UI.
 class LoginScreen extends StatelessWidget {
@@ -20,18 +21,11 @@ class LoginScreen extends StatelessWidget {
             children: [
               const Spacer(),
 
-              // App icon
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.flight_takeoff_rounded,
-                  size: 56,
-                  color: colorScheme.primary,
-                ),
+              // App logo
+              SvgPicture.asset(
+                'assets/branding/logo.svg',
+                width: 120,
+                height: 120,
               ),
               const SizedBox(height: 24),
 
