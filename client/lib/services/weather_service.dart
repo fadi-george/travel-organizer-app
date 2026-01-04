@@ -5,38 +5,13 @@ import 'package:http/http.dart' as http;
 import '../models/trip.dart';
 import '../utils/time_format.dart';
 import 'airports_service.dart';
+import 'openweathermap_service.dart';
 
-/// Represents hourly weather data
-class HourlyWeather {
-  final DateTime time;
-  final double temperature; // Fahrenheit
-  final String condition;
-  final String iconCode;
-  final int precipitationChance; // 0-100
+// Re-export HourlyWeather for consumers
+export 'openweathermap_service.dart' show HourlyWeather;
 
-  const HourlyWeather({
-    required this.time,
-    required this.temperature,
-    required this.condition,
-    required this.iconCode,
-    required this.precipitationChance,
-  });
-
-  factory HourlyWeather.fromJson(Map<String, dynamic> json) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(json['dt'] * 1000);
-    final temp = (json['temp'] as num).toDouble();
-    final weather = (json['weather'] as List).first as Map<String, dynamic>;
-    final pop = ((json['pop'] as num?) ?? 0).toDouble();
-
-    return HourlyWeather(
-      time: dt,
-      temperature: temp,
-      condition: weather['main'] as String? ?? 'Unknown',
-      iconCode: weather['icon'] as String? ?? '01d',
-      precipitationChance: (pop * 100).round(),
-    );
-  }
-}
+/// Supported weather API providers
+enum WeatherApiType { openWeather }
 
 /// Location coordinates
 class LatLng {
@@ -46,89 +21,43 @@ class LatLng {
   const LatLng(this.lat, this.lng);
 }
 
-/// Singleton service for weather data
+/// Singleton service for weather data and location resolution
 class WeatherService {
   static WeatherService? _instance;
   final Map<String, LatLng?> _geocodeCache = {};
+  final WeatherApiType _apiType;
 
-  WeatherService._();
+  WeatherService._(this._apiType);
 
   static WeatherService get instance {
-    _instance ??= WeatherService._();
+    _instance ??= WeatherService._(WeatherApiType.openWeather);
     return _instance!;
   }
 
-  String? get _apiKey => dotenv.env['OPENWEATHERMAP_API_KEY'];
+  /// Get instance with specific API type
+  static WeatherService withType(WeatherApiType type) {
+    if (_instance == null || _instance!._apiType != type) {
+      _instance = WeatherService._(type);
+    }
+    return _instance!;
+  }
+
   String? get _googleApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
 
   /// Fetch hourly weather for a location and date
-  /// Returns weather for 8am, 10am, 12pm, 2pm, 4pm, 6pm, 8pm, 10pm, 12am
   Future<List<HourlyWeather>?> getHourlyWeather({
     required double lat,
     required double lng,
     required DateTime date,
-  }) async {
-    final apiKey = _apiKey;
-    if (apiKey == null || apiKey.isEmpty) {
-      debugPrint('WeatherService: OPENWEATHERMAP_API_KEY not configured');
-      return null;
-    }
-
-    try {
-      // Use One Call API 3.0 for hourly forecast
-      final url = Uri.parse(
-        'https://api.openweathermap.org/data/3.0/onecall'
-        '?lat=$lat&lon=$lng'
-        '&exclude=minutely,daily,alerts'
-        '&units=imperial'
-        '&appid=$apiKey',
-      );
-
-      final response = await http.get(url);
-      if (response.statusCode != 200) {
-        debugPrint('WeatherService: API error ${response.statusCode}');
-        return null;
-      }
-
-      final data = json.decode(response.body);
-      final hourlyData = data['hourly'] as List<dynamic>?;
-      if (hourlyData == null) return null;
-
-      // Parse all hourly data
-      final allHours = hourlyData
-          .map((h) => HourlyWeather.fromJson(h as Map<String, dynamic>))
-          .toList();
-
-      // Filter to target hours: 8, 10, 12, 14, 16, 18, 20, 22, 24 (midnight next day)
-      final targetHours = [8, 10, 12, 14, 16, 18, 20, 22, 0];
-      final targetDate = DateTime(date.year, date.month, date.day);
-      final nextDay = targetDate.add(const Duration(days: 1));
-
-      final filtered = <HourlyWeather>[];
-      for (final hour in targetHours) {
-        final targetTime = hour == 0
-            ? DateTime(nextDay.year, nextDay.month, nextDay.day, 0)
-            : DateTime(targetDate.year, targetDate.month, targetDate.day, hour);
-
-        // Find closest hour in data
-        HourlyWeather? closest;
-        int minDiff = 999999;
-        for (final weather in allHours) {
-          final diff = (weather.time.difference(targetTime).inMinutes).abs();
-          if (diff < minDiff) {
-            minDiff = diff;
-            closest = weather;
-          }
-        }
-        if (closest != null && minDiff <= 90) {
-          filtered.add(closest);
-        }
-      }
-
-      return filtered;
-    } catch (e) {
-      debugPrint('WeatherService: Error fetching weather: $e');
-      return null;
+  }) {
+    switch (_apiType) {
+      case WeatherApiType.openWeather:
+        return OpenWeatherMapService.instance.getHourlyWeather(
+          lat: lat,
+          lng: lng,
+          date: date,
+        );
+      // Add other cases here when new providers are added
     }
   }
 
