@@ -75,14 +75,27 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    - Create a new API key
    - Enable these APIs: **Geocoding API**, **Places API**
 
-3. Install Flutter dependencies:
+3. **Configure OpenWeatherMap API Key** (optional, for hourly weather forecast):
+
+   Add your API key to `.env` or `.env.local` in the project root:
+
+   ```
+   OPENWEATHERMAP_API_KEY=your-openweathermap-api-key
+   ```
+
+   To get an API key:
+   - Sign up at [OpenWeatherMap](https://openweathermap.org/api)
+   - Subscribe to the **One Call API 3.0** (free tier available with 1000 calls/day)
+   - Copy your API key from the account dashboard
+
+4. Install Flutter dependencies:
 
    ```bash
    cd client
    flutter pub get
    ```
 
-4. Run the app:
+5. Run the app:
 
    ```bash
    flutter run
