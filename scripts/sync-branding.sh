@@ -18,12 +18,6 @@ cd "$(dirname "$0")/.." || exit 1
 # Source of truth
 BRAND_SOURCE="branding"
 
-# Logo files
-LOGO_FILES=(
-  "logo.png"
-  "logo.svg"
-)
-
 # Directories that need copies (Flutter can't use symlinks for assets)
 COPY_DIRS=(
   "client/assets/branding"
@@ -41,16 +35,21 @@ SYMLINK_DIRS=(
 echo "Syncing branding assets..."
 echo ""
 
-# Verify source files exist
-for file in "${LOGO_FILES[@]}"; do
-  if [ ! -f "$BRAND_SOURCE/$file" ]; then
-    echo "❌ Error: Source file not found: $BRAND_SOURCE/$file"
-    exit 1
+# Get all files in branding directory
+BRAND_FILES=()
+for file in "$BRAND_SOURCE"/*; do
+  if [ -f "$file" ]; then
+    BRAND_FILES+=("$(basename "$file")")
   fi
 done
 
+if [ ${#BRAND_FILES[@]} -eq 0 ]; then
+  echo "❌ Error: No files found in $BRAND_SOURCE/"
+  exit 1
+fi
+
 echo "Source: $BRAND_SOURCE/"
-for file in "${LOGO_FILES[@]}"; do
+for file in "${BRAND_FILES[@]}"; do
   echo "  • $file"
 done
 echo ""
@@ -60,7 +59,7 @@ for dir in "${COPY_DIRS[@]}"; do
   echo "→ Copying to $dir/"
   mkdir -p "$dir"
   
-  for file in "${LOGO_FILES[@]}"; do
+  for file in "${BRAND_FILES[@]}"; do
     cp "$BRAND_SOURCE/$file" "$dir/$file"
     echo "  ✓ $file"
   done
@@ -71,7 +70,7 @@ done
 for dir in "${SYMLINK_DIRS[@]}"; do
   echo "→ Linking in $dir/"
   
-  for file in "${LOGO_FILES[@]}"; do
+  for file in "${BRAND_FILES[@]}"; do
     target="$dir/$file"
     rm -f "$target" 2>/dev/null
     ln -s "../$BRAND_SOURCE/$file" "$target"

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 96 96" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-miterlimit:10;">
+    <g transform="matrix(1,0,0,1,-867.763,0)">
+        <g id="Test2" transform="matrix(0.14607,0,0,0.14607,460.233,-122.508)">
+            <rect x="2789.96" y="838.69" width="657.218" height="657.218" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="2789.96" y="838.69" width="657.218" height="657.218"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(8.38461,0,0,8.38461,-3447.46,1086.77)">
+                    <g transform="matrix(0.147667,0,0,0.141824,607.697,-157.255)">
+                        <g transform="matrix(5.52931,-0,-0,5.75714,922.445,900.185)">
+                            <path d="M64.716,66.162L71.636,68.124L72.486,75.265" style="fill:none;stroke:rgb(254,181,106);stroke-width:6.65px;"/>
+                            <path d="M24.136,69.204C24.136,69.204 43.629,90.68 71.636,68.124" style="fill:none;stroke:rgb(254,181,106);stroke-width:6.65px;stroke-miterlimit:1.5;"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1,0,0,1,47.9971,19.6145)">
+                        <path d="M739.838,-16.112L749.64,-4.802L769.887,-23.823" style="fill:none;stroke:rgb(254,181,106);stroke-width:7.08px;stroke-linejoin:round;stroke-miterlimit:1.5;"/>
+                    </g>
+                    <g transform="matrix(0.226278,-1.99179e-17,-9.95895e-18,0.226278,313.336,-272.977)">
+                        <path d="M1924.6,1246.63C1918.6,1236.65 1915.14,1224.98 1915.14,1212.5C1915.14,1175.91 1944.84,1146.21 1981.42,1146.21C2018.01,1146.21 2047.71,1175.91 2047.71,1212.5C2047.71,1224.98 2044.25,1236.65 2038.25,1246.63C2037.1,1248.53 2035.86,1250.37 2034.53,1252.15C2025.23,1265.53 2000.33,1298.6 1981.42,1298.6C1962.52,1298.6 1937.62,1265.53 1928.32,1252.15C1926.99,1250.37 1925.75,1248.53 1924.6,1246.63Z" style="fill:rgb(254,181,106);"/>
+                    </g>
+                    <g transform="matrix(0.11651,-1.02557e-17,-5.12785e-18,0.11651,530.833,-139.884)">
+                        <circle cx="1981.42" cy="1212.5" r="66.284" style="fill:white;"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
