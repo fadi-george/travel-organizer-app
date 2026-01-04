@@ -2,6 +2,7 @@ import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/auth_service.dart';
 
 /// Login screen with custom Clerk authentication UI.
 class LoginScreen extends StatelessWidget {
@@ -9,6 +10,11 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hide during OAuth sign-in flow
+    if (AuthService.instance.signInInProgress) {
+      return const SizedBox.shrink();
+    }
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -39,18 +45,17 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
+              // Subtitle
               Text(
                 'Plan your trips with ease',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
-
               const SizedBox(height: 48),
 
               // Google sign-in button
               _GoogleSignInButton(onPressed: () => _signInWithGoogle(context)),
-
               const Spacer(),
             ],
           ),
@@ -61,6 +66,7 @@ class LoginScreen extends StatelessWidget {
 
   Future<void> _signInWithGoogle(BuildContext context) async {
     final clerkAuth = ClerkAuth.of(context);
+    AuthService.instance.signInInProgress = true;
 
     try {
       await clerkAuth.ssoSignIn(
@@ -68,11 +74,12 @@ class LoginScreen extends StatelessWidget {
         clerk.Strategy.oauthGoogle,
         onError: (error) {
           debugPrint('SignIn onError: ${error.message}');
+          AuthService.instance.signInInProgress = false;
         },
       );
     } catch (e) {
       debugPrint('SSO Error: $e');
-      // Only show error if user is still not signed in
+      AuthService.instance.signInInProgress = false;
       if (!clerkAuth.isSignedIn && context.mounted) {
         ScaffoldMessenger.of(
           context,
