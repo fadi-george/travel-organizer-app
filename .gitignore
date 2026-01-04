@@ -53,3 +53,4 @@ client/android/gradle/wrapper/gradle-wrapper.jar
 client/.flutter-plugins
 client/.flutter-plugins-dependencies
 *.iml
+*.zip
