@@ -64,7 +64,7 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 
 2. **Configure Google Places API Key** (required for address autocomplete and geocoding):
 
-   Add your API key to `.env` or `.env.local` in the project root:
+   Add your API key to `.env.local` in the project root:
 
    ```
    GOOGLE_PLACES_API_KEY=your-actual-api-key-here
@@ -78,7 +78,6 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 3. **Configure Weather API Key** (required for weather forecasts):
 
    Add your OpenWeatherMap API key to your **Convex environment variables**:
-
    - Go to your [Convex Dashboard](https://dashboard.convex.dev)
    - Select your project → **Settings** → **Environment Variables**
    - Add: `OPENWEATHERMAP_API_KEY` = your API key
@@ -127,11 +126,11 @@ This app uses [flutter_map](https://pub.dev/packages/flutter_map) with free Open
 
 Weather data is cached server-side using [Convex Action Cache](https://www.convex.dev/components/action-cache):
 
-| Date Range | TTL | Notes |
-|------------|-----|-------|
-| Past dates | 24 hours | Historical data never changes |
-| Today/tomorrow | 1 hour | Fresher data for near-term |
-| 3+ days ahead | 2 hours | Forecasts are stable |
+| Date Range     | TTL      | Notes                         |
+| -------------- | -------- | ----------------------------- |
+| Past dates     | 24 hours | Historical data never changes |
+| Today/tomorrow | 1 hour   | Fresher data for near-term    |
+| 3+ days ahead  | 2 hours  | Forecasts are stable          |
 
 This shared cache reduces OpenWeatherMap API calls across all users, keeping you well under the 1000 calls/day free tier limit.
 
@@ -175,7 +174,7 @@ bunx convex login
 
 This means the Google Places API key is missing or invalid:
 
-1. Check that `.env` or `.env.local` has `GOOGLE_PLACES_API_KEY` set
+1. Check that `.env.local` has `GOOGLE_PLACES_API_KEY` set
 2. Ensure the API key has these APIs enabled in Google Cloud Console:
    - Geocoding API
    - Places API

@@ -9,6 +9,7 @@
     "setup:client:staging": "./scripts/setup-client-env.sh staging",
     "dev:client": "cd client && flutter run",
     "dev:convex": "bunx convex dev",
+    "deploy:convex": "bunx convex deploy",
     "sync:branding": "./scripts/sync-branding.sh",
     "update:icons": "cd client && dart run flutter_launcher_icons",
     "dev:release": "cd client && flutter run --release"

@@ -45,7 +45,7 @@ dependencies:
   flutter_map: ^8.1.1
   latlong2: ^0.9.1
   geolocator: ^14.0.0
-  
+
   # Authentication
   clerk_flutter: ^0.0.13-beta
   clerk_auth: ^0.0.13-beta
@@ -86,7 +86,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - .env
     - .env.local
     - .env.prod
     - assets/mocks/
