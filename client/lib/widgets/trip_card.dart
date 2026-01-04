@@ -97,10 +97,16 @@ class _TripCardState extends State<TripCard>
   }
 
   Widget _buildFullCardContent(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.08),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
@@ -207,9 +213,11 @@ class _TripCardState extends State<TripCard>
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: isDark
-            ? Border.all(color: colorScheme.outline.withValues(alpha: 0.15))
-            : null,
+        border: Border.all(
+          color: isDark
+              ? colorScheme.outline.withValues(alpha: 0.15)
+              : Colors.black.withValues(alpha: 0.08),
+        ),
         boxShadow: [
           if (isDark)
             BoxShadow(
