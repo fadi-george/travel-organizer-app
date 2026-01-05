@@ -17,6 +17,8 @@ import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
 import 'trip_map_screen.dart';
 
+const double _kAppBarIconSize = 20;
+
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
   final String? primaryPlace;
@@ -448,7 +450,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   color: Colors.black.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.white),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: _kAppBarIconSize,
+                ),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -460,10 +466,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     color: Colors.black.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.more_horiz,
                     color: Colors.white,
-                    size: 20,
+                    size: _kAppBarIconSize,
                   ),
                 ),
                 onSelected: (value) {
@@ -547,7 +553,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Text(
@@ -581,7 +586,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         // Quick actions
                         Row(
                           children: [

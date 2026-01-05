@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:convex_flutter/convex_flutter.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Singleton service for managing the Convex client connection.
@@ -203,7 +204,8 @@ class ConvexService {
         if (airline != null) 'airline': airline,
         if (departureAirportCode != null)
           'departureAirportCode': departureAirportCode,
-        if (arrivalAirportCode != null) 'arrivalAirportCode': arrivalAirportCode,
+        if (arrivalAirportCode != null)
+          'arrivalAirportCode': arrivalAirportCode,
         if (departureDate != null) 'departureDate': departureDate,
         if (departureTime != null) 'departureTime': departureTime,
         if (arrivalDate != null) 'arrivalDate': arrivalDate,
