@@ -62,7 +62,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   Future<void> _loadAirportsAndMarkers() async {
-    await AirportsService.instance.loadAirports();
     await _updateMarkers();
   }
 

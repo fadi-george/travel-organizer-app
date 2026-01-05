@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/trip.dart';
@@ -240,7 +239,7 @@ class WeatherService {
     if (hotelLocation != null) return hotelLocation;
 
     // 3. Try flight destination (arrival airport)
-    final flightLocation = await _getFlightDestination(trip, date);
+    final flightLocation = _getFlightDestination(trip, date);
     if (flightLocation != null) return flightLocation;
 
     return null;
@@ -263,7 +262,6 @@ class WeatherService {
         }
       }
     }
-
     if (activitiesForDate.isEmpty) return null;
 
     // Sort by time, get last one
@@ -319,11 +317,8 @@ class WeatherService {
     return null;
   }
 
-  Future<LatLng?> _getFlightDestination(Trip trip, DateTime date) async {
+  LatLng? _getFlightDestination(Trip trip, DateTime date) {
     if (trip.flights == null || trip.flights!.isEmpty) return null;
-
-    // Ensure airports are loaded
-    await AirportsService.instance.loadAirports();
 
     for (final flight in trip.flights!) {
       final data = flight as Map<String, dynamic>;
@@ -379,8 +374,8 @@ class WeatherService {
           return latLng;
         }
       }
-    } catch (e) {
-      debugPrint('WeatherService: Geocoding error: $e');
+    } catch (_) {
+      // Geocoding failed
     }
 
     _geocodeCache[address] = null;

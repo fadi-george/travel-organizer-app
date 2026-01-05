@@ -37,19 +37,13 @@ class _AirportAutocompleteState extends State<AirportAutocomplete> {
   @override
   void initState() {
     super.initState();
-    _loadAirports();
+    // Airports are preloaded in TripsScreen, so we're ready immediately
+    _isLoading = false;
     _focusNode.addListener(_onFocusChange);
 
     // If there's already a value, show it
     if (widget.controller.text.isNotEmpty) {
       _searchController.text = widget.controller.text;
-    }
-  }
-
-  Future<void> _loadAirports() async {
-    await AirportsService.instance.loadAirports();
-    if (mounted) {
-      setState(() => _isLoading = false);
     }
   }
 
