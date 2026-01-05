@@ -45,7 +45,7 @@ import '../services/weather_service.dart';
 }
 
 /// Height for loading and daily fallback views
-const double _kWeatherRowHeight = 60;
+const double _kWeatherRowHeight = 64;
 
 /// Displays weather forecast - hourly for near dates, daily for future dates
 class WeatherWidget extends StatefulWidget {
@@ -73,6 +73,27 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void initState() {
     super.initState();
+    _initWeather();
+  }
+
+  /// Try to load from cache synchronously first, then fetch if needed
+  void _initWeather() {
+    final service = WeatherService.instance;
+    final tripId = widget.trip.id;
+    final cached = service.getCachedTripWeather(
+      tripId: tripId,
+      date: widget.selectedDate,
+    );
+    if (cached != null) {
+      // Cache hit - use cached data immediately, no loading state
+      _weather = cached;
+      _isLoading = false;
+      _lastFetchedDate = widget.selectedDate;
+      _lastTripId = tripId;
+      _lastActivityCount = widget.trip.activities?.length ?? 0;
+      return;
+    }
+    // Cache miss - fetch from API
     _fetchWeather();
   }
 
@@ -90,7 +111,11 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
     if (dateChanged || tripChanged || activitiesChanged) {
       if (activitiesChanged) {
-        WeatherService.instance.invalidateCache();
+        // Invalidate cache for current date since activity might affect weather location
+        WeatherService.instance.invalidateCacheForDate(
+          widget.trip.id,
+          widget.selectedDate,
+        );
       }
       _fetchWeather();
     }
@@ -143,6 +168,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         lng: location.lng,
         date: widget.selectedDate,
       );
+
+      // Cache at trip level for fast sync lookup on screen transitions
+      service.cacheTripWeather(widget.trip.id, widget.selectedDate, weather);
 
       if (!mounted) return;
 
@@ -328,7 +356,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           (now.hour - hour.time.hour).abs() <= 1 &&
           now.hour >= hour.time.hour;
       return Padding(
-        padding: EdgeInsets.only(left: index == 0 ? 0 : 8),
+        padding: EdgeInsets.only(left: index == 0 ? 0 : 16),
         child: _WeatherHourItem(
           weather: hour,
           isNow: isNow && index == _findCurrentIndex(),
@@ -338,7 +366,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
     return SizedBox(
       key: const ValueKey('weather'),
-      height: 60,
+      height: _kWeatherRowHeight,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -430,6 +458,7 @@ class _WeatherHourItem extends StatelessWidget {
               ],
             ],
           ),
+          const SizedBox(height: 6),
         ],
       ),
     );

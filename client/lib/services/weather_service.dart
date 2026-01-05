@@ -109,6 +109,8 @@ class WeatherService {
   static WeatherService? _instance;
   final Map<String, LatLng?> _geocodeCache = {};
   final Map<String, _CachedWeather> _weatherCache = {};
+  // Trip-level cache: tripId_date -> weather (for fast sync lookup across screen navigations)
+  final Map<String, _CachedWeather> _tripWeatherCache = {};
   final WeatherApiType _apiType;
 
   WeatherService._(this._apiType);
@@ -148,9 +150,46 @@ class WeatherService {
     return null;
   }
 
-  /// Invalidate weather cache - call when activities/hotels/flights change
-  void invalidateCache() {
-    _weatherCache.clear();
+  /// Build cache key for trip-level weather lookup
+  String _buildTripCacheKey(String tripId, DateTime date) {
+    final dateKey = '${date.year}-${date.month}-${date.day}';
+    return '${tripId}_$dateKey';
+  }
+
+  /// Synchronously check if we have valid cached weather for a trip+date
+  /// This allows fast lookup without needing to geocode
+  List<HourlyWeather>? getCachedTripWeather({
+    required String tripId,
+    required DateTime date,
+  }) {
+    final cacheKey = _buildTripCacheKey(tripId, date);
+    final cached = _tripWeatherCache[cacheKey];
+    if (cached != null && !cached.isExpired) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  /// Cache weather data for a trip+date
+  void cacheTripWeather(
+    String tripId,
+    DateTime date,
+    List<HourlyWeather>? data,
+  ) {
+    final cacheKey = _buildTripCacheKey(tripId, date);
+    _tripWeatherCache[cacheKey] = _CachedWeather(data);
+  }
+
+  /// Invalidate weather cache for a specific trip+date
+  /// Call when activities/hotels/flights change for that date
+  void invalidateCacheForDate(String tripId, DateTime date) {
+    final cacheKey = _buildTripCacheKey(tripId, date);
+    _tripWeatherCache.remove(cacheKey);
+  }
+
+  /// Invalidate all weather cache for a trip
+  void invalidateCacheForTrip(String tripId) {
+    _tripWeatherCache.removeWhere((key, _) => key.startsWith('${tripId}_'));
   }
 
   /// Fetch hourly weather for a location and date (with caching)
