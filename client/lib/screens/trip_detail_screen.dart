@@ -662,9 +662,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 ),
                 Hero(
                   tag: 'weather-widget-${_trip.id}',
-                  child: WeatherWidget(
-                    trip: _trip,
-                    selectedDate: _selectedDate,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: WeatherWidget(
+                      trip: _trip,
+                      selectedDate: _selectedDate,
+                    ),
                   ),
                 ),
                 const Divider(height: 1),

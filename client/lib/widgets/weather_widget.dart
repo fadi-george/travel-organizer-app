@@ -69,6 +69,32 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void initState() {
     super.initState();
+    _initWeather();
+  }
+
+  /// Try to load from cache synchronously, then fetch if needed
+  void _initWeather() {
+    final service = WeatherService.instance;
+    final cachedLocation = service.getCachedLocation(widget.trip, widget.selectedDate);
+
+    if (cachedLocation != null) {
+      final cachedWeather = service.getCachedWeather(
+        lat: cachedLocation.lat,
+        lng: cachedLocation.lng,
+        date: widget.selectedDate,
+      );
+
+      if (cachedWeather != null) {
+        // We have cached data - use it immediately, no loading state
+        _weather = cachedWeather;
+        _isLoading = false;
+        _lastFetchedDate = widget.selectedDate;
+        _lastTripId = widget.trip.id;
+        return;
+      }
+    }
+
+    // No cache, fetch normally
     _fetchWeather();
   }
 
@@ -78,7 +104,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     // Refetch if date or trip changed
     if (!_isSameDay(widget.selectedDate, oldWidget.selectedDate) ||
         widget.trip.id != oldWidget.trip.id) {
-      _fetchWeather();
+      _initWeather(); // Use init to check cache first
     }
   }
 
@@ -93,10 +119,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Only show loading if we don't already have data
+    if (_weather == null) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final service = WeatherService.instance;

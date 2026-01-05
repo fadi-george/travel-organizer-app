@@ -93,10 +93,34 @@ class LatLng {
   const LatLng(this.lat, this.lng);
 }
 
+/// Cached weather result with timestamp
+class _CachedWeather {
+  final List<HourlyWeather>? data;
+  final DateTime fetchedAt;
+
+  _CachedWeather(this.data) : fetchedAt = DateTime.now();
+
+  bool get isExpired =>
+      DateTime.now().difference(fetchedAt).inMinutes > 5; // 5 min TTL
+}
+
+/// Cached location result with timestamp
+class _CachedLocation {
+  final LatLng? data;
+  final DateTime fetchedAt;
+
+  _CachedLocation(this.data) : fetchedAt = DateTime.now();
+
+  bool get isExpired =>
+      DateTime.now().difference(fetchedAt).inMinutes > 30; // 30 min TTL
+}
+
 /// Singleton service for weather data and location resolution
 class WeatherService {
   static WeatherService? _instance;
   final Map<String, LatLng?> _geocodeCache = {};
+  final Map<String, _CachedWeather> _weatherCache = {};
+  final Map<String, _CachedLocation> _locationCache = {}; // trip+date -> location
   final WeatherApiType _apiType;
 
   WeatherService._(this._apiType);
@@ -116,43 +140,112 @@ class WeatherService {
 
   String? get _googleApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
 
-  /// Fetch hourly weather for a location and date
-  Future<List<HourlyWeather>?> getHourlyWeather({
+  /// Build cache key for weather lookup
+  String _buildWeatherCacheKey(double lat, double lng, DateTime date) {
+    final dateKey = '${date.year}-${date.month}-${date.day}';
+    return '${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}_${dateKey}_${_apiType.name}';
+  }
+
+  /// Synchronously check if we have valid cached weather data
+  List<HourlyWeather>? getCachedWeather({
     required double lat,
     required double lng,
     required DateTime date,
   }) {
+    final cacheKey = _buildWeatherCacheKey(lat, lng, date);
+    final cached = _weatherCache[cacheKey];
+    if (cached != null && !cached.isExpired) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  /// Fetch hourly weather for a location and date (with caching)
+  Future<List<HourlyWeather>?> getHourlyWeather({
+    required double lat,
+    required double lng,
+    required DateTime date,
+  }) async {
+    final cacheKey = _buildWeatherCacheKey(lat, lng, date);
+
+    // Check cache
+    final cached = _weatherCache[cacheKey];
+    if (cached != null && !cached.isExpired) {
+      return cached.data;
+    }
+
+    // Fetch fresh data
+    final List<HourlyWeather>? result;
     switch (_apiType) {
       case WeatherApiType.openWeather:
-        return OpenWeatherMapService.instance.getHourlyWeather(
+        result = await OpenWeatherMapService.instance.getHourlyWeather(
           lat: lat,
           lng: lng,
           date: date,
         );
       case WeatherApiType.tomorrowIo:
-        return TomorrowIoService.instance.getHourlyWeather(
+        result = await TomorrowIoService.instance.getHourlyWeather(
           lat: lat,
           lng: lng,
           date: date,
         );
     }
+
+    // Cache the result
+    _weatherCache[cacheKey] = _CachedWeather(result);
+    return result;
+  }
+
+  /// Build cache key for location lookup
+  String _buildLocationCacheKey(String tripId, DateTime date) {
+    final dateKey = '${date.year}-${date.month}-${date.day}';
+    return '${tripId}_$dateKey';
+  }
+
+  /// Synchronously check if we have cached location for a trip+date
+  LatLng? getCachedLocation(Trip trip, DateTime date) {
+    final cacheKey = _buildLocationCacheKey(trip.id, date);
+    final cached = _locationCache[cacheKey];
+    if (cached != null && !cached.isExpired) {
+      return cached.data;
+    }
+    return null;
   }
 
   /// Get the best location for weather based on trip data for a specific date
   /// Priority: 1) Last activity with location, 2) Hotel, 3) Flight destination
   Future<LatLng?> getLocationForDate(Trip trip, DateTime date) async {
+    final cacheKey = _buildLocationCacheKey(trip.id, date);
+
+    // Check cache
+    final cached = _locationCache[cacheKey];
+    if (cached != null && !cached.isExpired) {
+      return cached.data;
+    }
+
     // 1. Try last activity's location (sorted by time)
     final activityLocation = await _getLastActivityLocation(trip, date);
-    if (activityLocation != null) return activityLocation;
+    if (activityLocation != null) {
+      _locationCache[cacheKey] = _CachedLocation(activityLocation);
+      return activityLocation;
+    }
 
     // 2. Try hotel location (check-in or staying that night)
     final hotelLocation = await _getHotelLocation(trip, date);
-    if (hotelLocation != null) return hotelLocation;
+    if (hotelLocation != null) {
+      _locationCache[cacheKey] = _CachedLocation(hotelLocation);
+      return hotelLocation;
+    }
 
     // 3. Try flight destination (arrival airport)
     final flightLocation = await _getFlightDestination(trip, date);
-    if (flightLocation != null) return flightLocation;
+    if (flightLocation != null) {
+      _locationCache[cacheKey] = _CachedLocation(flightLocation);
+      return flightLocation;
+    }
 
+    // Cache the null result too
+    _locationCache[cacheKey] = _CachedLocation(null);
     return null;
   }
 

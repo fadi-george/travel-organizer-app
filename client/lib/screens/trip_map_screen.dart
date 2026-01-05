@@ -798,9 +798,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
           ),
           Hero(
             tag: 'weather-widget-${widget.trip.id}',
-            child: WeatherWidget(
-              trip: widget.trip,
-              selectedDate: _selectedDate,
+            child: Material(
+              type: MaterialType.transparency,
+              child: WeatherWidget(
+                trip: widget.trip,
+                selectedDate: _selectedDate,
+              ),
             ),
           ),
           const SizedBox(height: 8),
