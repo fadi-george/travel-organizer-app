@@ -44,6 +44,9 @@ import '../services/weather_service.dart';
   };
 }
 
+/// Height for loading and daily fallback views
+const double _kWeatherRowHeight = 60;
+
 /// Displays weather forecast - hourly for near dates, daily for future dates
 class WeatherWidget extends StatefulWidget {
   final Trip trip;
@@ -75,7 +78,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   /// Try to load from cache synchronously, then fetch if needed
   void _initWeather() {
     final service = WeatherService.instance;
-    final cachedLocation = service.getCachedLocation(widget.trip, widget.selectedDate);
+    final cachedLocation = service.getCachedLocation(
+      widget.trip,
+      widget.selectedDate,
+    );
 
     if (cachedLocation != null) {
       final cachedWeather = service.getCachedWeather(
@@ -203,14 +209,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     final temp = weather.temperature.round();
     final precipChance = weather.precipitationChance;
     final colorScheme = Theme.of(context).colorScheme;
+    final hasHighLow = weather.tempHigh != null && weather.tempLow != null;
 
     return Container(
       key: const ValueKey('daily'),
-      margin: const EdgeInsets.symmetric(
-        horizontal: 0,
-        vertical: 0,
-      ).copyWith(top: 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      height: _kWeatherRowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -224,6 +229,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
@@ -239,12 +245,45 @@ class _WeatherWidgetState extends State<WeatherWidget> {
                     '$precipChance% chance of rain',
                     style: TextStyle(
                       fontSize: 13,
-                      color: const Color(0xFF5DA4D9).withValues(alpha: 0.9),
+                      color: const Color(0xFF3B8BBD),
                     ),
                   ),
               ],
             ),
           ),
+          // High/Low temps on the right with gradient bar
+          if (hasHighLow)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${weather.tempLow!.round()}°',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    color: const Color(0xFFFF8A65),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${weather.tempHigh!.round()}°',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -260,14 +299,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
     return Container(
       key: const ValueKey('loading'),
-      // margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 21),
+      height: _kWeatherRowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
             width: 20,

@@ -176,7 +176,7 @@ class TomorrowIoService {
     final daily = await getDailyWeather(lat: lat, lng: lng, date: date);
     if (daily == null) return null;
 
-    // Return single entry with daily high temp at noon
+    // Return single entry with daily temps at noon
     return [
       HourlyWeather(
         time: DateTime(date.year, date.month, date.day, 12),
@@ -184,6 +184,8 @@ class TomorrowIoService {
         condition: daily.condition,
         weatherCondition: daily.weatherCondition,
         precipitationChance: daily.precipitationChance,
+        tempHigh: daily.tempHigh,
+        tempLow: daily.tempLow,
       ),
     ];
   }

@@ -72,6 +72,7 @@ class DaysCarousel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 10),
         // Month/Year header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -84,10 +85,10 @@ class DaysCarousel extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         // Days carousel
         SizedBox(
-          height: 68,
+          height: 64,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 0),

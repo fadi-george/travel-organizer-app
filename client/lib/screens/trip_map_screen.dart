@@ -777,7 +777,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
           Hero(
             tag: 'days-carousel-${widget.trip.id}',
             flightShuttleBuilder:

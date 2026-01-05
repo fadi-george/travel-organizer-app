@@ -437,7 +437,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         slivers: [
           // Hero header with image
           SliverAppBar(
-            expandedHeight: 180,
+            expandedHeight: 170,
             pinned: true,
             stretch: true,
             backgroundColor: const Color(0xFFFF7043),
@@ -534,7 +534,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   Positioned(
                     left: 20,
                     right: 20,
-                    bottom: 16,
+                    bottom: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -632,7 +632,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                const SizedBox(height: 16),
                 Hero(
                   tag: 'days-carousel-${_trip.id}',
                   flightShuttleBuilder:
@@ -675,7 +674,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             ),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
           // Filtered activities list
           SliverList(
