@@ -86,102 +86,150 @@ class DaysCarousel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        // Days carousel
+        // Days carousel - pad to 7 days minimum
         SizedBox(
           height: 64,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 0),
-            itemCount: days.length,
-            itemBuilder: (context, index) {
-              final day = days[index];
-              final isSelected = _isSameDay(day, selectedDate);
-              final eventCount = _getEventCount(day);
-              final isToday = _isSameDay(day, DateTime.now());
+          child: Builder(
+            builder: (context) {
+              // Calculate padding days to fill to 7 (only after, not before startDate)
+              const minDays = 7;
+              final paddingAfter = (minDays - days.length).clamp(0, minDays);
+              final totalItems = days.length + paddingAfter;
 
-              return GestureDetector(
-                onTap: () => onDateSelected(day),
-                child: Container(
-                  width: 46,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Day name (MON, TUE, etc.)
-                      Text(
-                        _dayName(day),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? const Color(0xFFFF7043)
-                              : colorScheme.onSurface.withValues(alpha: 0.5),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Day number with selection indicator
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFFFF7043).withValues(alpha: 0.15)
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: isToday && !isSelected
-                              ? Border.all(
-                                  color: const Color(0xFFFF7043),
-                                  width: 1.5,
-                                )
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${day.day}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected
-                                  ? const Color(0xFFFF7043)
-                                  : colorScheme.onSurface.withValues(
-                                      alpha: 0.7,
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Event indicators
-                      SizedBox(
-                        height: 5,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            eventCount.clamp(0, 3),
-                            (i) => Container(
-                              width: 4,
-                              height: 4,
-                              margin: EdgeInsets.only(left: i > 0 ? 2 : 0),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFFFF7043)
-                                    : Colors.blue.shade400,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                itemCount: totalItems,
+                itemBuilder: (context, index) {
+                  // Determine if this is a padding day (only after real days)
+                  final isPaddingDay = index >= days.length;
+
+                  if (isPaddingDay) {
+                    // Fake day - calculate the date after the trip
+                    final fakeDay = days.last.add(
+                      Duration(days: index - days.length + 1),
+                    );
+                    return _buildDayItem(
+                      context,
+                      fakeDay,
+                      isSelected: false,
+                      isToday: false,
+                      eventCount: 0,
+                      isDisabled: true,
+                      colorScheme: colorScheme,
+                    );
+                  }
+
+                  final day = days[index];
+                  final isSelected = _isSameDay(day, selectedDate);
+                  final eventCount = _getEventCount(day);
+                  final isToday = _isSameDay(day, DateTime.now());
+
+                  return GestureDetector(
+                    onTap: () => onDateSelected(day),
+                    child: _buildDayItem(
+                      context,
+                      day,
+                      isSelected: isSelected,
+                      isToday: isToday,
+                      eventCount: eventCount,
+                      isDisabled: false,
+                      colorScheme: colorScheme,
+                    ),
+                  );
+                },
               );
             },
           ),
         ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildDayItem(
+    BuildContext context,
+    DateTime day, {
+    required bool isSelected,
+    required bool isToday,
+    required int eventCount,
+    required bool isDisabled,
+    required ColorScheme colorScheme,
+  }) {
+    final opacity = isDisabled ? 0.25 : 1.0;
+
+    return Container(
+      width: 46,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      child: Opacity(
+        opacity: opacity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Day name (MON, TUE, etc.)
+            Text(
+              _dayName(day),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? const Color(0xFFFF7043)
+                    : colorScheme.onSurface.withValues(alpha: 0.5),
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Day number with selection indicator
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFFFF7043).withValues(alpha: 0.15)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+                border: isToday && !isSelected
+                    ? Border.all(color: const Color(0xFFFF7043), width: 1.5)
+                    : null,
+              ),
+              child: Center(
+                child: Text(
+                  '${day.day}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? const Color(0xFFFF7043)
+                        : colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Event indicators
+            SizedBox(
+              height: 5,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  eventCount.clamp(0, 3),
+                  (i) => Container(
+                    width: 4,
+                    height: 4,
+                    margin: EdgeInsets.only(left: i > 0 ? 2 : 0),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFFF7043)
+                          : Colors.blue.shade400,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
