@@ -2,27 +2,46 @@ import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
 /**
- * Get the authenticated user's ID (Clerk subject).
- * Throws an error if not authenticated.
+ * Get the authenticated user's Convex ID from the users table.
+ * Throws an error if not authenticated or user not found.
  */
 export async function getAuthenticatedUserId(
   ctx: QueryCtx | MutationCtx
-): Promise<string> {
+): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("Not authenticated");
   }
-  return identity.subject;
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  if (!user) {
+    throw new Error("User not found in database");
+  }
+
+  return user._id;
 }
 
 /**
- * Get the authenticated user's ID if available, or null if not authenticated.
+ * Get the authenticated user's Convex ID if available, or null if not authenticated.
  */
 export async function getOptionalUserId(
   ctx: QueryCtx | MutationCtx
-): Promise<string | null> {
+): Promise<Id<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
-  return identity?.subject ?? null;
+  if (!identity) {
+    return null;
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  return user?._id ?? null;
 }
 
 /**
@@ -32,7 +51,7 @@ export async function getOptionalUserId(
 export async function verifyTripOwnership(
   ctx: QueryCtx | MutationCtx,
   tripId: Id<"trips">,
-  userId: string
+  userId: Id<"users">
 ): Promise<void> {
   const trip = await ctx.db.get(tripId);
   if (!trip) {
