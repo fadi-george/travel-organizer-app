@@ -415,6 +415,7 @@ class _WeatherHourItem extends StatelessWidget {
     final precipChance = weather.precipitationChance;
     final label = isNow ? 'Now' : _formatTime(weather.time);
     final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
       width: 50,
@@ -428,16 +429,16 @@ class _WeatherHourItem extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
-              color: const Color(0xFF5D4E37).withValues(alpha: 0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           // Temperature
           Text(
             '$temp°',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF3E3428),
+              color: colorScheme.onSurface,
             ),
           ),
           // Icon + Precipitation row
@@ -450,10 +451,10 @@ class _WeatherHourItem extends StatelessWidget {
                 const SizedBox(width: 2),
                 Text(
                   '$precipChance%',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF3B8BBD),
+                    color: Color(0xFF42A5F5),
                   ),
                 ),
               ],
