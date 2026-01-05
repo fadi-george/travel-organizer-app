@@ -12,9 +12,12 @@ import '../widgets/save_activity_sheet.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
 import '../theme/app_theme.dart';
+import '../widgets/weather_widget.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
 import 'trip_map_screen.dart';
+
+const double _kAppBarIconSize = 20;
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
@@ -228,7 +231,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
-    debugPrint('Primary place: ${widget.primaryPlace}');
     return PlacesImages.getImageUrl(widget.primaryPlace);
   }
 
@@ -437,7 +439,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         slivers: [
           // Hero header with image
           SliverAppBar(
-            expandedHeight: 210,
+            expandedHeight: 170,
             pinned: true,
             stretch: true,
             backgroundColor: const Color(0xFFFF7043),
@@ -448,7 +450,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   color: Colors.black.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.white),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Colors.white,
+                  size: _kAppBarIconSize,
+                ),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -460,10 +466,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     color: Colors.black.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.more_horiz,
                     color: Colors.white,
-                    size: 20,
+                    size: _kAppBarIconSize,
                   ),
                 ),
                 onSelected: (value) {
@@ -534,7 +540,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   Positioned(
                     left: 20,
                     right: 20,
-                    bottom: 16,
+                    bottom: 12,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -547,7 +553,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Row(
                           children: [
                             Text(
@@ -581,7 +586,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         // Quick actions
                         Row(
                           children: [
@@ -632,7 +637,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                const SizedBox(height: 16),
                 Hero(
                   tag: 'days-carousel-${_trip.id}',
                   flightShuttleBuilder:
@@ -660,13 +664,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 8),
+                Hero(
+                  tag: 'weather-widget-${_trip.id}',
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: WeatherWidget(
+                      trip: _trip,
+                      selectedDate: _selectedDate,
+                    ),
+                  ),
+                ),
                 const Divider(height: 1),
               ],
             ),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
           // Filtered activities list
           SliverList(
@@ -788,20 +801,21 @@ class _HeaderActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(height: 2),
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),

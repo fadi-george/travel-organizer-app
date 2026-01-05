@@ -33,7 +33,7 @@ export const backfillTripUserId = migrations.define({
       // Assign to a placeholder user ID for legacy trips
       // These trips will be accessible to anyone until claimed or deleted
       await ctx.db.patch(trip._id, {
-        userId: "legacy_user",
+        userId: "legacy_user" as any,
       });
     }
   },

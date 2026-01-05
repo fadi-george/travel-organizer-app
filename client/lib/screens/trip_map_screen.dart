@@ -11,6 +11,7 @@ import '../models/trip.dart';
 import '../services/airports_service.dart';
 import '../utils/time_format.dart';
 import '../widgets/days_carousel.dart';
+import '../widgets/weather_widget.dart';
 
 class TripMapScreen extends StatefulWidget {
   final Trip trip;
@@ -61,7 +62,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   Future<void> _loadAirportsAndMarkers() async {
-    await AirportsService.instance.loadAirports();
     await _updateMarkers();
   }
 
@@ -774,8 +774,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
           Hero(
             tag: 'days-carousel-${widget.trip.id}',
             flightShuttleBuilder:
@@ -792,6 +792,16 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 // Reset map rotation when day changes
                 _mapController.rotate(0);
               },
+            ),
+          ),
+          Hero(
+            tag: 'weather-widget-${widget.trip.id}',
+            child: Material(
+              type: MaterialType.transparency,
+              child: WeatherWidget(
+                trip: widget.trip,
+                selectedDate: _selectedDate,
+              ),
             ),
           ),
           const SizedBox(height: 8),

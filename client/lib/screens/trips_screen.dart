@@ -4,6 +4,7 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../services/airports_service.dart';
 import '../services/auth_service.dart';
 import '../services/convex_service.dart';
 import '../theme/app_theme.dart';
@@ -29,6 +30,8 @@ class _TripsScreenState extends State<TripsScreen> {
   @override
   void initState() {
     super.initState();
+    // Preload airports data for use across the app
+    AirportsService.instance.loadAirports();
     _startTripsSubscription();
   }
 
