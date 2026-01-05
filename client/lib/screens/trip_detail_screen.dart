@@ -447,12 +447,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: Colors.black.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.arrow_back,
-                  color: Colors.white,
+                  color: Colors.white.withValues(alpha: 0.9),
                   size: _kAppBarIconSize,
                 ),
               ),
@@ -463,12 +463,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 icon: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.more_horiz,
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.9),
                     size: _kAppBarIconSize,
                   ),
                 ),
@@ -546,11 +546,17 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                       children: [
                         Text(
                           trip.name,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.95),
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.5,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
                         ),
                         Row(
@@ -558,7 +564,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             Text(
                               trip.formattedDateRange,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -571,14 +577,18 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: trip.isUpcoming
-                                    ? const Color(0xFFFF7043)
-                                    : Colors.grey.shade600,
+                                    ? const Color(
+                                        0xFFFF7043,
+                                      ).withValues(alpha: 0.85)
+                                    : Colors.grey.shade600.withValues(
+                                        alpha: 0.7,
+                                      ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 trip.daysUntilTrip,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.95),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -586,7 +596,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         // Quick actions
                         Row(
                           children: [
@@ -798,26 +808,34 @@ class _HeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: isDark
+              ? Colors.black.withValues(alpha: 0.25)
+              : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: 0.15),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 16),
+            Icon(icon, color: Colors.white.withValues(alpha: 0.85), size: 16),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Colors.white.withValues(alpha: 0.85),
               ),
             ),
           ],
