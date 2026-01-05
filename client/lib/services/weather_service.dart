@@ -10,9 +10,80 @@ import 'tomorrowio_service.dart';
 
 // Re-export weather models for consumers
 export 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
+// WeatherCondition is defined in this file and exported directly
 
 /// Supported weather API providers
 enum WeatherApiType { openWeather, tomorrowIo }
+
+/// Unified weather condition codes
+/// Both OpenWeatherMap and Tomorrow.io map to these conditions
+enum WeatherCondition {
+  clear, // Clear sky
+  fewClouds, // Few clouds (11-25%)
+  cloudy, // Scattered/broken/overcast clouds
+  mist, // Mist, fog, haze
+  drizzle, // Light rain, drizzle
+  rain, // Rain, heavy rain
+  thunderstorm, // Thunderstorm
+  snow, // Snow, sleet, ice
+  unknown, // Unknown condition
+}
+
+/// Extension to get display name and icon for weather conditions
+extension WeatherConditionExtension on WeatherCondition {
+  String get displayName => switch (this) {
+    WeatherCondition.clear => 'Clear',
+    WeatherCondition.fewClouds => 'Partly Cloudy',
+    WeatherCondition.cloudy => 'Cloudy',
+    WeatherCondition.mist => 'Mist',
+    WeatherCondition.drizzle => 'Drizzle',
+    WeatherCondition.rain => 'Rain',
+    WeatherCondition.thunderstorm => 'Thunderstorm',
+    WeatherCondition.snow => 'Snow',
+    WeatherCondition.unknown => 'Unknown',
+  };
+
+  /// Map OpenWeatherMap icon codes (e.g., "01d", "10n") to WeatherCondition
+  static WeatherCondition fromOpenWeatherCode(String iconCode) {
+    if (iconCode.startsWith('01') || iconCode.startsWith('02')) {
+      return iconCode.startsWith('01')
+          ? WeatherCondition.clear
+          : WeatherCondition.fewClouds;
+    } else if (iconCode.startsWith('03') || iconCode.startsWith('04')) {
+      return WeatherCondition.cloudy;
+    } else if (iconCode.startsWith('09')) {
+      return WeatherCondition.drizzle;
+    } else if (iconCode.startsWith('10')) {
+      return WeatherCondition.rain;
+    } else if (iconCode.startsWith('11')) {
+      return WeatherCondition.thunderstorm;
+    } else if (iconCode.startsWith('13')) {
+      return WeatherCondition.snow;
+    } else if (iconCode.startsWith('50')) {
+      return WeatherCondition.mist;
+    }
+    return WeatherCondition.unknown;
+  }
+
+  /// Map Tomorrow.io weather codes to WeatherCondition
+  static WeatherCondition fromTomorrowIoCode(int code) {
+    return switch (code) {
+      1000 => WeatherCondition.clear, // Clear
+      1100 => WeatherCondition.clear, // Mostly Clear
+      1101 => WeatherCondition.fewClouds, // Partly Cloudy
+      1102 => WeatherCondition.cloudy, // Mostly Cloudy
+      1001 => WeatherCondition.cloudy, // Cloudy
+      2000 || 2100 => WeatherCondition.mist, // Fog
+      4000 || 4200 => WeatherCondition.drizzle, // Drizzle/Light Rain
+      4001 || 4201 => WeatherCondition.rain, // Rain/Heavy Rain
+      5000 || 5001 || 5100 || 5101 => WeatherCondition.snow, // Snow
+      6000 || 6001 || 6200 || 6201 => WeatherCondition.snow, // Freezing Rain
+      7000 || 7101 || 7102 => WeatherCondition.snow, // Ice Pellets
+      8000 => WeatherCondition.thunderstorm, // Thunderstorm
+      _ => WeatherCondition.unknown,
+    };
+  }
+}
 
 /// Location coordinates
 class LatLng {

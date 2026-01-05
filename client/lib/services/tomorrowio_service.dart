@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
+import 'weather_service.dart' show WeatherConditionExtension;
 
 /// Service for fetching weather data from Tomorrow.io API
 class TomorrowIoService {
@@ -129,7 +130,7 @@ class TomorrowIoService {
       time: startTime.toLocal(),
       temperature: temp,
       condition: _getConditionFromCode(weatherCode),
-      iconCode: _getIconCodeFromWeatherCode(weatherCode),
+      weatherCondition: WeatherConditionExtension.fromTomorrowIoCode(weatherCode),
       precipitationChance: precipProb.round(),
     );
   }
@@ -165,26 +166,6 @@ class TomorrowIoService {
     };
   }
 
-  /// Map Tomorrow.io weather codes to OpenWeatherMap-style icon codes
-  /// for compatibility with existing UI
-  String _getIconCodeFromWeatherCode(int code) {
-    return switch (code) {
-      1000 => '01d', // Clear
-      1100 => '01d', // Mostly Clear
-      1101 => '02d', // Partly Cloudy
-      1102 => '03d', // Mostly Cloudy
-      1001 => '04d', // Cloudy
-      2000 || 2100 => '50d', // Fog
-      4000 || 4200 => '09d', // Drizzle/Light Rain
-      4001 || 4201 => '10d', // Rain/Heavy Rain
-      5000 || 5001 || 5100 || 5101 => '13d', // Snow
-      6000 || 6001 || 6200 || 6201 => '13d', // Freezing Rain
-      7000 || 7101 || 7102 => '13d', // Ice Pellets
-      8000 => '11d', // Thunderstorm
-      _ => '01d',
-    };
-  }
-
   /// Fallback: fetch daily forecast and convert to hourly-like format
   /// Used when date is beyond hourly forecast limit
   Future<List<HourlyWeather>?> _getDailyAsFallback({
@@ -201,7 +182,7 @@ class TomorrowIoService {
         time: DateTime(date.year, date.month, date.day, 12),
         temperature: daily.tempHigh,
         condition: daily.condition,
-        iconCode: daily.iconCode,
+        weatherCondition: daily.weatherCondition,
         precipitationChance: daily.precipitationChance,
       ),
     ];
@@ -267,7 +248,7 @@ class TomorrowIoService {
             tempHigh: tempHigh,
             tempLow: tempLow,
             condition: _getConditionFromCode(weatherCode),
-            iconCode: _getIconCodeFromWeatherCode(weatherCode),
+            weatherCondition: WeatherConditionExtension.fromTomorrowIoCode(weatherCode),
             precipitationChance: precipProb.round(),
           );
         }

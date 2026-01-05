@@ -11,6 +11,7 @@ import '../models/trip.dart';
 import '../services/airports_service.dart';
 import '../utils/time_format.dart';
 import '../widgets/days_carousel.dart';
+import '../widgets/weather_widget.dart';
 
 class TripMapScreen extends StatefulWidget {
   final Trip trip;
@@ -792,6 +793,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 // Reset map rotation when day changes
                 _mapController.rotate(0);
               },
+              bottomWidget: WeatherWidget(
+                trip: widget.trip,
+                selectedDate: _selectedDate,
+              ),
             ),
           ),
           const SizedBox(height: 8),

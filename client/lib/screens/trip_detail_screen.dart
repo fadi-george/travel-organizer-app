@@ -12,7 +12,7 @@ import '../widgets/save_activity_sheet.dart';
 import '../widgets/save_flight_sheet.dart';
 import '../widgets/save_hotel_sheet.dart';
 import '../theme/app_theme.dart';
-import '../widgets/hourly_weather_widget.dart';
+import '../widgets/weather_widget.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
 import 'trip_map_screen.dart';
@@ -658,23 +658,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         _selectedDate = date;
                       });
                     },
+                    bottomWidget: WeatherWidget(
+                      trip: _trip,
+                      selectedDate: _selectedDate,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                // const SizedBox(height: 8),
                 const Divider(height: 1),
               ],
             ),
           ),
 
-          // Weather widget
-          SliverToBoxAdapter(
-            child: HourlyWeatherWidget(
-              trip: _trip,
-              selectedDate: _selectedDate,
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
           // Filtered activities list
           SliverList(

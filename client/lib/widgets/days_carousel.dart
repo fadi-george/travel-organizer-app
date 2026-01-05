@@ -6,6 +6,7 @@ class DaysCarousel extends StatelessWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
   final Map<DateTime, int> eventCounts;
+  final Widget? bottomWidget;
 
   const DaysCarousel({
     super.key,
@@ -14,6 +15,7 @@ class DaysCarousel extends StatelessWidget {
     required this.selectedDate,
     required this.onDateSelected,
     this.eventCounts = const {},
+    this.bottomWidget,
   });
 
   List<DateTime> get _tripDays {
@@ -178,6 +180,9 @@ class DaysCarousel extends StatelessWidget {
             },
           ),
         ),
+        // Optional bottom widget (e.g., weather)
+        if (bottomWidget != null) bottomWidget!,
+        const SizedBox(height: 8),
       ],
     );
   }

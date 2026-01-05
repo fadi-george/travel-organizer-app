@@ -2,22 +2,64 @@ import 'package:flutter/material.dart';
 import '../models/trip.dart';
 import '../services/weather_service.dart';
 
-/// Displays hourly weather forecast in a horizontal scrollable row
-class HourlyWeatherWidget extends StatefulWidget {
+/// Returns icon and color for a weather condition
+({IconData icon, Color color}) getWeatherIconData(WeatherCondition condition) {
+  return switch (condition) {
+    WeatherCondition.clear => (
+      icon: Icons.wb_sunny,
+      color: const Color(0xFFFFA726),
+    ),
+    WeatherCondition.fewClouds => (
+      icon: Icons.wb_sunny,
+      color: const Color(0xFFFFA726),
+    ),
+    WeatherCondition.cloudy => (
+      icon: Icons.cloud,
+      color: const Color(0xFF78909C),
+    ),
+    WeatherCondition.mist => (
+      icon: Icons.foggy,
+      color: const Color(0xFFB0BEC5),
+    ),
+    WeatherCondition.drizzle => (
+      icon: Icons.water_drop,
+      color: const Color(0xFF42A5F5),
+    ),
+    WeatherCondition.rain => (
+      icon: Icons.water_drop,
+      color: const Color(0xFF42A5F5),
+    ),
+    WeatherCondition.thunderstorm => (
+      icon: Icons.thunderstorm,
+      color: const Color(0xFF5C6BC0),
+    ),
+    WeatherCondition.snow => (
+      icon: Icons.ac_unit,
+      color: const Color(0xFF90CAF9),
+    ),
+    WeatherCondition.unknown => (
+      icon: Icons.cloud,
+      color: const Color(0xFF78909C),
+    ),
+  };
+}
+
+/// Displays weather forecast - hourly for near dates, daily for future dates
+class WeatherWidget extends StatefulWidget {
   final Trip trip;
   final DateTime selectedDate;
 
-  const HourlyWeatherWidget({
+  const WeatherWidget({
     super.key,
     required this.trip,
     required this.selectedDate,
   });
 
   @override
-  State<HourlyWeatherWidget> createState() => _HourlyWeatherWidgetState();
+  State<WeatherWidget> createState() => _WeatherWidgetState();
 }
 
-class _HourlyWeatherWidgetState extends State<HourlyWeatherWidget> {
+class _WeatherWidgetState extends State<WeatherWidget> {
   List<HourlyWeather>? _weather;
   bool _isLoading = true;
   String? _error;
@@ -31,7 +73,7 @@ class _HourlyWeatherWidgetState extends State<HourlyWeatherWidget> {
   }
 
   @override
-  void didUpdateWidget(HourlyWeatherWidget oldWidget) {
+  void didUpdateWidget(WeatherWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Refetch if date or trip changed
     if (!_isSameDay(widget.selectedDate, oldWidget.selectedDate) ||
@@ -109,52 +151,129 @@ class _HourlyWeatherWidgetState extends State<HourlyWeatherWidget> {
       return const SizedBox.shrink();
     }
 
+    // Check for null OR empty list
+    final hasWeatherData = _weather != null && _weather!.isNotEmpty;
+
+    // Single item = daily forecast fallback, multiple = hourly forecast
+    final isDailyFallback = hasWeatherData && _weather!.length == 1;
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: _isLoading
           ? _buildLoadingState()
-          : _weather != null
-          ? _buildWeatherRow()
+          : hasWeatherData
+          ? isDailyFallback
+                ? _buildDailyFallback()
+                : _buildHourlyRow()
           : const SizedBox.shrink(),
     );
   }
 
-  Widget _buildLoadingState() {
+  Widget _buildDailyFallback() {
+    final weather = _weather!.first;
+    final temp = weather.temperature.round();
+    final precipChance = weather.precipitationChance;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      key: const ValueKey('loading'),
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      key: const ValueKey('daily'),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 0,
+      ).copyWith(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5EFE6),
-        borderRadius: BorderRadius.circular(16),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: const Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Color(0xFF8B7355),
+      child: Row(
+        children: [
+          // Weather icon
+          _buildWeatherIcon(weather.weatherCondition, size: 28),
+          const SizedBox(width: 12),
+          // Temperature and condition
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$temp° · ${weather.condition}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                if (precipChance > 0)
+                  Text(
+                    '$precipChance% chance of rain',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFF5DA4D9).withValues(alpha: 0.9),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildWeatherRow() {
+  Widget _buildWeatherIcon(WeatherCondition condition, {double size = 28}) {
+    final (:icon, :color) = getWeatherIconData(condition);
+    return Icon(icon, size: size, color: color);
+  }
+
+  Widget _buildLoadingState() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      key: const ValueKey('loading'),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Loading weather...',
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHourlyRow() {
     final now = DateTime.now();
     final isToday = _isSameDay(widget.selectedDate, now);
 
     return Container(
       key: const ValueKey('weather'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       decoration: BoxDecoration(
         color: const Color(0xFFF5EFE6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         child: Row(
           children: _weather!.map((hour) {
             final isNow =
@@ -202,62 +321,25 @@ class _WeatherHourItem extends StatelessWidget {
   }
 
   Widget _buildWeatherIcon() {
-    final iconCode = weather.iconCode;
-    // Map OpenWeatherMap icon codes to appropriate icons and colors
-    IconData icon;
-    Color color;
-
-    if (iconCode.startsWith('01')) {
-      // Clear sky
-      icon = Icons.wb_sunny;
-      color = const Color(0xFFFFA726);
-    } else if (iconCode.startsWith('02')) {
-      // Few clouds
-      icon = Icons.wb_sunny;
-      color = const Color(0xFFFFA726);
-    } else if (iconCode.startsWith('03') || iconCode.startsWith('04')) {
-      // Scattered/broken clouds
-      icon = Icons.cloud;
-      color = const Color(0xFF78909C);
-    } else if (iconCode.startsWith('09') || iconCode.startsWith('10')) {
-      // Rain
-      icon = Icons.water_drop;
-      color = const Color(0xFF42A5F5);
-    } else if (iconCode.startsWith('11')) {
-      // Thunderstorm
-      icon = Icons.thunderstorm;
-      color = const Color(0xFF5C6BC0);
-    } else if (iconCode.startsWith('13')) {
-      // Snow
-      icon = Icons.ac_unit;
-      color = const Color(0xFF90CAF9);
-    } else if (iconCode.startsWith('50')) {
-      // Mist/fog
-      icon = Icons.foggy;
-      color = const Color(0xFFB0BEC5);
-    } else {
-      icon = Icons.cloud;
-      color = const Color(0xFF78909C);
-    }
-
+    final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
     return Icon(icon, size: 28, color: color);
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('WeatherService');
     final temp = weather.temperature.round();
     final precipChance = weather.precipitationChance;
 
+    final label = isNow ? 'Now' : _formatTime(weather.time);
+
     return Container(
       width: 60,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Time label
           Text(
-            isNow ? 'Now' : _formatTime(weather.time),
+            label,
             style: TextStyle(
               fontSize: 13,
               fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
@@ -265,7 +347,6 @@ class _WeatherHourItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          // Temperature
           Text(
             '$temp°',
             style: const TextStyle(
@@ -275,9 +356,7 @@ class _WeatherHourItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Weather icon
           _buildWeatherIcon(),
-          // Precipitation chance (only show if > 0)
           if (precipChance > 0) ...[
             const SizedBox(height: 4),
             Row(
