@@ -794,10 +794,15 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 // Reset map rotation when day changes
                 _mapController.rotate(0);
               },
-              bottomWidget: WeatherWidget(
-                trip: widget.trip,
+            ),
           ),
-          WeatherWidget(trip: widget.trip, selectedDate: _selectedDate),
+          Hero(
+            tag: 'weather-widget-${widget.trip.id}',
+            child: WeatherWidget(
+              trip: widget.trip,
+              selectedDate: _selectedDate,
+            ),
+          ),
           const SizedBox(height: 8),
           const Divider(height: 1),
         ],

@@ -179,6 +179,7 @@ class DaysCarousel extends StatelessWidget {
             },
           ),
         ),
+        const SizedBox(height: 8),
       ],
     );
   }
