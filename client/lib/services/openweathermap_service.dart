@@ -59,7 +59,7 @@ class OpenWeatherMapService {
 
   /// Fetch hourly weather for a location and date
   /// Returns weather for 8am, 10am, 12pm, 2pm, 4pm, 6pm, 8pm, 10pm, 12am
-  /// Note: OpenWeatherMap hourly forecast is ~48 hours, daily is up to 8 days
+  /// Uses Time Machine API for past hours (today) and One Call for future hours
   Future<List<HourlyWeather>?> getHourlyWeather({
     required double lat,
     required double lng,
@@ -84,9 +84,9 @@ class OpenWeatherMapService {
       return null;
     }
 
+    // Past dates (before today) - use Time Machine API for the full day
     if (daysAhead < 0) {
-      debugPrint('OpenWeatherMapService: Cannot get weather for past dates');
-      return null;
+      return _getHistoricalHourlyWeather(lat: lat, lng: lng, date: date);
     }
 
     final apiKey = _apiKey;
@@ -95,8 +95,32 @@ class OpenWeatherMapService {
       return null;
     }
 
+    // Target hours: 8am through midnight
+    final targetHours = [8, 10, 12, 14, 16, 18, 20, 22, 0];
+    final targetDate = DateTime(date.year, date.month, date.day);
+    final nextDay = targetDate.add(const Duration(days: 1));
+
+    // For today, split into past hours (Time Machine) and future hours (One Call)
+    final isToday = daysAhead == 0;
+    final pastHours = <HourlyWeather>[];
+    final futureHours = <HourlyWeather>[];
+
+    if (isToday) {
+      // Fetch past hours using Time Machine API
+      final pastTargetHours = targetHours.where((h) => h != 0 && h < now.hour).toList();
+      if (pastTargetHours.isNotEmpty) {
+        final historical = await _fetchPastHoursForToday(
+          lat: lat,
+          lng: lng,
+          date: targetDate,
+          targetHours: pastTargetHours,
+        );
+        pastHours.addAll(historical);
+      }
+    }
+
     try {
-      // Use One Call API 3.0 for hourly forecast
+      // Use One Call API 3.0 for current and future hourly forecast
       final url = Uri.parse(
         'https://api.openweathermap.org/data/3.0/onecall'
         '?lat=$lat&lon=$lng'
@@ -109,31 +133,35 @@ class OpenWeatherMapService {
       if (response.statusCode != 200) {
         debugPrint('OpenWeatherMapService: API error ${response.statusCode}');
         debugPrint('OpenWeatherMapService: Response: ${response.body}');
+        // If One Call fails but we have past hours, return those
+        if (pastHours.isNotEmpty) return pastHours;
         return null;
       }
 
       final data = json.decode(response.body);
       final hourlyData = data['hourly'] as List<dynamic>?;
-      if (hourlyData == null) return null;
+      if (hourlyData == null) {
+        if (pastHours.isNotEmpty) return pastHours;
+        return null;
+      }
 
-      // Parse all hourly data
-      final allHours = hourlyData.map(_parseHourlyWeather).toList();
+      // Parse all hourly data from forecast
+      final allForecastHours = hourlyData.map(_parseHourlyWeather).toList();
 
-      // Filter to target hours: 8, 10, 12, 14, 16, 18, 20, 22, 24 (midnight next day)
-      final targetHours = [8, 10, 12, 14, 16, 18, 20, 22, 0];
-      final targetDate = DateTime(date.year, date.month, date.day);
-      final nextDay = targetDate.add(const Duration(days: 1));
+      // Filter to target hours that are current or future
+      final futureTargetHours = isToday
+          ? targetHours.where((h) => h == 0 || h >= now.hour).toList()
+          : targetHours;
 
-      final filtered = <HourlyWeather>[];
-      for (final hour in targetHours) {
+      for (final hour in futureTargetHours) {
         final targetTime = hour == 0
             ? DateTime(nextDay.year, nextDay.month, nextDay.day, 0)
             : DateTime(targetDate.year, targetDate.month, targetDate.day, hour);
 
-        // Find closest hour in data
+        // Find closest hour in forecast data
         HourlyWeather? closest;
         int minDiff = 999999;
-        for (final weather in allHours) {
+        for (final weather in allForecastHours) {
           final diff = (weather.time.difference(targetTime).inMinutes).abs();
           if (diff < minDiff) {
             minDiff = diff;
@@ -141,15 +169,131 @@ class OpenWeatherMapService {
           }
         }
         if (closest != null && minDiff <= 90) {
-          filtered.add(closest);
+          futureHours.add(closest);
         }
       }
 
-      return filtered;
+      // Combine past and future hours, sorted by time
+      final combined = [...pastHours, ...futureHours];
+      combined.sort((a, b) => a.time.compareTo(b.time));
+      return combined;
     } catch (e) {
       debugPrint('OpenWeatherMapService: Error fetching weather: $e');
+      if (pastHours.isNotEmpty) return pastHours;
       return null;
     }
+  }
+
+  /// Fetch past hours for today using Time Machine API
+  Future<List<HourlyWeather>> _fetchPastHoursForToday({
+    required double lat,
+    required double lng,
+    required DateTime date,
+    required List<int> targetHours,
+  }) async {
+    final apiKey = _apiKey;
+    if (apiKey == null || apiKey.isEmpty) return [];
+
+    final results = <HourlyWeather>[];
+
+    // Fetch each past hour individually (Time Machine returns data for specific timestamp)
+    for (final hour in targetHours) {
+      final targetTime = DateTime(date.year, date.month, date.day, hour);
+      final timestamp = targetTime.millisecondsSinceEpoch ~/ 1000;
+
+      try {
+        final url = Uri.parse(
+          'https://api.openweathermap.org/data/3.0/onecall/timemachine'
+          '?lat=$lat&lon=$lng'
+          '&dt=$timestamp'
+          '&units=imperial'
+          '&appid=$apiKey',
+        );
+
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final hourlyData = data['data'] as List<dynamic>?;
+          if (hourlyData != null && hourlyData.isNotEmpty) {
+            // Time Machine returns hourly data around the requested time
+            // Find the closest match to our target hour
+            HourlyWeather? closest;
+            int minDiff = 999999;
+            for (final hourData in hourlyData) {
+              final weather = _parseHourlyWeather(hourData);
+              final diff = (weather.time.difference(targetTime).inMinutes).abs();
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = weather;
+              }
+            }
+            if (closest != null && minDiff <= 90) {
+              results.add(closest);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('OpenWeatherMapService: Time Machine error for hour $hour: $e');
+      }
+    }
+
+    return results;
+  }
+
+  /// Fetch historical hourly weather for a past date using Time Machine API
+  Future<List<HourlyWeather>?> _getHistoricalHourlyWeather({
+    required double lat,
+    required double lng,
+    required DateTime date,
+  }) async {
+    final apiKey = _apiKey;
+    if (apiKey == null || apiKey.isEmpty) {
+      debugPrint('OpenWeatherMapService: API key not configured');
+      return null;
+    }
+
+    final targetHours = [8, 10, 12, 14, 16, 18, 20, 22];
+    final results = <HourlyWeather>[];
+
+    for (final hour in targetHours) {
+      final targetTime = DateTime(date.year, date.month, date.day, hour);
+      final timestamp = targetTime.millisecondsSinceEpoch ~/ 1000;
+
+      try {
+        final url = Uri.parse(
+          'https://api.openweathermap.org/data/3.0/onecall/timemachine'
+          '?lat=$lat&lon=$lng'
+          '&dt=$timestamp'
+          '&units=imperial'
+          '&appid=$apiKey',
+        );
+
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final hourlyData = data['data'] as List<dynamic>?;
+          if (hourlyData != null && hourlyData.isNotEmpty) {
+            HourlyWeather? closest;
+            int minDiff = 999999;
+            for (final hourData in hourlyData) {
+              final weather = _parseHourlyWeather(hourData);
+              final diff = (weather.time.difference(targetTime).inMinutes).abs();
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = weather;
+              }
+            }
+            if (closest != null && minDiff <= 90) {
+              results.add(closest);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('OpenWeatherMapService: Time Machine error for hour $hour: $e');
+      }
+    }
+
+    return results.isNotEmpty ? results : null;
   }
 
   HourlyWeather _parseHourlyWeather(dynamic json) {

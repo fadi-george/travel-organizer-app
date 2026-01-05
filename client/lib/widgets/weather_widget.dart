@@ -416,7 +416,7 @@ class _WeatherHourItem extends StatelessWidget {
     final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
 
     return SizedBox(
-      width: 48,
+      width: 50,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
