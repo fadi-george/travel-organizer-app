@@ -775,6 +775,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
           Hero(
@@ -795,10 +796,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
               },
               bottomWidget: WeatherWidget(
                 trip: widget.trip,
-                selectedDate: _selectedDate,
-              ),
-            ),
           ),
+          WeatherWidget(trip: widget.trip, selectedDate: _selectedDate),
           const SizedBox(height: 8),
           const Divider(height: 1),
         ],

@@ -6,7 +6,6 @@ class DaysCarousel extends StatelessWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
   final Map<DateTime, int> eventCounts;
-  final Widget? bottomWidget;
 
   const DaysCarousel({
     super.key,
@@ -15,7 +14,6 @@ class DaysCarousel extends StatelessWidget {
     required this.selectedDate,
     required this.onDateSelected,
     this.eventCounts = const {},
-    this.bottomWidget,
   });
 
   List<DateTime> get _tripDays {
@@ -71,11 +69,12 @@ class DaysCarousel extends StatelessWidget {
     if (days.isEmpty) return const SizedBox.shrink();
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Month/Year header
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             _monthYear(selectedDate),
             style: TextStyle(
@@ -91,7 +90,7 @@ class DaysCarousel extends StatelessWidget {
           height: 68,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 0),
             itemCount: days.length,
             itemBuilder: (context, index) {
               final day = days[index];
@@ -180,9 +179,6 @@ class DaysCarousel extends StatelessWidget {
             },
           ),
         ),
-        // Optional bottom widget (e.g., weather)
-        if (bottomWidget != null) bottomWidget!,
-        const SizedBox(height: 8),
       ],
     );
   }

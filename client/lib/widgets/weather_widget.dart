@@ -178,9 +178,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     return Container(
       key: const ValueKey('daily'),
       margin: const EdgeInsets.symmetric(
-        horizontal: 16,
+        horizontal: 0,
         vertical: 0,
-      ).copyWith(top: 8),
+      ).copyWith(top: 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surface,

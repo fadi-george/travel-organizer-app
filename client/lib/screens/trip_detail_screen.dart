@@ -437,7 +437,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         slivers: [
           // Hero header with image
           SliverAppBar(
-            expandedHeight: 210,
+            expandedHeight: 180,
             pinned: true,
             stretch: true,
             backgroundColor: const Color(0xFFFF7043),
@@ -581,7 +581,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         // Quick actions
                         Row(
                           children: [
@@ -658,13 +658,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         _selectedDate = date;
                       });
                     },
-                    bottomWidget: WeatherWidget(
-                      trip: _trip,
-                      selectedDate: _selectedDate,
-                    ),
                   ),
                 ),
-                // const SizedBox(height: 8),
+                WeatherWidget(trip: _trip, selectedDate: _selectedDate),
                 const Divider(height: 1),
               ],
             ),
@@ -792,20 +788,21 @@ class _HeaderActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 18),
-            const SizedBox(height: 2),
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
