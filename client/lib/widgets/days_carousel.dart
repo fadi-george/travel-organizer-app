@@ -156,7 +156,7 @@ class DaysCarousel extends StatelessWidget {
     required bool isDisabled,
     required ColorScheme colorScheme,
   }) {
-    final opacity = isDisabled ? 0.25 : 1.0;
+    final opacity = isDisabled ? 0.3 : 1.0;
 
     return Container(
       width: 46,
@@ -174,7 +174,9 @@ class DaysCarousel extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 color: isSelected
                     ? const Color(0xFFFF7043)
-                    : colorScheme.onSurface.withValues(alpha: 0.5),
+                    : colorScheme.onSurface.withValues(
+                        alpha: isDisabled ? 0.8 : 0.5,
+                      ),
                 letterSpacing: 0.5,
               ),
             ),
