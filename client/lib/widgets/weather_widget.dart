@@ -66,7 +66,6 @@ class WeatherWidget extends StatefulWidget {
 class _WeatherWidgetState extends State<WeatherWidget> {
   List<HourlyWeather>? _weather;
   bool _isLoading = true;
-  String? _error;
   DateTime? _lastFetchedDate;
   String? _lastTripId;
   int? _lastActivityCount;
@@ -138,10 +137,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
     // Only show loading if we don't already have data
     if (_weather == null) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+      setState(() => _isLoading = true);
     }
 
     try {
@@ -152,11 +148,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       );
 
       if (location == null) {
-        debugPrint('No location found');
         setState(() {
           _weather = null;
           _isLoading = false;
-          _error = 'No location found';
           _lastFetchedDate = widget.selectedDate;
           _lastTripId = widget.trip.id;
           _lastActivityCount = activityCount;
@@ -178,17 +172,15 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       setState(() {
         _weather = weather;
         _isLoading = false;
-        _error = weather == null ? 'Could not load weather' : null;
         _lastFetchedDate = widget.selectedDate;
         _lastTripId = widget.trip.id;
         _lastActivityCount = activityCount;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _weather = null;
         _isLoading = false;
-        _error = 'Error loading weather';
         _lastFetchedDate = widget.selectedDate;
         _lastTripId = widget.trip.id;
         _lastActivityCount = widget.trip.activities?.length ?? 0;
@@ -198,16 +190,22 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Don't show anything if there's an error or no data
-    if (_error != null && !_isLoading) {
-      return const SizedBox.shrink();
-    }
-
     // Check for null OR empty list
     final hasWeatherData = _weather != null && _weather!.isNotEmpty;
 
     // Single item = daily forecast fallback, multiple = hourly forecast
     final isDailyFallback = hasWeatherData && _weather!.length == 1;
+
+    // Show message if date is in the future and no weather data available
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDay = DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+      widget.selectedDate.day,
+    );
+    final daysAhead = selectedDay.difference(today).inDays;
+    final showFutureMessage = daysAhead >= 0 && !hasWeatherData && !_isLoading;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -217,7 +215,42 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           ? isDailyFallback
                 ? _buildDailyFallback()
                 : _buildHourlyRow()
+          : showFutureMessage
+          ? _buildFarFutureMessage()
           : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildFarFutureMessage() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      key: const ValueKey('far-future'),
+      height: _kWeatherRowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.auto_awesome,
+            size: 18,
+            color: colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              "Too far ahead to predict 🔮",
+              style: TextStyle(
+                fontSize: 13,
+                // fontStyle: FontStyle.italic,
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
