@@ -70,10 +70,48 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   String? _lastTripId;
   int? _lastActivityCount;
 
+  // Scroll tracking for fade indicators
+  final ScrollController _scrollController = ScrollController();
+  bool _showLeftFade = false;
+  bool _showRightFade = true;
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _initWeather();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    _updateFadeState();
+  }
+
+  void _updateFadeState() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+
+    // Check if content even needs scrolling
+    final canScroll = position.maxScrollExtent > 0;
+    final atStart = position.pixels <= 0;
+    final atEnd =
+        position.pixels >= position.maxScrollExtent - 1; // 1px tolerance
+
+    final newShowLeft = canScroll && !atStart;
+    final newShowRight = canScroll && !atEnd;
+
+    if (_showLeftFade != newShowLeft || _showRightFade != newShowRight) {
+      setState(() {
+        _showLeftFade = newShowLeft;
+        _showRightFade = newShowRight;
+      });
+    }
   }
 
   /// Try to load from cache synchronously first, then fetch if needed
@@ -364,15 +402,39 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       );
     }).toList();
 
+    // Check initial scroll state after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateFadeState());
+
+    // Build gradient stops based on scroll position
+    final leftStop = _showLeftFade ? 0.16 : 0.0;
+    final rightStop = _showRightFade ? 0.84 : 1.0;
+
     return SizedBox(
       key: const ValueKey('weather'),
       height: _kWeatherRowHeight,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: items,
+      child: ShaderMask(
+        shaderCallback: (Rect bounds) {
+          return LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              _showLeftFade ? Colors.transparent : Colors.black,
+              Colors.black,
+              Colors.black,
+              _showRightFade ? Colors.transparent : Colors.black,
+            ],
+            stops: [0.0, leftStop, rightStop, 1.0],
+          ).createShader(bounds);
+        },
+        blendMode: BlendMode.dstIn,
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: items,
+          ),
         ),
       ),
     );
