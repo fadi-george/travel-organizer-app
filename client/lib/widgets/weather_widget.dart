@@ -68,6 +68,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   String? _error;
   DateTime? _lastFetchedDate;
   String? _lastTripId;
+  int? _lastActivityCount;
 
   @override
   void initState() {
@@ -78,9 +79,19 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   @override
   void didUpdateWidget(WeatherWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Refetch if date or trip changed
-    if (!_isSameDay(widget.selectedDate, oldWidget.selectedDate) ||
-        widget.trip.id != oldWidget.trip.id) {
+    // Refetch if date, trip, or activities changed
+    final activityCount = widget.trip.activities?.length ?? 0;
+    final dateChanged = !_isSameDay(
+      widget.selectedDate,
+      oldWidget.selectedDate,
+    );
+    final tripChanged = widget.trip.id != oldWidget.trip.id;
+    final activitiesChanged = activityCount != _lastActivityCount;
+
+    if (dateChanged || tripChanged || activitiesChanged) {
+      if (activitiesChanged) {
+        WeatherService.instance.invalidateCache();
+      }
       _fetchWeather();
     }
   }
@@ -89,10 +100,13 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<void> _fetchWeather() async {
+    final activityCount = widget.trip.activities?.length ?? 0;
+
     // Avoid redundant fetches
     if (_lastFetchedDate != null &&
         _isSameDay(_lastFetchedDate!, widget.selectedDate) &&
-        _lastTripId == widget.trip.id) {
+        _lastTripId == widget.trip.id &&
+        _lastActivityCount == activityCount) {
       return;
     }
 
@@ -119,6 +133,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           _error = 'No location found';
           _lastFetchedDate = widget.selectedDate;
           _lastTripId = widget.trip.id;
+          _lastActivityCount = activityCount;
         });
         return;
       }
@@ -137,6 +152,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         _error = weather == null ? 'Could not load weather' : null;
         _lastFetchedDate = widget.selectedDate;
         _lastTripId = widget.trip.id;
+        _lastActivityCount = activityCount;
       });
     } catch (e) {
       if (!mounted) return;
@@ -146,6 +162,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         _error = 'Error loading weather';
         _lastFetchedDate = widget.selectedDate;
         _lastTripId = widget.trip.id;
+        _lastActivityCount = widget.trip.activities?.length ?? 0;
       });
     }
   }
@@ -303,27 +320,31 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     final now = DateTime.now();
     final isToday = _isSameDay(widget.selectedDate, now);
 
-    return Container(
+    final items = _weather!.asMap().entries.map((entry) {
+      final index = entry.key;
+      final hour = entry.value;
+      final isNow =
+          isToday &&
+          (now.hour - hour.time.hour).abs() <= 1 &&
+          now.hour >= hour.time.hour;
+      return Padding(
+        padding: EdgeInsets.only(left: index == 0 ? 0 : 8),
+        child: _WeatherHourItem(
+          weather: hour,
+          isNow: isNow && index == _findCurrentIndex(),
+        ),
+      );
+    }).toList();
+
+    return SizedBox(
       key: const ValueKey('weather'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5EFE6),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      height: 60,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
-          children: _weather!.map((hour) {
-            final isNow =
-                isToday &&
-                (now.hour - hour.time.hour).abs() <= 1 &&
-                now.hour >= hour.time.hour;
-            return _WeatherHourItem(
-              weather: hour,
-              isNow: isNow && _weather!.indexOf(hour) == _findCurrentIndex(),
-            );
-          }).toList(),
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: items,
         ),
       ),
     );
@@ -359,65 +380,56 @@ class _WeatherHourItem extends StatelessWidget {
     return '${hour - 12}pm';
   }
 
-  Widget _buildWeatherIcon() {
-    final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
-    return Icon(icon, size: 28, color: color);
-  }
-
   @override
   Widget build(BuildContext context) {
     final temp = weather.temperature.round();
     final precipChance = weather.precipitationChance;
-
     final label = isNow ? 'Now' : _formatTime(weather.time);
+    final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
 
-    return Container(
-      width: 60,
-      padding: const EdgeInsets.symmetric(vertical: 0),
+    return SizedBox(
+      width: 48,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Time label
           Text(
             label,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
-              color: const Color(0xFF5D4E37),
+              color: const Color(0xFF5D4E37).withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 8),
+          // Temperature
           Text(
             '$temp°',
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
               color: Color(0xFF3E3428),
             ),
           ),
-          const SizedBox(height: 6),
-          _buildWeatherIcon(),
-          if (precipChance > 0) ...[
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.water_drop_outlined,
-                  size: 12,
-                  color: const Color(0xFF5DA4D9).withValues(alpha: 0.8),
-                ),
+          // Icon + Precipitation row
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              if (precipChance > 0) ...[
                 const SizedBox(width: 2),
                 Text(
                   '$precipChance%',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF5DA4D9).withValues(alpha: 0.9),
+                    color: const Color(0xFF3B8BBD),
                   ),
                 ),
               ],
-            ),
-          ],
+            ],
+          ),
         ],
       ),
     );

@@ -148,6 +148,11 @@ class WeatherService {
     return null;
   }
 
+  /// Invalidate weather cache - call when activities/hotels/flights change
+  void invalidateCache() {
+    _weatherCache.clear();
+  }
+
   /// Fetch hourly weather for a location and date (with caching)
   Future<List<HourlyWeather>?> getHourlyWeather({
     required double lat,
