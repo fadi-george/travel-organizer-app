@@ -125,9 +125,19 @@ jobs:
       - name: Install CocoaPods
         run: cd ios && pod install
 
+      - name: Configure manual signing
+        run: |
+          # Get provisioning profile UUID
+          PP_UUID=$(security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | grep -A1 '<key>UUID</key>' | tail -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
+          echo "Provisioning Profile UUID: $PP_UUID"
+
+          # Update Xcode project to use manual signing
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development"/CODE_SIGN_IDENTITY = "Apple Distribution"/g' ios/Runner.xcodeproj/project.pbxproj
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"Travel Organizer App\"/g" ios/Runner.xcodeproj/project.pbxproj
+
       - name: Build iOS archive
-        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist || true
-        # The export may fail but the archive will be created
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 
       - name: Create API key file
         env:
