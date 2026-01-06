@@ -7,8 +7,13 @@
     <key>destination</key>
     <string>upload</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
     <key>teamID</key>
     <string>Y76TUYCQ8B</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>dev.fadigeorge.travelorganizer</key>
+        <string>Travel Organizer App</string>
+    </dict>
 </dict>
 </plist>
