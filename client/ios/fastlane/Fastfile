@@ -10,8 +10,7 @@ platform :ios do
       output_directory: "../build/ios/ipa",
       output_name: "travel_organizer.ipa",
       export_options: {
-        method: "app-store-connect",
-        destination: "upload"
+        method: "app-store"
       }
     )
 
