@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
+import 'loading_button.dart';
 
 class CreateTripSheet extends StatefulWidget {
   final void Function(
@@ -365,31 +366,10 @@ class _CreateTripSheetState extends State<CreateTripSheet>
                   const SizedBox(height: 24),
 
                   // Submit button
-                  FilledButton(
-                    onPressed: _isSubmitting ? null : _onSubmit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF7043),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            widget.isEditing ? 'Update Trip' : 'Create Trip',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                  LoadingButton(
+                    label: widget.isEditing ? 'Update Trip' : 'Create Trip',
+                    isLoading: _isSubmitting,
+                    onPressed: _onSubmit,
                   ),
                 ],
               ),

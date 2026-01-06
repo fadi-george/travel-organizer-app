@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
 import 'airport_autocomplete.dart';
+import 'loading_button.dart';
 import 'pdf_upload_dialog.dart';
 
 class FlightOptionsSheet extends StatelessWidget {
@@ -623,31 +624,10 @@ class _ManualFlightFormSheetState extends State<_ManualFlightFormSheet> {
                   const SizedBox(height: 24),
 
                   // Submit button
-                  FilledButton(
-                    onPressed: _isSubmitting ? null : _onSubmit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF7043),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            isEditing ? 'Update Flight' : 'Add Flight',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                  LoadingButton(
+                    label: isEditing ? 'Update Flight' : 'Add Flight',
+                    isLoading: _isSubmitting,
+                    onPressed: _onSubmit,
                   ),
                 ],
               ),
