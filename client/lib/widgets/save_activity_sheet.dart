@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import '../theme/app_theme.dart';
 import 'address_autocomplete.dart';
 import 'loading_button.dart';
 import 'pdf_upload_dialog.dart';
@@ -116,10 +117,10 @@ class ActivityOptionsSheet extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF7043).withValues(alpha: 0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.edit, color: Color(0xFFFF7043)),
+                child: const Icon(Icons.edit, color: AppColors.primary),
               ),
               title: const Text('Add Manually'),
               subtitle: const Text('Enter activity details by hand'),
@@ -259,7 +260,7 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(
             context,
-          ).colorScheme.copyWith(primary: const Color(0xFFFF7043)),
+          ).colorScheme.copyWith(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -278,7 +279,7 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(
             context,
-          ).colorScheme.copyWith(primary: const Color(0xFFFF7043)),
+          ).colorScheme.copyWith(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -501,7 +502,7 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
                             Icon(
                               entry.value,
                               size: 20,
-                              color: const Color(0xFFFF7043),
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 12),
                             Text(entry.key),
@@ -564,7 +565,7 @@ class _ManualActivityFormSheetState extends State<_ManualActivityFormSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFFF7043), width: 2),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );

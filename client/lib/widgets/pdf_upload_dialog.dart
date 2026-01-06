@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 /// The type of content to extract from a PDF
 enum PdfExtractType { flights, accommodations, activities }
@@ -211,7 +212,7 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
         duration: const Duration(
           minutes: 5,
         ), // Long duration, will be dismissed
-        backgroundColor: const Color(0xFFFF7043),
+        backgroundColor: AppColors.primary,
       ),
     );
 
@@ -264,7 +265,7 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const accentColor = Color(0xFFFF7043);
+    const accentColor = AppColors.primary;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -401,7 +402,7 @@ class _PdfUploadDialogState extends State<PdfUploadDialog> {
                         ? _uploadAndExtract
                         : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF7043),
+                      backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

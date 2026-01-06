@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/trip.dart';
 import '../services/airports_service.dart';
 import '../utils/time_format.dart';
+import '../theme/app_theme.dart';
 import '../widgets/days_carousel.dart';
 import '../widgets/weather_widget.dart';
 
@@ -758,7 +759,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.trip.name),
-        backgroundColor: const Color(0xFFFF7043),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -881,7 +882,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
         onPressed: _isLoadingLocation ? null : _toggleLocationTracking,
         backgroundColor: _isTrackingLocation
             ? Colors.blue
-            : const Color(0xFFFF7043),
+            : AppColors.primary,
         foregroundColor: Colors.white,
         mini: true,
         child: _isLoadingLocation
@@ -932,7 +933,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       child: Container(
         color: Colors.black.withValues(alpha: 0.1),
         child: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF7043)),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
     );

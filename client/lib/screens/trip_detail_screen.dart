@@ -442,7 +442,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
             expandedHeight: 170,
             pinned: true,
             stretch: true,
-            backgroundColor: const Color(0xFFFF7043),
+            backgroundColor: AppColors.primary,
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
@@ -898,7 +898,7 @@ class _EmptyDaySection extends StatelessWidget {
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Activity'),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFFF7043),
+              foregroundColor: AppColors.primary,
             ),
           ),
         ],

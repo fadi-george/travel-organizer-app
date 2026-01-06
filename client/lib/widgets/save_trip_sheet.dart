@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../models/trip.dart';
 import '../services/convex_service.dart';
+import '../theme/app_theme.dart';
 import 'loading_button.dart';
 
 class CreateTripSheet extends StatefulWidget {
@@ -80,7 +81,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(
             context,
-          ).colorScheme.copyWith(primary: const Color(0xFFFF7043)),
+          ).colorScheme.copyWith(primary: AppColors.primary),
         ),
         child: child!,
       ),
@@ -393,7 +394,7 @@ class _CreateTripSheetState extends State<CreateTripSheet>
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFFF7043), width: 2),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
     );
   }
@@ -441,7 +442,7 @@ class _DatePickerField extends StatelessWidget {
                   Icons.calendar_today_outlined,
                   size: 18,
                   color: hasValue
-                      ? const Color(0xFFFF7043)
+                      ? AppColors.primary
                       : Colors.grey.shade400,
                 ),
                 const SizedBox(width: 8),

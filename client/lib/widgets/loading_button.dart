@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 /// A reusable submit button with loading state
 class LoadingButton extends StatelessWidget {
@@ -20,7 +21,7 @@ class LoadingButton extends StatelessWidget {
     return FilledButton(
       onPressed: isLoading ? null : onPressed,
       style: FilledButton.styleFrom(
-        backgroundColor: backgroundColor ?? const Color(0xFFFF7043),
+        backgroundColor: backgroundColor ?? AppColors.primary,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

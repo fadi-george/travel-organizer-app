@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class DaysCarousel extends StatelessWidget {
   final DateTime startDate;
@@ -173,7 +174,7 @@ class DaysCarousel extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: isSelected
-                    ? const Color(0xFFFF7043)
+                    ? AppColors.primary
                     : colorScheme.onSurface.withValues(
                         alpha: isDisabled ? 0.8 : 0.5,
                       ),
@@ -187,11 +188,11 @@ class DaysCarousel extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? const Color(0xFFFF7043).withValues(alpha: 0.15)
+                    ? AppColors.primary.withValues(alpha: 0.15)
                     : Colors.transparent,
                 shape: BoxShape.circle,
                 border: isToday && !isSelected
-                    ? Border.all(color: const Color(0xFFFF7043), width: 1.5)
+                    ? Border.all(color: AppColors.primary, width: 1.5)
                     : null,
               ),
               child: Center(
@@ -201,7 +202,7 @@ class DaysCarousel extends StatelessWidget {
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: isSelected
-                        ? const Color(0xFFFF7043)
+                        ? AppColors.primary
                         : colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -221,7 +222,7 @@ class DaysCarousel extends StatelessWidget {
                     margin: EdgeInsets.only(left: i > 0 ? 2 : 0),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFFFF7043)
+                          ? AppColors.primary
                           : Colors.blue.shade400,
                       shape: BoxShape.circle,
                     ),

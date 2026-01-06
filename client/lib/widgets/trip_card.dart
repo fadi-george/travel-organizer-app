@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../theme/app_theme.dart';
 import '../utils/places_images.dart';
 import 'swipe_action_card.dart';
 
@@ -151,7 +152,7 @@ class _TripCardState extends State<TripCard>
                     ),
                     decoration: BoxDecoration(
                       color: widget.trip.isUpcoming
-                          ? const Color(0xFFFF7043)
+                          ? AppColors.primary
                           : Colors.grey.shade600,
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -279,7 +280,7 @@ class _TripCardState extends State<TripCard>
                           ? Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.5)
-                          : const Color(0xFFFF7043),
+                          : AppColors.primary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),

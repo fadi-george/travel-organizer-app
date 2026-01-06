@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/airports_service.dart';
+import '../theme/app_theme.dart';
 
 /// A text field that autocompletes airport names from a local JSON database.
 /// Returns the IATA airport code when an airport is selected.
@@ -113,7 +114,7 @@ class _AirportAutocompleteState extends State<AirportAutocomplete> {
                           airport.iata,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFFF7043),
+                            color: AppColors.primary,
                             fontSize: 14,
                           ),
                         ),
@@ -196,7 +197,7 @@ class _AirportAutocompleteState extends State<AirportAutocomplete> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFFF7043), width: 2),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,

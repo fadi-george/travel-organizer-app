@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../utils/time_format.dart';
 import 'swipe_action_card.dart';
 import 'timeline_styles.dart';
@@ -21,7 +22,7 @@ class ActivityCard extends StatelessWidget {
     this.onDelete,
   });
 
-  static const _accentColor = Color(0xFFFF7043);
+  static const _accentColor = AppColors.primary;
 
   static const Map<String, IconData> _typeIcons = {
     'Sightseeing': Icons.photo_camera_outlined,

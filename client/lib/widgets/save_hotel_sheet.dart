@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/convex_service.dart';
+import '../theme/app_theme.dart';
 import 'address_autocomplete.dart';
 import 'loading_button.dart';
 import 'pdf_upload_dialog.dart';
@@ -605,7 +606,7 @@ class _ManualHotelFormSheetState extends State<_ManualHotelFormSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFFF7043), width: 2),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );

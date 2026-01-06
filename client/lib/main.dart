@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/login_screen.dart';
 import 'screens/trips_screen.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,7 +60,7 @@ class TravelOrganizerApp extends StatelessWidget {
 
   ThemeData _buildTheme(Brightness brightness) => ThemeData(
     colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFFFF7043),
+      seedColor: AppColors.primary,
       brightness: brightness,
     ),
     useMaterial3: true,
