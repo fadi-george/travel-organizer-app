@@ -379,4 +379,29 @@ class ConvexService {
   Future<void> deleteActivity(String id) async {
     await client.mutation(name: 'activities:remove', args: {'id': id});
   }
+
+  /// Get weather data from server-side cache
+  /// Returns hourly weather data for the given location and date
+  /// The server caches responses to reduce API calls across all users
+  Future<List<Map<String, dynamic>>?> getWeather({
+    required double lat,
+    required double lng,
+    required String date,
+  }) async {
+    try {
+      final result = await client.action(
+        name: 'weather:getWeather',
+        args: {'lat': lat, 'lng': lng, 'date': date},
+      );
+      final decoded = jsonDecode(result);
+      if (decoded == null) return null;
+      final List<dynamic> weatherList = decoded as List<dynamic>;
+      return weatherList
+          .map((w) => Map<String, dynamic>.from(w as Map))
+          .toList();
+    } catch (e) {
+      debugPrint('ConvexService.getWeather error: $e');
+      return null;
+    }
+  }
 }

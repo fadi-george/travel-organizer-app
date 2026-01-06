@@ -135,13 +135,32 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       return;
     }
 
-    // Only show loading if we don't already have data
-    if (_weather == null) {
-      setState(() => _isLoading = true);
+    // Check if we have cached data for this specific date
+    final service = WeatherService.instance;
+    final cached = service.getCachedTripWeather(
+      tripId: widget.trip.id,
+      date: widget.selectedDate,
+    );
+
+    if (cached != null) {
+      // Cache hit - use cached data immediately
+      setState(() {
+        _weather = cached;
+        _isLoading = false;
+        _lastFetchedDate = widget.selectedDate;
+        _lastTripId = widget.trip.id;
+        _lastActivityCount = activityCount;
+      });
+      return;
     }
 
+    // No cached data for this date - show loading and clear old data
+    setState(() {
+      _weather = null;
+      _isLoading = true;
+    });
+
     try {
-      final service = WeatherService.instance;
       final location = await service.getLocationForDate(
         widget.trip,
         widget.selectedDate,

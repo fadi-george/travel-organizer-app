@@ -75,27 +75,19 @@ A travel itinerary organizer with a Flutter client and Convex backend.
    - Create a new API key
    - Enable these APIs: **Geocoding API**, **Places API**
 
-3. **Configure Weather API Key** (optional, for hourly weather forecast):
+3. **Configure Weather API Key** (required for weather forecasts):
 
-   Add one of the following API keys to `.env` or `.env.local` in the project root:
+   Add your OpenWeatherMap API key to your **Convex environment variables**:
 
-   **Option A: OpenWeatherMap** (default)
+   - Go to your [Convex Dashboard](https://dashboard.convex.dev)
+   - Select your project → **Settings** → **Environment Variables**
+   - Add: `OPENWEATHERMAP_API_KEY` = your API key
 
-   ```
-   OPENWEATHERMAP_API_KEY=your-openweathermap-api-key
-   ```
-
+   To get an API key:
    - Sign up at [OpenWeatherMap](https://openweathermap.org/api)
    - Subscribe to the **One Call API 3.0** (free tier: 1000 calls/day)
 
-   **Option B: Tomorrow.io**
-
-   ```
-   TOMORROWIO_API_KEY=your-tomorrowio-api-key
-   ```
-
-   - Sign up at [Tomorrow.io](https://www.tomorrow.io/weather-api/)
-   - Free tier: 500 calls/day, 25/hour
+   > **Note:** Weather data is cached server-side to reduce API calls. All users share the same cache, so popular destinations won't exhaust your quota.
 
 4. Install Flutter dependencies:
 
@@ -129,6 +121,16 @@ This app uses [flutter_map](https://pub.dev/packages/flutter_map) with free Open
 | `accommodations` | `listByDestination`, `get`, `create`, `update`, `remove` |
 | `flights`        | `listByTrip`, `get`, `create`, `update`, `remove`        |
 | `activities`     | `listByTrip`, `get`, `create`, `update`, `remove`        |
+| `weather`        | `getWeather` (cached via Action Cache)                   |
+
+### Weather Caching
+
+Weather data is cached server-side using [Convex Action Cache](https://www.convex.dev/components/action-cache):
+
+- **Today/tomorrow**: 1-hour TTL
+- **3+ days ahead**: 2-hour TTL
+
+This shared cache reduces OpenWeatherMap API calls across all users, keeping you well under the 1000 calls/day free tier limit.
 
 ## Scripts
 
@@ -150,7 +152,8 @@ travel-organizer-app/
 │       ├── destinations.ts
 │       ├── accommodations.ts
 │       ├── flights.ts
-│       └── activities.ts
+│       ├── activities.ts
+│       └── weather.ts     # Weather API with caching
 ├── convex.json            # Convex configuration
 └── package.json
 ```
