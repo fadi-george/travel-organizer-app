@@ -140,7 +140,7 @@ jobs:
         run: |
           # Build archive only (export will be done by Fastlane)
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist || true
-          
+
           # Verify archive was created
           if [ ! -d "build/ios/archive/Runner.xcarchive" ]; then
             echo "❌ Archive was not created. Build failed."
@@ -166,8 +166,9 @@ jobs:
       - name: Export and upload with Fastlane
         run: |
           cd ios
-          bundle install
-          bundle exec fastlane release
+          gem install bundler -v 2.5.23
+          bundle _2.5.23_ install
+          bundle _2.5.23_ exec fastlane release
 
       - name: Clean up keychain
         if: always()
