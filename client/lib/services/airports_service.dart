@@ -138,41 +138,46 @@ class AirportsService {
     }
 
     // Second priority: IATA starts with query
-    if (results.length < limit) {
-      for (final airport in _airports!) {
-        if (airport.iata.toLowerCase().startsWith(q) &&
-            !results.contains(airport)) {
-          results.add(airport);
-          if (results.length >= limit) break;
-        }
-      }
-    }
+    _addMatchingAirports(
+      results: results,
+      limit: limit,
+      predicate: (a) => a.iata.toLowerCase().startsWith(q),
+    );
 
     // Third priority: city or name starts with query
-    if (results.length < limit) {
-      for (final airport in _airports!) {
-        if ((airport.city.toLowerCase().startsWith(q) ||
-                airport.name.toLowerCase().startsWith(q)) &&
-            !results.contains(airport)) {
-          results.add(airport);
-          if (results.length >= limit) break;
-        }
-      }
-    }
+    _addMatchingAirports(
+      results: results,
+      limit: limit,
+      predicate: (a) =>
+          a.city.toLowerCase().startsWith(q) ||
+          a.name.toLowerCase().startsWith(q),
+    );
 
     // Fourth priority: city or name contains query
-    if (results.length < limit) {
-      for (final airport in _airports!) {
-        if ((airport.city.toLowerCase().contains(q) ||
-                airport.name.toLowerCase().contains(q)) &&
-            !results.contains(airport)) {
-          results.add(airport);
-          if (results.length >= limit) break;
-        }
-      }
-    }
+    _addMatchingAirports(
+      results: results,
+      limit: limit,
+      predicate: (a) =>
+          a.city.toLowerCase().contains(q) ||
+          a.name.toLowerCase().contains(q),
+    );
 
     return results;
+  }
+
+  /// Helper to add matching airports to results until limit is reached
+  void _addMatchingAirports({
+    required List<Airport> results,
+    required int limit,
+    required bool Function(Airport) predicate,
+  }) {
+    if (results.length >= limit) return;
+    for (final airport in _airports!) {
+      if (predicate(airport) && !results.contains(airport)) {
+        results.add(airport);
+        if (results.length >= limit) break;
+      }
+    }
   }
 
   /// Get airport by IATA code (O(1) lookup)

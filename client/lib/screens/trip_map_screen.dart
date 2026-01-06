@@ -542,24 +542,27 @@ class _TripMapScreenState extends State<TripMapScreen> {
   /// Get max arrows based on zoom and distance
   int _getMaxArrows(double zoom, double distKm) {
     // Zoom-based max - higher at zoom 17+
-    final zoomMax = (zoom < 14)
-        ? (zoom * 2).clamp(10, 25)
-        : (zoom < 17)
-        ? (zoom * 4).clamp(25, 60)
-        : (zoom * 10).clamp(120, 180);
+    num zoomMax;
+    if (zoom < 14) {
+      zoomMax = (zoom * 2).clamp(10, 25);
+    } else if (zoom < 17) {
+      zoomMax = (zoom * 4).clamp(25, 60);
+    } else {
+      zoomMax = (zoom * 10).clamp(120, 180);
+    }
 
     // Distance-based max: scale with both distance and zoom
     final distScale = math.pow(distKm.clamp(0.2, 20), 1.1);
+
     // Higher per-km cap at high zoom levels
-    final perKmCap = (zoom < 14)
-        ? 2 +
-              zoom *
-                  0.5 // ~8 at zoom 12
-        : (zoom < 16)
-        ? 3 +
-              zoom *
-                  0.8 // ~16 at zoom 15
-        : 8 + zoom * 2.0; // ~44 at zoom 18
+    double perKmCap;
+    if (zoom < 14) {
+      perKmCap = 2 + zoom * 0.5; // ~8 at zoom 12
+    } else if (zoom < 16) {
+      perKmCap = 3 + zoom * 0.8; // ~16 at zoom 15
+    } else {
+      perKmCap = 8 + zoom * 2.0; // ~44 at zoom 18
+    }
     final distanceMax = (distScale * perKmCap).round();
 
     return math.min(zoomMax, distanceMax).toInt().clamp(3, 180);

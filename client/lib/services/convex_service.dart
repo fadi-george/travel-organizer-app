@@ -42,6 +42,13 @@ class ConvexService {
     return _client!;
   }
 
+  /// Decode JSON result to a Map, returns null if result is null
+  Map<String, dynamic>? _decodeAsMap(String result) {
+    final decoded = jsonDecode(result);
+    if (decoded == null) return null;
+    return Map<String, dynamic>.from(decoded as Map);
+  }
+
   /// Query trips from Convex
   Future<List<Map<String, dynamic>>> getTrips() async {
     final result = await client.query('trips:list', {});
@@ -68,9 +75,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Subscribe to trips updates for real-time sync
@@ -114,9 +119,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Delete a trip
@@ -172,9 +175,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   Future<void> deleteFlight(String id) async {
@@ -217,9 +218,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Create a new accommodation
@@ -251,9 +250,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Update an accommodation
@@ -285,9 +282,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Delete an accommodation
@@ -343,9 +338,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Update an activity
@@ -370,9 +363,7 @@ class ConvexService {
         if (notes != null) 'notes': notes,
       },
     );
-    final decoded = jsonDecode(result);
-    if (decoded == null) return null;
-    return Map<String, dynamic>.from(decoded as Map);
+    return _decodeAsMap(result);
   }
 
   /// Delete an activity
