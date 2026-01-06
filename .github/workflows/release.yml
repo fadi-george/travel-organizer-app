@@ -137,7 +137,16 @@ jobs:
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"Travel Organizer App\"/g" ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build iOS archive
-        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+        run: |
+          # Build archive only (export will be done by Fastlane)
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist || true
+          
+          # Verify archive was created
+          if [ ! -d "build/ios/archive/Runner.xcarchive" ]; then
+            echo "❌ Archive was not created. Build failed."
+            exit 1
+          fi
+          echo "✅ Archive created successfully"
 
       - name: Create API key file
         env:
