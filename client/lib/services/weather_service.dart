@@ -194,6 +194,8 @@ class WeatherService {
   }
 
   /// Fetch hourly weather for a location and date (with caching)
+  /// Uses server-side cache for future dates (shared across all users)
+  /// Falls back to direct API for historical data
   Future<List<HourlyWeather>?> getHourlyWeather({
     required double lat,
     required double lng,
@@ -201,32 +203,104 @@ class WeatherService {
   }) async {
     final cacheKey = _buildWeatherCacheKey(lat, lng, date);
 
-    // Check cache
+    // Check local cache first for instant response
     final cached = _weatherCache[cacheKey];
     if (cached != null && !cached.isExpired) {
       return cached.data;
     }
 
-    // Fetch fresh data
-    final List<HourlyWeather>? result;
-    switch (_apiType) {
-      case WeatherApiType.openWeather:
-        result = await OpenWeatherMapService.instance.getHourlyWeather(
-          lat: lat,
-          lng: lng,
-          date: date,
-        );
-      case WeatherApiType.tomorrowIo:
-        result = await TomorrowIoService.instance.getHourlyWeather(
-          lat: lat,
-          lng: lng,
-          date: date,
-        );
+    // Calculate days ahead to decide if we can use server cache
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final requestedDate = DateTime(date.year, date.month, date.day);
+    final daysAhead = requestedDate.difference(today).inDays;
+
+    List<HourlyWeather>? result;
+
+    // For future dates (0-8 days ahead), try server-side cache first
+    // This shares cached responses across all users
+    if (daysAhead >= 0 && daysAhead <= 8 && _apiType == WeatherApiType.openWeather) {
+      result = await _fetchFromServerCache(lat, lng, date);
     }
 
-    // Cache the result
+    // Fall back to direct API calls if server cache fails or for historical data
+    if (result == null) {
+      switch (_apiType) {
+        case WeatherApiType.openWeather:
+          result = await OpenWeatherMapService.instance.getHourlyWeather(
+            lat: lat,
+            lng: lng,
+            date: date,
+          );
+        case WeatherApiType.tomorrowIo:
+          result = await TomorrowIoService.instance.getHourlyWeather(
+            lat: lat,
+            lng: lng,
+            date: date,
+          );
+      }
+    }
+
+    // Cache the result locally
     _weatherCache[cacheKey] = _CachedWeather(result);
     return result;
+  }
+
+  /// Fetch weather from server-side cache (Convex)
+  Future<List<HourlyWeather>?> _fetchFromServerCache(
+    double lat,
+    double lng,
+    DateTime date,
+  ) async {
+    try {
+      final convex = await ConvexService.getInstance();
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      final serverData = await convex.getWeather(
+        lat: lat,
+        lng: lng,
+        date: dateStr,
+      );
+
+      if (serverData == null || serverData.isEmpty) {
+        return null;
+      }
+
+      // Convert server response to HourlyWeather objects
+      return serverData.map((data) {
+        final timeMs = data['time'] as int;
+        final conditionStr = data['weatherCondition'] as String? ?? 'unknown';
+
+        return HourlyWeather(
+          time: DateTime.fromMillisecondsSinceEpoch(timeMs),
+          temperature: (data['temperature'] as num).toDouble(),
+          condition: data['condition'] as String? ?? 'Unknown',
+          weatherCondition: _parseWeatherCondition(conditionStr),
+          precipitationChance: data['precipitationChance'] as int? ?? 0,
+          tempHigh: (data['tempHigh'] as num?)?.toDouble(),
+          tempLow: (data['tempLow'] as num?)?.toDouble(),
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('WeatherService: Server cache error: $e');
+      return null;
+    }
+  }
+
+  /// Parse weather condition string from server to enum
+  WeatherCondition _parseWeatherCondition(String condition) {
+    return switch (condition) {
+      'clear' => WeatherCondition.clear,
+      'fewClouds' => WeatherCondition.fewClouds,
+      'cloudy' => WeatherCondition.cloudy,
+      'mist' => WeatherCondition.mist,
+      'drizzle' => WeatherCondition.drizzle,
+      'rain' => WeatherCondition.rain,
+      'thunderstorm' => WeatherCondition.thunderstorm,
+      'snow' => WeatherCondition.snow,
+      _ => WeatherCondition.unknown,
+    };
   }
 
   /// Get the best location for weather based on trip data for a specific date
