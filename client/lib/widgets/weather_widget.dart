@@ -66,6 +66,7 @@ class WeatherWidget extends StatefulWidget {
 class _WeatherWidgetState extends State<WeatherWidget> {
   List<HourlyWeather>? _weather;
   bool _isLoading = true;
+  bool _isFetching = false; // Prevent concurrent fetches
   DateTime? _lastFetchedDate;
   String? _lastTripId;
   int? _lastActivityCount;
@@ -125,6 +126,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<void> _fetchWeather() async {
+    // Prevent concurrent fetches
+    if (_isFetching) return;
+
     final activityCount = widget.trip.activities?.length ?? 0;
 
     // Avoid redundant fetches
@@ -135,13 +139,14 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       return;
     }
 
+    _isFetching = true;
+
     // Check if we have cached data for this specific date
     final service = WeatherService.instance;
     final cached = service.getCachedTripWeather(
       tripId: widget.trip.id,
       date: widget.selectedDate,
     );
-
     if (cached != null) {
       // Cache hit - use cached data immediately
       setState(() {
@@ -186,7 +191,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       // Cache at trip level for fast sync lookup on screen transitions
       service.cacheTripWeather(widget.trip.id, widget.selectedDate, weather);
 
-      if (!mounted) return;
+      if (!mounted) {
+        _isFetching = false;
+        return;
+      }
 
       setState(() {
         _weather = weather;
@@ -196,7 +204,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         _lastActivityCount = activityCount;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        _isFetching = false;
+        return;
+      }
       setState(() {
         _weather = null;
         _isLoading = false;
@@ -204,6 +215,8 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         _lastTripId = widget.trip.id;
         _lastActivityCount = widget.trip.activities?.length ?? 0;
       });
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -215,7 +228,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     // Single item = daily forecast fallback, multiple = hourly forecast
     final isDailyFallback = hasWeatherData && _weather!.length == 1;
 
-    // Show message if date is in the future and no weather data available
+    // Calculate days ahead for appropriate message
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selectedDay = DateTime(
@@ -224,7 +237,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
       widget.selectedDate.day,
     );
     final daysAhead = selectedDay.difference(today).inDays;
-    final showFutureMessage = daysAhead >= 0 && !hasWeatherData && !_isLoading;
+
+    // Determine which message to show when no data
+    final showNoDataMessage = !hasWeatherData && !_isLoading;
+    final isTooFarAhead = daysAhead > 8;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -234,17 +250,40 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           ? isDailyFallback
                 ? _buildDailyFallback()
                 : _buildHourlyRow()
-          : showFutureMessage
-          ? _buildFarFutureMessage()
+          : showNoDataMessage
+          ? isTooFarAhead
+                ? _buildFarFutureMessage()
+                : _buildUnavailableMessage()
           : const SizedBox.shrink(),
     );
   }
 
   Widget _buildFarFutureMessage() {
+    return _buildMessageRow(
+      key: 'far-future',
+      icon: Icons.auto_awesome,
+      message: "Too far ahead to predict 🔮",
+    );
+  }
+
+  Widget _buildUnavailableMessage() {
+    return _buildMessageRow(
+      key: 'unavailable',
+      icon: Icons.cloud_off,
+      message: "Weather unavailable",
+    );
+  }
+
+  Widget _buildMessageRow({
+    required String key,
+    required IconData icon,
+    required String message,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textColor = colorScheme.onSurface.withValues(alpha: 0.65);
 
     return Container(
-      key: const ValueKey('far-future'),
+      key: ValueKey(key),
       height: _kWeatherRowHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       alignment: Alignment.center,
@@ -252,20 +291,12 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 18,
-            color: colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
+          Icon(icon, size: 18, color: textColor),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              "Too far ahead to predict 🔮",
-              style: TextStyle(
-                fontSize: 13,
-                // fontStyle: FontStyle.italic,
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
+              message,
+              style: TextStyle(fontSize: 13, color: textColor),
             ),
           ),
         ],

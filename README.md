@@ -127,8 +127,11 @@ This app uses [flutter_map](https://pub.dev/packages/flutter_map) with free Open
 
 Weather data is cached server-side using [Convex Action Cache](https://www.convex.dev/components/action-cache):
 
-- **Today/tomorrow**: 1-hour TTL
-- **3+ days ahead**: 2-hour TTL
+| Date Range | TTL | Notes |
+|------------|-----|-------|
+| Past dates | 24 hours | Historical data never changes |
+| Today/tomorrow | 1 hour | Fresher data for near-term |
+| 3+ days ahead | 2 hours | Forecasts are stable |
 
 This shared cache reduces OpenWeatherMap API calls across all users, keeping you well under the 1000 calls/day free tier limit.
 

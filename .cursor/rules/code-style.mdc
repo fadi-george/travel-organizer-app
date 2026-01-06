@@ -1,0 +1,55 @@
+---
+description: Code style and best practices for this codebase
+globs:
+alwaysApply: true
+---
+
+# Code Style Guidelines
+
+## Avoid Nested Ternaries
+Never use nested ternary operators. They reduce readability. Use `if`/`else if`/`else` statements or `switch` expressions instead.
+
+**Bad:**
+```dart
+return a ? b : c ? d : e;
+```
+
+**Good:**
+```dart
+if (a) return b;
+if (c) return d;
+return e;
+```
+
+## DRY - Don't Repeat Yourself
+If code, widgets, or logic is used more than once, extract it into a reusable helper, widget, or function.
+
+- Extract repeated UI patterns into helper methods or separate widget classes
+- Create utility functions for repeated logic
+- Use constants for repeated values (colors, sizes, strings)
+
+**Bad:**
+```dart
+Container(
+  padding: EdgeInsets.all(16),
+  child: Row(children: [Icon(Icons.error), Text("Error 1")]),
+)
+// ... later ...
+Container(
+  padding: EdgeInsets.all(16),
+  child: Row(children: [Icon(Icons.warning), Text("Error 2")]),
+)
+```
+
+**Good:**
+```dart
+Widget _buildMessageRow({required IconData icon, required String message}) {
+  return Container(
+    padding: EdgeInsets.all(16),
+    child: Row(children: [Icon(icon), Text(message)]),
+  );
+}
+
+_buildMessageRow(icon: Icons.error, message: "Error 1")
+_buildMessageRow(icon: Icons.warning, message: "Error 2")
+```

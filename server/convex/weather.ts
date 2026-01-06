@@ -65,6 +65,13 @@ const dailyWeatherCache = new ActionCache(components.actionCache, {
   ttl: 1000 * 60 * 60 * 2, // 2 hours
 });
 
+// Cache for historical weather (24 hour TTL - data never changes, but cleanup periodically)
+const historicalWeatherCache = new ActionCache(components.actionCache, {
+  action: internal.weather.fetchHistoricalWeatherInternal,
+  name: "historical-weather-v1",
+  ttl: 1000 * 60 * 60 * 24, // 24 hours
+});
+
 // Internal action to fetch hourly weather from OpenWeatherMap
 export const fetchHourlyWeatherInternal = internalAction({
   args: {
@@ -243,6 +250,99 @@ export const fetchDailyWeatherInternal = internalAction({
   },
 });
 
+// Internal action to fetch historical weather using Time Machine API
+export const fetchHistoricalWeatherInternal = internalAction({
+  args: {
+    lat: v.number(),
+    lng: v.number(),
+    date: v.string(),
+  },
+  handler: async (_, args): Promise<HourlyWeatherData[] | null> => {
+    const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+    if (!apiKey) {
+      console.error("OPENWEATHERMAP_API_KEY not configured");
+      return null;
+    }
+
+    const { lat, lng, date } = args;
+    const requestedDate = new Date(date);
+    const targetDate = new Date(
+      requestedDate.getFullYear(),
+      requestedDate.getMonth(),
+      requestedDate.getDate()
+    );
+
+    // Target hours: 8am through 10pm (no midnight for historical)
+    const targetHours = [8, 10, 12, 14, 16, 18, 20, 22];
+    const results: HourlyWeatherData[] = [];
+
+    // Time Machine API requires fetching each hour individually
+    for (const hour of targetHours) {
+      const targetTime = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        hour
+      );
+      const timestamp = Math.floor(targetTime.getTime() / 1000);
+
+      try {
+        const url = new URL("https://api.openweathermap.org/data/3.0/onecall/timemachine");
+        url.searchParams.set("lat", lat.toString());
+        url.searchParams.set("lon", lng.toString());
+        url.searchParams.set("dt", timestamp.toString());
+        url.searchParams.set("units", "imperial");
+        url.searchParams.set("appid", apiKey);
+
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          console.error(`Time Machine API error for hour ${hour}: ${response.status}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const hourlyData = data.data as Array<{
+          dt: number;
+          temp: number;
+          pop?: number;
+          weather: Array<{ main: string; icon: string }>;
+        }>;
+
+        if (hourlyData && hourlyData.length > 0) {
+          // Find closest hour in response
+          let closest: HourlyWeatherData | null = null;
+          let minDiff = 999999;
+
+          for (const hourData of hourlyData) {
+            const weatherTime = new Date(hourData.dt * 1000);
+            const diff = Math.abs(weatherTime.getTime() - targetTime.getTime()) / (1000 * 60);
+
+            if (diff < minDiff) {
+              minDiff = diff;
+              const iconCode = hourData.weather[0]?.icon ?? "01d";
+              closest = {
+                time: hourData.dt * 1000,
+                temperature: hourData.temp,
+                condition: hourData.weather[0]?.main ?? "Unknown",
+                weatherCondition: mapIconToCondition(iconCode),
+                precipitationChance: Math.round((hourData.pop ?? 0) * 100),
+              };
+            }
+          }
+
+          if (closest && minDiff <= 90) {
+            results.push(closest);
+          }
+        }
+      } catch (e) {
+        console.error(`Time Machine error for hour ${hour}:`, e);
+      }
+    }
+
+    return results.length > 0 ? results : null;
+  },
+});
+
 // Public action exposed to Flutter client
 export const getWeather = action({
   args: {
@@ -263,10 +363,17 @@ export const getWeather = action({
       (requestedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    // Past dates - not supported for caching (would need Time Machine API)
+    // Past dates - use historical cache (Time Machine API)
     if (daysAhead < 0) {
-      console.log("Historical weather not supported via server cache");
-      return null;
+      // Round coordinates for cache key consistency
+      const roundedLat = roundCoord(lat);
+      const roundedLng = roundCoord(lng);
+      
+      return await historicalWeatherCache.fetch(ctx, {
+        lat: roundedLat,
+        lng: roundedLng,
+        date,
+      });
     }
 
     // Beyond forecast range

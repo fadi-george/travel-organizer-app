@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/trip.dart';
@@ -176,21 +175,11 @@ class WeatherService {
       return cached.data;
     }
 
-    // Calculate days ahead to decide if we can use server cache
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final requestedDate = DateTime(date.year, date.month, date.day);
-    final daysAhead = requestedDate.difference(today).inDays;
+    // Try server-side cache first (shared across all users)
+    // Server returns null for unsupported dates (past dates, >8 days ahead)
+    var result = await _fetchFromServerCache(lat, lng, date);
 
-    List<HourlyWeather>? result;
-
-    // For future dates (0-8 days ahead), try server-side cache first
-    // This shares cached responses across all users
-    if (daysAhead >= 0 && daysAhead <= 8) {
-      result = await _fetchFromServerCache(lat, lng, date);
-    }
-
-    // Fall back to direct API calls if server cache fails or for historical data
+    // Fall back to direct API calls if server cache fails
     result ??= await OpenWeatherMapService.instance.getHourlyWeather(
       lat: lat,
       lng: lng,
@@ -225,7 +214,7 @@ class WeatherService {
 
       // Convert server response to HourlyWeather objects
       return serverData.map((data) {
-        final timeMs = data['time'] as int;
+        final timeMs = (data['time'] as num).toInt();
         final conditionStr = data['weatherCondition'] as String? ?? 'unknown';
 
         return HourlyWeather(
@@ -233,13 +222,13 @@ class WeatherService {
           temperature: (data['temperature'] as num).toDouble(),
           condition: data['condition'] as String? ?? 'Unknown',
           weatherCondition: _parseWeatherCondition(conditionStr),
-          precipitationChance: data['precipitationChance'] as int? ?? 0,
+          precipitationChance:
+              (data['precipitationChance'] as num?)?.toInt() ?? 0,
           tempHigh: (data['tempHigh'] as num?)?.toDouble(),
           tempLow: (data['tempLow'] as num?)?.toDouble(),
         );
       }).toList();
-    } catch (e) {
-      debugPrint('WeatherService: Server cache error: $e');
+    } catch (_) {
       return null;
     }
   }
