@@ -19,6 +19,7 @@ import type * as lib_parseClaudeJson from "../lib/parseClaudeJson.js";
 import type * as migrations from "../migrations.js";
 import type * as trips from "../trips.js";
 import type * as users from "../users.js";
+import type * as weather from "../weather.js";
 
 import type {
   ApiFromModules,
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   trips: typeof trips;
   users: typeof users;
+  weather: typeof weather;
 }>;
 
 /**
@@ -150,6 +152,48 @@ export declare const components: {
           processed: number;
           state: "inProgress" | "success" | "failed" | "canceled" | "unknown";
         }
+      >;
+    };
+  };
+  actionCache: {
+    crons: {
+      purge: FunctionReference<
+        "mutation",
+        "internal",
+        { expiresAt?: number },
+        null
+      >;
+    };
+    lib: {
+      get: FunctionReference<
+        "query",
+        "internal",
+        { args: any; name: string; ttl: number | null },
+        { kind: "hit"; value: any } | { expiredEntry?: string; kind: "miss" }
+      >;
+      put: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          args: any;
+          expiredEntry?: string;
+          name: string;
+          ttl: number | null;
+          value: any;
+        },
+        { cacheHit: boolean; deletedExpiredEntry: boolean }
+      >;
+      remove: FunctionReference<
+        "mutation",
+        "internal",
+        { args: any; name: string },
+        null
+      >;
+      removeAll: FunctionReference<
+        "mutation",
+        "internal",
+        { batchSize?: number; before?: number; name?: string },
+        null
       >;
     };
   };

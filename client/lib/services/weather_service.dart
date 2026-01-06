@@ -7,17 +7,12 @@ import '../utils/time_format.dart';
 import 'airports_service.dart';
 import 'convex_service.dart';
 import 'openweathermap_service.dart';
-import 'tomorrowio_service.dart';
 
 // Re-export weather models for consumers
 export 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
 // WeatherCondition is defined in this file and exported directly
 
-/// Supported weather API providers
-enum WeatherApiType { openWeather, tomorrowIo }
-
 /// Unified weather condition codes
-/// Both OpenWeatherMap and Tomorrow.io map to these conditions
 enum WeatherCondition {
   clear, // Clear sky
   fewClouds, // Few clouds (11-25%)
@@ -65,25 +60,6 @@ extension WeatherConditionExtension on WeatherCondition {
     }
     return WeatherCondition.unknown;
   }
-
-  /// Map Tomorrow.io weather codes to WeatherCondition
-  static WeatherCondition fromTomorrowIoCode(int code) {
-    return switch (code) {
-      1000 => WeatherCondition.clear, // Clear
-      1100 => WeatherCondition.clear, // Mostly Clear
-      1101 => WeatherCondition.fewClouds, // Partly Cloudy
-      1102 => WeatherCondition.cloudy, // Mostly Cloudy
-      1001 => WeatherCondition.cloudy, // Cloudy
-      2000 || 2100 => WeatherCondition.mist, // Fog
-      4000 || 4200 => WeatherCondition.drizzle, // Drizzle/Light Rain
-      4001 || 4201 => WeatherCondition.rain, // Rain/Heavy Rain
-      5000 || 5001 || 5100 || 5101 => WeatherCondition.snow, // Snow
-      6000 || 6001 || 6200 || 6201 => WeatherCondition.snow, // Freezing Rain
-      7000 || 7101 || 7102 => WeatherCondition.snow, // Ice Pellets
-      8000 => WeatherCondition.thunderstorm, // Thunderstorm
-      _ => WeatherCondition.unknown,
-    };
-  }
 }
 
 /// Location coordinates
@@ -112,20 +88,11 @@ class WeatherService {
   final Map<String, _CachedWeather> _weatherCache = {};
   // Trip-level cache: tripId_date -> weather (for fast sync lookup across screen navigations)
   final Map<String, _CachedWeather> _tripWeatherCache = {};
-  final WeatherApiType _apiType;
 
-  WeatherService._(this._apiType);
+  WeatherService._();
 
   static WeatherService get instance {
-    _instance ??= WeatherService._(WeatherApiType.openWeather);
-    return _instance!;
-  }
-
-  /// Get instance with specific API type
-  static WeatherService withType(WeatherApiType type) {
-    if (_instance == null || _instance!._apiType != type) {
-      _instance = WeatherService._(type);
-    }
+    _instance ??= WeatherService._();
     return _instance!;
   }
 
@@ -134,7 +101,7 @@ class WeatherService {
   /// Build cache key for weather lookup
   String _buildWeatherCacheKey(double lat, double lng, DateTime date) {
     final dateKey = '${date.year}-${date.month}-${date.day}';
-    return '${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}_${dateKey}_${_apiType.name}';
+    return '${lat.toStringAsFixed(2)}_${lng.toStringAsFixed(2)}_$dateKey';
   }
 
   /// Synchronously check if we have valid cached weather data
@@ -219,27 +186,16 @@ class WeatherService {
 
     // For future dates (0-8 days ahead), try server-side cache first
     // This shares cached responses across all users
-    if (daysAhead >= 0 && daysAhead <= 8 && _apiType == WeatherApiType.openWeather) {
+    if (daysAhead >= 0 && daysAhead <= 8) {
       result = await _fetchFromServerCache(lat, lng, date);
     }
 
     // Fall back to direct API calls if server cache fails or for historical data
-    if (result == null) {
-      switch (_apiType) {
-        case WeatherApiType.openWeather:
-          result = await OpenWeatherMapService.instance.getHourlyWeather(
-            lat: lat,
-            lng: lng,
-            date: date,
-          );
-        case WeatherApiType.tomorrowIo:
-          result = await TomorrowIoService.instance.getHourlyWeather(
-            lat: lat,
-            lng: lng,
-            date: date,
-          );
-      }
-    }
+    result ??= await OpenWeatherMapService.instance.getHourlyWeather(
+      lat: lat,
+      lng: lng,
+      date: date,
+    );
 
     // Cache the result locally
     _weatherCache[cacheKey] = _CachedWeather(result);
