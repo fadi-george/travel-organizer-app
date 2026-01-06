@@ -125,40 +125,34 @@ jobs:
       - name: Install CocoaPods
         run: cd ios && pod install
 
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
+      - name: Build iOS archive
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist || true
+        # The export may fail but the archive will be created
 
-      - name: Archive
+      - name: Create API key file
+        env:
+          API_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: |
+          # Escape newlines for JSON
+          ESCAPED_KEY=$(echo "$API_KEY" | awk '{printf "%s\\n", $0}' | sed 's/\\n$//')
+          cat > ios/fastlane/api_key.json << EOF
+          {
+            "key_id": "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}",
+            "issuer_id": "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}",
+            "key": "$ESCAPED_KEY",
+            "in_house": false
+          }
+          EOF
+
+      - name: Export and upload with Fastlane
         run: |
           cd ios
-          xcodebuild -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath ../build/ios/archive/Runner.xcarchive \
-            archive \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="Travel Organizer App" \
-            DEVELOPMENT_TEAM=Y76TUYCQ8B
-
-      - name: Export IPA
-        run: |
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportPath build/ios/ipa \
-            -exportOptionsPlist ios/ExportOptions.plist
+          bundle install
+          bundle exec fastlane release
 
       - name: Clean up keychain
         if: always()
         run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
-
-      - name: Upload to App Store Connect
-        uses: apple-actions/upload-testflight-build@v4
-        with:
-          app-path: client/build/ios/ipa/travel_organizer.ipa
-          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
 
       - name: Commit version bump
         run: |

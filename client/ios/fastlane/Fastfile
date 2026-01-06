@@ -1,0 +1,23 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload to TestFlight"
+  lane :release do
+    # Use the archive Flutter already built
+    build_app(
+      skip_build_archive: true,
+      archive_path: "../build/ios/archive/Runner.xcarchive",
+      output_directory: "../build/ios/ipa",
+      output_name: "travel_organizer.ipa",
+      export_options: {
+        method: "app-store-connect",
+        destination: "upload"
+      }
+    )
+
+    upload_to_testflight(
+      api_key_path: "fastlane/api_key.json",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

@@ -54,3 +54,6 @@ client/.flutter-plugins
 client/.flutter-plugins-dependencies
 *.iml
 *.zip
+
+# Shorebird
+.salive
