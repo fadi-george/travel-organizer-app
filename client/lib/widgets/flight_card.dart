@@ -74,7 +74,9 @@ class FlightCard extends StatelessWidget {
     if (s.contains('landed') || s.contains('arrived')) {
       return Colors.green;
     }
-    if (s.contains('en route') || s.contains('active') || s.contains('airborne')) {
+    if (s.contains('en route') ||
+        s.contains('active') ||
+        s.contains('airborne')) {
       return Colors.blue;
     }
     if (s.contains('cancelled') || s.contains('diverted')) {
@@ -111,16 +113,16 @@ class FlightCard extends StatelessWidget {
     final displayStatus = _formatStatus(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         displayStatus,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
           color: color,
         ),
@@ -186,7 +188,8 @@ class FlightCard extends StatelessWidget {
                           flightNumber,
                           style: TimelineStyles.subtitleStyle(colorScheme),
                         ),
-                      if (departureGate != null && departureGate.isNotEmpty) ...[
+                      if (departureGate != null &&
+                          departureGate.isNotEmpty) ...[
                         Text(
                           ' · Gate $departureGate',
                           style: TimelineStyles.subtitleStyle(colorScheme),

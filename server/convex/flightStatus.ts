@@ -9,14 +9,14 @@ import { components, internal } from "./_generated/api";
 interface FlightStatusData {
   status: string | null;
   departureGate: string | null;
-  departureTime: string | null;
-  arrivalTime: string | null;
+  estimatedOut: string | null; // Full ISO timestamp (UTC)
+  estimatedIn: string | null; // Full ISO timestamp (UTC)
 }
 
 // Cache for flight status (15 min TTL)
 const flightStatusCache = new ActionCache(components.actionCache, {
   action: internal.flightStatus.fetchFlightStatusInternal,
-  name: "flight-status-v3", // Bumped to include times
+  name: "flight-status-v4", // Bumped to include estimated times
   ttl: 1000 * 60 * 15, // 15 minutes
 });
 
@@ -60,34 +60,37 @@ export const fetchFlightStatusInternal = internalAction({
         return null;
       }
 
-      const data = await response.json();
-      const flights = data.flights as Array<{
-        status: string;
-        gate_origin: string | null;
-        gate_destination: string | null;
-        scheduled_out: string | null;
-        scheduled_in: string | null;
-      }>;
+      const json = await response.json();
+      console.log("AeroAPI response:", json);
+      const data = json as {
+        flights: Array<{
+          status: string;
+          gate_origin: string | null;
+          gate_destination: string | null;
+          scheduled_out: string | null;
+          scheduled_in: string | null;
+        }>;
+      };
+      const flights = data.flights;
 
       if (!flights || flights.length === 0) {
         return null;
       }
 
-      // Take the first matching flight
-      const flight = flights[0];
+      // Take the first matching flight (safe after length check above)
+      const flight = flights[0]!;
 
-      // Parse times from ISO format to HH:mm
-      const parseTime = (iso: string | null): string | null => {
-        if (!iso) return null;
-        const date = new Date(iso);
-        return date.toISOString().slice(11, 16); // "HH:mm"
-      };
+      console.log(
+        "[AeroAPI] Flight response:",
+        JSON.stringify(flight, null, 2)
+      );
 
       return {
         status: flight.status ?? null,
         departureGate: flight.gate_origin ?? null,
-        departureTime: parseTime(flight.scheduled_out),
-        arrivalTime: parseTime(flight.scheduled_in),
+        // Use scheduled times only
+        estimatedOut: flight.scheduled_out ?? null,
+        estimatedIn: flight.scheduled_in ?? null,
       };
     } catch (e) {
       console.error("Error fetching flight status:", e);
@@ -129,8 +132,6 @@ export const refreshFlightStatus = action({
         flightId: args.flightId,
         status: statusData.status ?? undefined,
         departureGate: statusData.departureGate ?? undefined,
-        departureTime: statusData.departureTime ?? undefined,
-        arrivalTime: statusData.arrivalTime ?? undefined,
         statusLastUpdated: Date.now(),
       });
     }

@@ -1,3 +1,15 @@
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
+
+/// Initialize timezone database (call once at app startup)
+bool _tzInitialized = false;
+void initializeTimezones() {
+  if (!_tzInitialized) {
+    tz_data.initializeTimeZones();
+    _tzInitialized = true;
+  }
+}
+
 /// Formats a time string (HH:MM or HH:MM:SS) to 12-hour format with AM/PM.
 /// Returns '--:--' for null/empty input, or the original string if parsing fails.
 String formatTime(String? timeStr) {
@@ -9,6 +21,33 @@ String formatTime(String? timeStr) {
   final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
   final period = hour >= 12 ? 'PM' : 'AM';
   return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+}
+
+/// Convert UTC ISO timestamp to local time in given timezone, return formatted time string.
+/// If timezone is null, uses device's local timezone.
+String formatUtcToLocalTime(String? isoTimestamp, {String? timezone}) {
+  if (isoTimestamp == null || isoTimestamp.isEmpty) return '--:--';
+
+  try {
+    initializeTimezones();
+    final utcTime = DateTime.parse(isoTimestamp).toUtc();
+
+    DateTime localTime;
+    if (timezone != null) {
+      final location = tz.getLocation(timezone);
+      localTime = tz.TZDateTime.from(utcTime, location);
+    } else {
+      localTime = utcTime.toLocal();
+    }
+
+    final hour = localTime.hour;
+    final minute = localTime.minute;
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    final period = hour >= 12 ? 'PM' : 'AM';
+    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+  } catch (e) {
+    return '--:--';
+  }
 }
 
 /// Formats a time string, returning null if the input is null/empty.
@@ -36,7 +75,8 @@ String? formatTimeOrNull(String? timeStr) {
     if (parts.length < 2) return null;
 
     var hours = int.tryParse(parts[0]) ?? 0;
-    final minutes = int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final minutes =
+        int.tryParse(parts[1].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
 
     if (isPM && hours != 12) hours += 12;
     if (isAM && hours == 12) hours = 0;
@@ -54,4 +94,3 @@ int? parseTimeToMinutes(String? time) {
   if (parsed == null) return null;
   return parsed.$1 * 60 + parsed.$2;
 }
-

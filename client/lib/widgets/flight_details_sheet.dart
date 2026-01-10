@@ -34,16 +34,14 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
   bool _isRefreshing = false;
   late String? _status;
   late String? _gate;
-  late String? _departureTime;
-  late String? _arrivalTime;
+  String? _estimatedOut; // Full ISO timestamp (UTC)
+  String? _estimatedIn; // Full ISO timestamp (UTC)
 
   @override
   void initState() {
     super.initState();
     _status = widget.data['status'] as String?;
     _gate = widget.data['departureGate'] as String?;
-    _departureTime = widget.data['departureTime'] as String?;
-    _arrivalTime = widget.data['arrivalTime'] as String?;
   }
 
   Future<void> _refreshStatus() async {
@@ -64,12 +62,8 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
         setState(() {
           _status = result['status'] as String?;
           _gate = result['departureGate'] as String?;
-          if (result['departureTime'] != null) {
-            _departureTime = result['departureTime'] as String?;
-          }
-          if (result['arrivalTime'] != null) {
-            _arrivalTime = result['arrivalTime'] as String?;
-          }
+          _estimatedOut = result['estimatedOut'] as String?;
+          _estimatedIn = result['estimatedIn'] as String?;
         });
       }
     } catch (e) {
@@ -121,9 +115,8 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
     final destinationCityName = destinationAirport?.city ?? destination;
     final departureDate = widget.data['departureDate'] as String?;
     final arrivalDate = widget.data['arrivalDate'] as String?;
-    // Use local state for times (updated by refresh)
-    final departureTime = _departureTime;
-    final arrivalTime = _arrivalTime;
+    final originalDepartureTime = widget.data['departureTime'] as String?;
+    final originalArrivalTime = widget.data['arrivalTime'] as String?;
     final flightNumber = widget.data['flightNumber'] as String? ?? '';
     final airline = widget.data['airline'] as String?;
     final terminal = widget.data['departureTerminal'] as String?;
@@ -132,6 +125,14 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
     // Use local state for status and gate (updated by refresh)
     final status = _status;
     final gate = _gate;
+
+    // Use estimated times if available (with timezone conversion), otherwise original
+    final departureTime = _estimatedOut != null
+        ? formatUtcToLocalTime(_estimatedOut, timezone: originAirport?.tz)
+        : formatTime(originalDepartureTime);
+    final arrivalTime = _estimatedIn != null
+        ? formatUtcToLocalTime(_estimatedIn, timezone: destinationAirport?.tz)
+        : formatTime(originalArrivalTime);
 
     return Container(
       decoration: BoxDecoration(
@@ -301,7 +302,7 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            formatTime(departureTime),
+                            departureTime,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w600,
@@ -380,7 +381,7 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            formatTime(arrivalTime),
+                            arrivalTime,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w600,

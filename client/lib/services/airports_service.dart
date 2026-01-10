@@ -12,6 +12,7 @@ class Airport {
   final String? state;
   final double? lat;
   final double? lon;
+  final String? tz; // IANA timezone (e.g., "America/Los_Angeles")
 
   const Airport({
     required this.iata,
@@ -22,6 +23,7 @@ class Airport {
     this.state,
     this.lat,
     this.lon,
+    this.tz,
   });
 
   /// Display format: "LAX - Los Angeles International"
@@ -40,6 +42,7 @@ class Airport {
       state: json['state'] as String?,
       lat: (json['lat'] as num?)?.toDouble(),
       lon: (json['lon'] as num?)?.toDouble(),
+      tz: json['tz'] as String?,
     );
   }
 
@@ -54,6 +57,7 @@ class Airport {
       state: data[5] as String?,
       lat: data[6] as double?,
       lon: data[7] as double?,
+      tz: data[8] as String?,
     );
   }
 }
@@ -78,6 +82,7 @@ List<List<dynamic>> _parseAirportsJson(String jsonString) {
         airportData['state'] as String?,
         (airportData['lat'] as num?)?.toDouble(),
         (airportData['lon'] as num?)?.toDouble(),
+        airportData['tz'] as String?,
       ]);
     }
   }
@@ -109,12 +114,12 @@ class AirportsService {
     _isLoading = true;
     try {
       final jsonString = await rootBundle.loadString('assets/airports.json');
-      
+
       // Parse in background isolate to prevent UI freeze
       final parsedData = await compute(_parseAirportsJson, jsonString);
-      
+
       _airports = parsedData.map(Airport.fromList).toList();
-      
+
       // Build lookup map for fast IATA searches
       _airportsByIata = {for (final a in _airports!) a.iata: a};
     } finally {
@@ -158,8 +163,7 @@ class AirportsService {
       results: results,
       limit: limit,
       predicate: (a) =>
-          a.city.toLowerCase().contains(q) ||
-          a.name.toLowerCase().contains(q),
+          a.city.toLowerCase().contains(q) || a.name.toLowerCase().contains(q),
     );
 
     return results;
