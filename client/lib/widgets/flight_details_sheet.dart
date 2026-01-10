@@ -411,18 +411,40 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                 items: [
                   if (flightNumber.isNotEmpty)
                     _DetailItem(label: 'Flight', value: flightNumber),
-                  if (airline != null && airline.isNotEmpty)
-                    _DetailItem(label: 'Airline', value: airline),
-                  if (terminal != null && terminal.isNotEmpty)
-                    _DetailItem(label: 'Terminal', value: terminal),
                   if (seatNumber != null && seatNumber.isNotEmpty)
                     _DetailItem(label: 'Seat', value: seatNumber),
+                  if (_calculateDuration(
+                        originalDepartureTime,
+                        originalArrivalTime,
+                        departureDate,
+                        arrivalDate,
+                        originAirport?.tz,
+                        destinationAirport?.tz,
+                      ) !=
+                      null)
+                    _DetailItem(
+                      label: 'Duration',
+                      value: _calculateDuration(
+                        originalDepartureTime,
+                        originalArrivalTime,
+                        departureDate,
+                        arrivalDate,
+                        originAirport?.tz,
+                        destinationAirport?.tz,
+                      )!,
+                    ),
+                  if (airline != null && airline.isNotEmpty)
+                    _DetailItem(label: 'Airline', value: airline),
                   if (confirmationNumber != null &&
                       confirmationNumber.isNotEmpty)
                     _DetailItem(
                       label: 'Confirmation',
                       value: confirmationNumber,
                     ),
+                  if (terminal != null && terminal.isNotEmpty)
+                    _DetailItem(label: 'Terminal', value: terminal),
+                  if (gate != null && gate.isNotEmpty)
+                    _DetailItem(label: 'Gate', value: gate),
                 ],
               ),
             ],
@@ -455,6 +477,126 @@ String _formatDate(String? dateStr) {
   return '${weekdays[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
 }
 
+String? _calculateDuration(
+  String? departureTime,
+  String? arrivalTime,
+  String? departureDate,
+  String? arrivalDate,
+  String? originTz,
+  String? destTz,
+) {
+  if (departureTime == null || arrivalTime == null || departureDate == null) {
+    return null;
+  }
+
+  final depDate = DateTime.tryParse(departureDate);
+  final arrDate = DateTime.tryParse(arrivalDate ?? departureDate);
+  if (depDate == null || arrDate == null) return null;
+
+  final depTimeParts = departureTime.split(':');
+  final arrTimeParts = arrivalTime.split(':');
+  if (depTimeParts.length < 2 || arrTimeParts.length < 2) return null;
+
+  final depHour = int.tryParse(depTimeParts[0]);
+  final depMin = int.tryParse(depTimeParts[1]);
+  final arrHour = int.tryParse(arrTimeParts[0]);
+  final arrMin = int.tryParse(arrTimeParts[1]);
+  if (depHour == null || depMin == null || arrHour == null || arrMin == null) {
+    return null;
+  }
+
+  // Get UTC offsets from timezone strings
+  final depOffset = _getUtcOffsetHours(originTz);
+  final arrOffset = _getUtcOffsetHours(destTz);
+
+  // Create DateTimes and convert to UTC for accurate comparison
+  final departureUtc = DateTime.utc(
+    depDate.year,
+    depDate.month,
+    depDate.day,
+    depHour,
+    depMin,
+  ).subtract(Duration(hours: depOffset));
+
+  final arrivalUtc = DateTime.utc(
+    arrDate.year,
+    arrDate.month,
+    arrDate.day,
+    arrHour,
+    arrMin,
+  ).subtract(Duration(hours: arrOffset));
+
+  final duration = arrivalUtc.difference(departureUtc);
+  if (duration.isNegative) return null;
+
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes % 60;
+
+  if (hours == 0) return '${minutes}m';
+  if (minutes == 0) return '${hours}h';
+  return '${hours}h ${minutes}m';
+}
+
+int _getUtcOffsetHours(String? tz) {
+  if (tz == null) return 0;
+  // Common timezone offsets (simplified - doesn't handle DST)
+  const offsets = {
+    // Americas
+    'America/Los_Angeles': -8,
+    'America/Phoenix': -7,
+    'America/Denver': -7,
+    'America/Chicago': -6,
+    'America/New_York': -5,
+    'America/Toronto': -5,
+    'America/Vancouver': -8,
+    'America/Mexico_City': -6,
+    'America/Sao_Paulo': -3,
+    'America/Buenos_Aires': -3,
+    // Europe
+    'Europe/London': 0,
+    'Europe/Paris': 1,
+    'Europe/Berlin': 1,
+    'Europe/Rome': 1,
+    'Europe/Madrid': 1,
+    'Europe/Amsterdam': 1,
+    'Europe/Zurich': 1,
+    'Europe/Vienna': 1,
+    'Europe/Prague': 1,
+    'Europe/Stockholm': 1,
+    'Europe/Oslo': 1,
+    'Europe/Copenhagen': 1,
+    'Europe/Helsinki': 2,
+    'Europe/Athens': 2,
+    'Europe/Istanbul': 3,
+    'Europe/Moscow': 3,
+    // Asia
+    'Asia/Dubai': 4,
+    'Asia/Karachi': 5,
+    'Asia/Kolkata': 5,
+    'Asia/Dhaka': 6,
+    'Asia/Bangkok': 7,
+    'Asia/Ho_Chi_Minh': 7,
+    'Asia/Jakarta': 7,
+    'Asia/Singapore': 8,
+    'Asia/Kuala_Lumpur': 8,
+    'Asia/Hong_Kong': 8,
+    'Asia/Shanghai': 8,
+    'Asia/Taipei': 8,
+    'Asia/Manila': 8,
+    'Asia/Seoul': 9,
+    'Asia/Tokyo': 9,
+    // Oceania
+    'Australia/Perth': 8,
+    'Australia/Adelaide': 9,
+    'Australia/Sydney': 10,
+    'Australia/Melbourne': 10,
+    'Australia/Brisbane': 10,
+    'Pacific/Auckland': 12,
+    'Pacific/Fiji': 12,
+  };
+  return offsets[tz] ?? 0;
+}
+
 Widget _buildDetailsSection({
   required ColorScheme colorScheme,
   required bool isDark,
@@ -462,44 +604,48 @@ Widget _buildDetailsSection({
 }) {
   if (items.isEmpty) return const SizedBox.shrink();
 
-  return Wrap(
-    spacing: 12,
-    runSpacing: 12,
-    children: items.map((item) {
-      return Container(
-        constraints: const BoxConstraints(minWidth: 100),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark
-              ? colorScheme.onSurface.withValues(alpha: 0.05)
-              : colorScheme.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              item.label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurface.withValues(alpha: 0.5),
+  return SizedBox(
+    width: double.infinity,
+    child: Wrap(
+      alignment: WrapAlignment.start,
+      spacing: 12,
+      runSpacing: 12,
+      children: items.map((item) {
+        return Container(
+          constraints: const BoxConstraints(minWidth: 100),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? colorScheme.onSurface.withValues(alpha: 0.05)
+                : colorScheme.primary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              item.value,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
+              const SizedBox(height: 2),
+              Text(
+                item.value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
               ),
-            ),
-          ],
-        ),
-      );
-    }).toList(),
+            ],
+          ),
+        );
+      }).toList(),
+    ),
   );
 }
 
