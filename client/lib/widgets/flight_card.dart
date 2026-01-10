@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/airports_service.dart';
+import '../utils/flight_status.dart';
 import '../utils/time_format.dart';
 import 'swipe_action_card.dart';
 import 'timeline_styles.dart';
@@ -64,70 +65,6 @@ class FlightCard extends StatelessWidget {
       'Dec',
     ];
     return '${months[dt.month - 1]} ${dt.day}';
-  }
-
-  /// Get status badge color based on flight status
-  Color _getStatusColor(String? status) {
-    if (status == null) return Colors.grey;
-
-    final s = status.toLowerCase();
-    if (s.contains('landed') || s.contains('arrived')) {
-      return Colors.green;
-    }
-    if (s.contains('en route') ||
-        s.contains('active') ||
-        s.contains('airborne')) {
-      return Colors.blue;
-    }
-    if (s.contains('cancelled') || s.contains('diverted')) {
-      return Colors.red;
-    }
-    if (s.contains('delayed')) {
-      return Colors.orange;
-    }
-    // Scheduled or unknown
-    return Colors.grey;
-  }
-
-  /// Format status text for display
-  String _formatStatus(String? status) {
-    if (status == null) return '';
-
-    // AeroAPI returns statuses like "Scheduled", "En Route / On Time", "Landed", etc.
-    // Simplify for display
-    final s = status.toLowerCase();
-    if (s.contains('landed')) return 'Landed';
-    if (s.contains('en route')) return 'En Route';
-    if (s.contains('cancelled')) return 'Cancelled';
-    if (s.contains('delayed')) return 'Delayed';
-    if (s.contains('scheduled')) return 'Scheduled';
-    if (s.contains('active') || s.contains('airborne')) return 'En Route';
-
-    return status;
-  }
-
-  Widget _buildStatusBadge(String? status, ColorScheme colorScheme) {
-    if (status == null || status.isEmpty) return const SizedBox.shrink();
-
-    final color = _getStatusColor(status);
-    final displayStatus = _formatStatus(status);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        displayStatus,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
   }
 
   static const _accentColor = Color(0xFF5B9BD5);
@@ -197,7 +134,7 @@ class FlightCard extends StatelessWidget {
                       ],
                       if (status != null && status.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        _buildStatusBadge(status, colorScheme),
+                        FlightStatusBadge(status: status, small: true),
                       ],
                     ],
                   ),
@@ -326,7 +263,7 @@ class FlightCard extends StatelessWidget {
                       ),
                       if (status != null && status.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        _buildStatusBadge(status, colorScheme),
+                        FlightStatusBadge(status: status, small: true),
                       ],
                     ],
                   ),

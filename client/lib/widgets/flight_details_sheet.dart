@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/airports_service.dart';
 import '../services/convex_service.dart';
+import '../utils/flight_status.dart';
 import '../utils/time_format.dart';
 
 const _accentColor = Color(0xFF5B9BD5);
@@ -73,32 +74,6 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
         setState(() => _isRefreshing = false);
       }
     }
-  }
-
-  Color _getStatusColor(String? status) {
-    if (status == null) return Colors.grey;
-
-    final s = status.toLowerCase();
-    if (s.contains('landed') || s.contains('arrived')) return Colors.green;
-    if (s.contains('en route') ||
-        s.contains('active') ||
-        s.contains('airborne'))
-      return Colors.blue;
-    if (s.contains('cancelled') || s.contains('diverted')) return Colors.red;
-    if (s.contains('delayed')) return Colors.orange;
-    return Colors.grey;
-  }
-
-  String _formatStatus(String? status) {
-    if (status == null) return '';
-    final s = status.toLowerCase();
-    if (s.contains('landed')) return 'Landed';
-    if (s.contains('en route')) return 'En Route';
-    if (s.contains('cancelled')) return 'Cancelled';
-    if (s.contains('delayed')) return 'Delayed';
-    if (s.contains('scheduled')) return 'Scheduled';
-    if (s.contains('active') || s.contains('airborne')) return 'En Route';
-    return status;
   }
 
   @override
@@ -226,28 +201,7 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                     ),
                   ),
                   // Status badge
-                  if (status != null && status.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _getStatusColor(status).withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Text(
-                        _formatStatus(status),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _getStatusColor(status),
-                        ),
-                      ),
-                    ),
+                  FlightStatusBadge(status: status),
                   Expanded(
                     child: Text(
                       destinationCityName,
