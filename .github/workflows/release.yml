@@ -74,6 +74,30 @@ jobs:
           echo "  feat!: ... or BREAKING CHANGE: (major bump)"
           exit 1
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install server dependencies
+        working-directory: .
+        run: bun install
+
+      - name: Set Convex environment variables
+        working-directory: .
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          bunx convex env set AERO_API_KEY "${{ secrets.AERO_API_KEY }}" --prod
+          bunx convex env set ANTHROPIC_API_KEY "${{ secrets.ANTHROPIC_API_KEY }}" --prod
+          bunx convex env set CLERK_ISSUER_URL "${{ secrets.CLERK_ISSUER_URL }}" --prod
+          bunx convex env set OPENWEATHERMAP_API_KEY "${{ secrets.OPENWEATHERMAP_API_KEY }}" --prod
+
+      - name: Deploy Convex to production
+        working-directory: .
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: bunx convex deploy --prod
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.38.5"
