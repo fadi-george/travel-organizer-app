@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'activity_card.dart';
 import 'flight_card.dart';
+import 'flight_details_sheet.dart';
 import 'hotel_card.dart';
 
 class TimelineItem extends StatelessWidget {
@@ -28,6 +29,7 @@ class TimelineItem extends StatelessWidget {
         return FlightCard(
           data: data,
           viewType: FlightCardViewType.timeline,
+          onTap: () => showFlightDetailsSheet(context, data),
           onEdit: onEdit,
           onDelete: onDelete,
         );
