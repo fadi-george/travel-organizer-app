@@ -59,6 +59,32 @@ jobs:
           # Update pubspec.yaml
           sed -i '' "s/^version: .*/version: ${NEW_VERSION}+${BUILD_NUMBER}/" pubspec.yaml
 
+          # Generate changelog from conventional commits
+          CHANGELOG=""
+
+          FEATS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null | grep -E "^feat(\(.+\))?:" | sed 's/^feat\(([^)]*)\)\?: /- /' || true)
+          if [ -n "$FEATS" ]; then
+            CHANGELOG="${CHANGELOG}## 🎉 Features\n${FEATS}\n\n"
+          fi
+
+          FIXES=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null | grep -E "^fix(\(.+\))?:" | sed 's/^fix\(([^)]*)\)\?: /- /' || true)
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="${CHANGELOG}## 🐛 Bug Fixes\n${FIXES}\n\n"
+          fi
+
+          PERFS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null | grep -E "^perf(\(.+\))?:" | sed 's/^perf\(([^)]*)\)\?: /- /' || true)
+          if [ -n "$PERFS" ]; then
+            CHANGELOG="${CHANGELOG}## ⚡ Performance\n${PERFS}\n\n"
+          fi
+
+          REFACTORS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null | grep -E "^refactor(\(.+\))?:" | sed 's/^refactor\(([^)]*)\)\?: /- /' || true)
+          if [ -n "$REFACTORS" ]; then
+            CHANGELOG="${CHANGELOG}## ♻️ Refactors\n${REFACTORS}\n\n"
+          fi
+
+          # Write changelog to file for multi-line output
+          echo -e "$CHANGELOG" > changelog.md
+
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "build=${BUILD_NUMBER}" >> $GITHUB_OUTPUT
           echo "bump=${BUMP}" >> $GITHUB_OUTPUT
@@ -211,4 +237,4 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
-          generate_release_notes: true
+          body_path: client/changelog.md
