@@ -35,6 +35,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late DateTime _endDate;
   late Trip _trip;
   SubscriptionHandle? _subscription;
+  final Set<String> _refreshingFlights = {};
 
   Trip get trip => _trip;
 
@@ -44,6 +45,38 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _trip = widget.trip;
     _initializeDates();
     _subscribeToTrips();
+    // Auto-refresh upcoming flights on initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoRefreshUpcomingFlights();
+    });
+  }
+
+  /// Auto-refresh status for flights departing within 24 hours
+  Future<void> _autoRefreshUpcomingFlights() async {
+    if (_trip.flights == null || _trip.flights!.isEmpty) return;
+
+    final convexService = await ConvexService.getInstance();
+
+    for (final flight in _trip.flights!) {
+      final flightData = flight as Map<String, dynamic>;
+      final flightId = flightData['_id'] as String?;
+
+      if (flightId == null) continue;
+      if (_refreshingFlights.contains(flightId)) continue;
+
+      // Check if this flight should be auto-refreshed
+      if (ConvexService.shouldAutoRefreshFlight(flightData)) {
+        _refreshingFlights.add(flightId);
+
+        // Fire and forget - the subscription will update the UI
+        convexService.refreshFlightStatus(flightId: flightId).then((_) {
+          _refreshingFlights.remove(flightId);
+        }).catchError((e) {
+          debugPrint('Auto-refresh error for flight $flightId: $e');
+          _refreshingFlights.remove(flightId);
+        });
+      }
+    }
   }
 
   @override
@@ -73,6 +106,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 _updateDates();
               }
             });
+            // Auto-refresh upcoming flights when trip data updates
+            _autoRefreshUpcomingFlights();
           }
         },
         onError: (message, value) {

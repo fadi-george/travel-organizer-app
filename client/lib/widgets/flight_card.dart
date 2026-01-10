@@ -66,6 +66,68 @@ class FlightCard extends StatelessWidget {
     return '${months[dt.month - 1]} ${dt.day}';
   }
 
+  /// Get status badge color based on flight status
+  Color _getStatusColor(String? status) {
+    if (status == null) return Colors.grey;
+
+    final s = status.toLowerCase();
+    if (s.contains('landed') || s.contains('arrived')) {
+      return Colors.green;
+    }
+    if (s.contains('en route') || s.contains('active') || s.contains('airborne')) {
+      return Colors.blue;
+    }
+    if (s.contains('cancelled') || s.contains('diverted')) {
+      return Colors.red;
+    }
+    if (s.contains('delayed')) {
+      return Colors.orange;
+    }
+    // Scheduled or unknown
+    return Colors.grey;
+  }
+
+  /// Format status text for display
+  String _formatStatus(String? status) {
+    if (status == null) return '';
+
+    // AeroAPI returns statuses like "Scheduled", "En Route / On Time", "Landed", etc.
+    // Simplify for display
+    final s = status.toLowerCase();
+    if (s.contains('landed')) return 'Landed';
+    if (s.contains('en route')) return 'En Route';
+    if (s.contains('cancelled')) return 'Cancelled';
+    if (s.contains('delayed')) return 'Delayed';
+    if (s.contains('scheduled')) return 'Scheduled';
+    if (s.contains('active') || s.contains('airborne')) return 'En Route';
+
+    return status;
+  }
+
+  Widget _buildStatusBadge(String? status, ColorScheme colorScheme) {
+    if (status == null || status.isEmpty) return const SizedBox.shrink();
+
+    final color = _getStatusColor(status);
+    final displayStatus = _formatStatus(status);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        displayStatus,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
   static const _accentColor = Color(0xFF5B9BD5);
 
   Widget _buildTimelineView(
@@ -79,6 +141,8 @@ class FlightCard extends StatelessWidget {
     required String? arrivalDate,
     required String? departureTime,
     required String? arrivalTime,
+    required String? departureGate,
+    required String? status,
   }) {
     return SwipeActionCard(
       onTap: onTap,
@@ -111,15 +175,33 @@ class FlightCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '$origin — $destination',
-                    style: TimelineStyles.titleStyle(colorScheme),
+                  Row(
+                    children: [
+                      Text(
+                        '$origin — $destination',
+                        style: TimelineStyles.titleStyle(colorScheme),
+                      ),
+                      if (status != null && status.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(status, colorScheme),
+                      ],
+                    ],
                   ),
-                  if (flightNumber.isNotEmpty)
-                    Text(
-                      flightNumber,
-                      style: TimelineStyles.subtitleStyle(colorScheme),
-                    ),
+                  Row(
+                    children: [
+                      if (flightNumber.isNotEmpty)
+                        Text(
+                          flightNumber,
+                          style: TimelineStyles.subtitleStyle(colorScheme),
+                        ),
+                      if (departureGate != null && departureGate.isNotEmpty) ...[
+                        Text(
+                          ' · Gate $departureGate',
+                          style: TimelineStyles.subtitleStyle(colorScheme),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -164,6 +246,8 @@ class FlightCard extends StatelessWidget {
     final departureTime = data['departureTime'] as String?;
     final arrivalTime = data['arrivalTime'] as String?;
     final flightNumber = data['flightNumber'] as String? ?? '';
+    final departureGate = data['departureGate'] as String?;
+    final status = data['status'] as String?;
 
     if (viewType == FlightCardViewType.timeline) {
       final arrivalDate = data['arrivalDate'] as String?;
@@ -178,6 +262,8 @@ class FlightCard extends StatelessWidget {
         arrivalDate: arrivalDate,
         departureTime: departureTime,
         arrivalTime: arrivalTime,
+        departureGate: departureGate,
+        status: status,
       );
     }
 
@@ -211,7 +297,7 @@ class FlightCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Top row: Cities and flight number
+            // Top row: Cities, flight number, and status badge
             Row(
               children: [
                 Expanded(
@@ -227,14 +313,23 @@ class FlightCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    flightNumber,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colorScheme.onSurface.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w500,
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        flightNumber,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (status != null && status.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(status, colorScheme),
+                      ],
+                    ],
                   ),
                 ),
                 Expanded(
@@ -257,16 +352,30 @@ class FlightCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Origin airport code
-                Text(
-                  origin,
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                    letterSpacing: -1,
-                    height: 1,
-                  ),
+                // Origin airport code with gate
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      origin,
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -1,
+                        height: 1,
+                      ),
+                    ),
+                    if (departureGate != null && departureGate.isNotEmpty)
+                      Text(
+                        'Gate $departureGate',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _accentColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 8),
                 // Flight path with plane

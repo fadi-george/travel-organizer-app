@@ -53,6 +53,10 @@ export default defineSchema({
     confirmationNumber: v.optional(v.string()),
     eTicketNumber: v.optional(v.string()),
     notes: v.optional(v.string()),
+    // Live status fields (from AeroAPI)
+    departureGate: v.optional(v.string()),
+    status: v.optional(v.string()), // "Scheduled" | "En Route" | "Landed" | "Cancelled"
+    statusLastUpdated: v.optional(v.number()),
   })
     .index("by_trip", ["tripId"])
     .index("by_trip_and_date", ["tripId", "departureDate"]),

@@ -395,4 +395,66 @@ class ConvexService {
       return null;
     }
   }
+
+  /// Refresh flight status from AeroAPI
+  /// Returns updated status and gate info, or null if unavailable
+  Future<Map<String, dynamic>?> refreshFlightStatus({
+    required String flightId,
+  }) async {
+    try {
+      final result = await client.action(
+        name: 'flightStatus:refreshFlightStatus',
+        args: {'flightId': flightId},
+      );
+      return _decodeAsMap(result);
+    } catch (e) {
+      debugPrint('ConvexService.refreshFlightStatus error: $e');
+      return null;
+    }
+  }
+
+  /// Check if a flight should auto-refresh based on departure time
+  /// Returns true if flight is within 24 hours and status is stale (>15 min)
+  static bool shouldAutoRefreshFlight(Map<String, dynamic> flight) {
+    final departureDateStr = flight['departureDate'] as String?;
+    final departureTimeStr = flight['departureTime'] as String?;
+    final statusLastUpdatedRaw = flight['statusLastUpdated'];
+    final statusLastUpdated = statusLastUpdatedRaw != null
+        ? (statusLastUpdatedRaw as num).toInt()
+        : null;
+
+    if (departureDateStr == null) return false;
+
+    // Parse departure datetime
+    DateTime departureDateTime;
+    try {
+      if (departureTimeStr != null) {
+        departureDateTime = DateTime.parse(
+          '${departureDateStr}T$departureTimeStr',
+        );
+      } else {
+        departureDateTime = DateTime.parse(departureDateStr);
+      }
+    } catch (e) {
+      return false;
+    }
+
+    final now = DateTime.now();
+    final hoursUntilDeparture = departureDateTime.difference(now).inHours;
+
+    // Only auto-refresh for flights within 24 hours (and not already departed long ago)
+    if (hoursUntilDeparture > 24 || hoursUntilDeparture < -6) {
+      return false;
+    }
+
+    // Check if status is stale (null or older than 15 minutes)
+    if (statusLastUpdated == null) {
+      return true;
+    }
+
+    final lastUpdated = DateTime.fromMillisecondsSinceEpoch(statusLastUpdated);
+    final minutesSinceUpdate = now.difference(lastUpdated).inMinutes;
+
+    return minutesSinceUpdate >= 15;
+  }
 }

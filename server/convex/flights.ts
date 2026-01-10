@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { getAuthenticatedUserId, verifyTripOwnership } from "./lib/auth";
 
 // Get all flights for a trip (requires ownership)
@@ -116,5 +116,48 @@ export const remove = mutation({
 
     await ctx.db.delete(args.id);
     return { message: "Flight deleted" };
+  },
+});
+
+// Internal query to get flight details for status lookup (used by flightStatus action)
+export const getFlightForStatus = internalQuery({
+  args: {
+    flightId: v.id("flights"),
+  },
+  handler: async (ctx, args) => {
+    const flight = await ctx.db.get(args.flightId);
+    if (!flight) return null;
+
+    return {
+      airline: flight.airline,
+      flightNumber: flight.flightNumber,
+      departureDate: flight.departureDate,
+    };
+  },
+});
+
+// Internal mutation to update flight status (used by flightStatus action)
+export const updateFlightStatus = internalMutation({
+  args: {
+    flightId: v.id("flights"),
+    status: v.optional(v.string()),
+    departureGate: v.optional(v.string()),
+    statusLastUpdated: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { flightId, status, departureGate, statusLastUpdated } = args;
+
+    const updates: Record<string, string | number | undefined> = {
+      statusLastUpdated,
+    };
+
+    if (status !== undefined) {
+      updates.status = status;
+    }
+    if (departureGate !== undefined) {
+      updates.departureGate = departureGate;
+    }
+
+    await ctx.db.patch(flightId, updates);
   },
 });
