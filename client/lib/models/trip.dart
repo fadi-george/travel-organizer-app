@@ -103,64 +103,112 @@ class Trip {
     return endDay.isBefore(today);
   }
 
-  /// Get the primary country from accommodations, or fall back to flight destination
-  String? get primaryPlace {
-    // Try accommodations first - extract country from address (last comma-separated part)
-    if (accommodations != null && accommodations!.isNotEmpty) {
-      final sorted =
-          List<Map<String, dynamic>>.from(
-            accommodations!.map((a) => a as Map<String, dynamic>),
-          )..sort((a, b) {
-            final aDate = a['checkIn'] as String? ?? '';
-            final bDate = b['checkIn'] as String? ?? '';
-            return aDate.compareTo(bDate);
-          });
-      final address = sorted.first['address'] as String?;
-      if (address != null && address.isNotEmpty) {
-        final parts = address.split(',').map((p) => p.trim()).toList();
-        final country = parts.last;
-        if (country.isNotEmpty) return country;
-      }
+  /// Get the primary location from combined accommodations, flights, and activities
+  /// If [selectedDay] is provided, returns the last location on that day
+  /// Otherwise returns the first location in the trip
+  String? primaryPlace([DateTime? selectedDay]) {
+    String? extractLocation(String? address) {
+      if (address == null || address.isEmpty) return null;
+      final parts = address.split(',').map((p) => p.trim()).toList();
+      final location = parts.last;
+      return location.isNotEmpty ? location : null;
     }
 
-    // Fall back to first flight's arrival city
-    if (flights != null && flights!.isNotEmpty) {
-      final sorted =
-          List<Map<String, dynamic>>.from(
-            flights!.map((f) => f as Map<String, dynamic>),
-          )..sort((a, b) {
-            final aDate = a['departureDate'] as String? ?? '';
-            final bDate = b['departureDate'] as String? ?? '';
-            return aDate.compareTo(bDate);
-          });
-      final arrivalCity = sorted.first['arrivalCity'] as String?;
-      if (arrivalCity != null && arrivalCity.isNotEmpty) return arrivalCity;
-    }
+    // Build unified list of entries with dateTime and location
+    final entries = <({DateTime dateTime, String location})>[];
 
-    // Fall back to first activity with a valid location
-    if (activities != null && activities!.isNotEmpty) {
-      final sorted =
-          List<Map<String, dynamic>>.from(
-            activities!.map((a) => a as Map<String, dynamic>),
-          )..sort((a, b) {
-            final aDate = a['date'] as String? ?? '';
-            final bDate = b['date'] as String? ?? '';
-            return aDate.compareTo(bDate);
-          });
-      for (final activity in sorted) {
-        final location = activity['location'] as String?;
-        if (location != null && location.isNotEmpty) {
-          // Extract country from full address (e.g., "Place, Address, City, Country")
-          final parts = location.split(',').map((p) => p.trim()).toList();
-          if (parts.isNotEmpty) {
-            // Return last part (typically the country)
-            return parts.last;
-          }
-          return location;
+    // Add accommodations as two entries (checkIn and checkOut)
+    if (accommodations != null) {
+      for (final a in accommodations!) {
+        final acc = a as Map<String, dynamic>;
+        final location = extractLocation(acc['address'] as String?);
+        if (location == null) continue;
+
+        final checkIn = DateTime.tryParse(acc['checkIn'] as String? ?? '');
+        if (checkIn != null) {
+          entries.add((dateTime: checkIn, location: location));
+        }
+
+        final checkOut = DateTime.tryParse(acc['checkOut'] as String? ?? '');
+        if (checkOut != null) {
+          entries.add((dateTime: checkOut, location: location));
         }
       }
     }
 
-    return null;
+    // Add flights using arrival time
+    if (flights != null) {
+      for (final f in flights!) {
+        final flight = f as Map<String, dynamic>;
+        final arrivalCity = flight['arrivalCity'] as String?;
+        if (arrivalCity == null || arrivalCity.isEmpty) continue;
+
+        final arrivalTime = DateTime.tryParse(
+          flight['arrivalTime'] as String? ?? '',
+        );
+        if (arrivalTime != null) {
+          entries.add((dateTime: arrivalTime, location: arrivalCity));
+        }
+      }
+    }
+
+    // Add activities
+    if (activities != null) {
+      for (final a in activities!) {
+        final activity = a as Map<String, dynamic>;
+        final location = extractLocation(activity['location'] as String?);
+        if (location == null) continue;
+
+        final date = DateTime.tryParse(activity['date'] as String? ?? '');
+        if (date != null) {
+          entries.add((dateTime: date, location: location));
+        }
+      }
+    }
+
+    if (entries.isEmpty) return null;
+
+    // Sort all entries by dateTime
+    entries.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+    if (selectedDay == null) {
+      // Return first entry's location
+      return entries.first.location;
+    }
+
+    // Filter entries to those on selectedDay, return last one's location
+    final selectedDayOnly = DateTime(
+      selectedDay.year,
+      selectedDay.month,
+      selectedDay.day,
+    );
+    final onDay = entries.where((e) {
+      final entryDay = DateTime(
+        e.dateTime.year,
+        e.dateTime.month,
+        e.dateTime.day,
+      );
+      return entryDay == selectedDayOnly;
+    }).toList();
+
+    if (onDay.isNotEmpty) {
+      return onDay.last.location;
+    }
+
+    // Fallback: get last entry before selectedDay
+    final before = entries.where((e) {
+      final entryDay = DateTime(
+        e.dateTime.year,
+        e.dateTime.month,
+        e.dateTime.day,
+      );
+      return entryDay.isBefore(selectedDayOnly);
+    }).toList();
+
+    if (before.isNotEmpty) {
+      return before.last.location;
+    }
+
+    return entries.first.location;
   }
 }

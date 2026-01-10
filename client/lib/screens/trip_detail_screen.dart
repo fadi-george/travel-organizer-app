@@ -69,12 +69,15 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
         _refreshingFlights.add(flightId);
 
         // Fire and forget - the subscription will update the UI
-        convexService.refreshFlightStatus(flightId: flightId).then((_) {
-          _refreshingFlights.remove(flightId);
-        }).catchError((e) {
-          debugPrint('Auto-refresh error for flight $flightId: $e');
-          _refreshingFlights.remove(flightId);
-        });
+        convexService
+            .refreshFlightStatus(flightId: flightId)
+            .then((_) {
+              _refreshingFlights.remove(flightId);
+            })
+            .catchError((e) {
+              debugPrint('Auto-refresh error for flight $flightId: $e');
+              _refreshingFlights.remove(flightId);
+            });
       }
     }
   }
@@ -266,7 +269,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
-    return PlacesImages.getImageUrl(widget.primaryPlace);
+    return PlacesImages.getImageUrl(_trip.primaryPlace(_selectedDate));
   }
 
   void _onEditTrip() {
@@ -932,9 +935,7 @@ class _EmptyDaySection extends StatelessWidget {
             onPressed: onAddActivity,
             icon: const Icon(Icons.add, size: 18),
             label: const Text('Add Activity'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
-            ),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
           ),
         ],
       ),

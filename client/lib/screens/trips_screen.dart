@@ -176,7 +176,7 @@ class _TripsScreenState extends State<TripsScreen> {
             final trip = trips[index];
             return TripCard(
               trip: trip,
-              primaryPlace: trip.primaryPlace,
+              primaryPlace: trip.primaryPlace(),
               index: index,
               isCompact: isCompact,
               onTap: () => _onTripTapped(trip),
@@ -358,7 +358,7 @@ class _TripsScreenState extends State<TripsScreen> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            TripDetailScreen(trip: trip, primaryPlace: trip.primaryPlace),
+            TripDetailScreen(trip: trip, primaryPlace: trip.primaryPlace()),
       ),
     );
   }
