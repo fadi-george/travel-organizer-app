@@ -88,14 +88,27 @@ A travel itinerary organizer with a Flutter client and Convex backend.
 
    > **Note:** Weather data is cached server-side to reduce API calls. All users share the same cache, so popular destinations won't exhaust your quota.
 
-4. Install Flutter dependencies:
+4. **Configure FlightAware AeroAPI Key** (optional, for live flight status):
+
+   Add your AeroAPI key to your **Convex environment variables**:
+   - Go to your [Convex Dashboard](https://dashboard.convex.dev)
+   - Select your project → **Settings** → **Environment Variables**
+   - Add: `AERO_API_KEY` = your API key
+
+   To get an API key:
+   - Sign up at [FlightAware](https://www.flightaware.com/aeroapi/)
+   - The Personal tier includes a limited number of free queries per month
+
+   > **Note:** Flight status is fetched on-demand when viewing flight details. If no API key is configured, flight status features will be unavailable.
+
+5. Install Flutter dependencies:
 
    ```bash
    cd client
    flutter pub get
    ```
 
-5. Run the app:
+6. Run the app:
 
    ```bash
    flutter run
@@ -119,6 +132,7 @@ This app uses [flutter_map](https://pub.dev/packages/flutter_map) with free Open
 | `destinations`   | `listByTrip`, `get`, `create`, `update`, `remove`        |
 | `accommodations` | `listByDestination`, `get`, `create`, `update`, `remove` |
 | `flights`        | `listByTrip`, `get`, `create`, `update`, `remove`        |
+| `flightStatus`   | `refreshStatus` (live status from AeroAPI)               |
 | `activities`     | `listByTrip`, `get`, `create`, `update`, `remove`        |
 | `weather`        | `getWeather` (cached via Action Cache)                   |
 
