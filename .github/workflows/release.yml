@@ -96,7 +96,7 @@ jobs:
         working-directory: .
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: bunx convex deploy --prod
+        run: bunx convex deploy --yes
 
       - uses: subosito/flutter-action@v2
         with:

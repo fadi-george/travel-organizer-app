@@ -142,10 +142,12 @@ export const updateFlightStatus = internalMutation({
     flightId: v.id("flights"),
     status: v.optional(v.string()),
     departureGate: v.optional(v.string()),
+    departureTime: v.optional(v.string()),
+    arrivalTime: v.optional(v.string()),
     statusLastUpdated: v.number(),
   },
   handler: async (ctx, args) => {
-    const { flightId, status, departureGate, statusLastUpdated } = args;
+    const { flightId, status, departureGate, departureTime, arrivalTime, statusLastUpdated } = args;
 
     const updates: Record<string, string | number | undefined> = {
       statusLastUpdated,
@@ -156,6 +158,12 @@ export const updateFlightStatus = internalMutation({
     }
     if (departureGate !== undefined) {
       updates.departureGate = departureGate;
+    }
+    if (departureTime !== undefined) {
+      updates.departureTime = departureTime;
+    }
+    if (arrivalTime !== undefined) {
+      updates.arrivalTime = arrivalTime;
     }
 
     await ctx.db.patch(flightId, updates);

@@ -9,12 +9,14 @@ import { components, internal } from "./_generated/api";
 interface FlightStatusData {
   status: string | null;
   departureGate: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
 }
 
 // Cache for flight status (15 min TTL)
 const flightStatusCache = new ActionCache(components.actionCache, {
   action: internal.flightStatus.fetchFlightStatusInternal,
-  name: "flight-status-v1",
+  name: "flight-status-v3", // Bumped to include times
   ttl: 1000 * 60 * 15, // 15 minutes
 });
 
@@ -50,7 +52,9 @@ export const fetchFlightStatusInternal = internalAction({
       });
 
       if (!response.ok) {
-        console.error(`AeroAPI error: ${response.status} ${response.statusText}`);
+        console.error(
+          `AeroAPI error: ${response.status} ${response.statusText}`
+        );
         const errorText = await response.text();
         console.error("AeroAPI error body:", errorText);
         return null;
@@ -72,9 +76,18 @@ export const fetchFlightStatusInternal = internalAction({
       // Take the first matching flight
       const flight = flights[0];
 
+      // Parse times from ISO format to HH:mm
+      const parseTime = (iso: string | null): string | null => {
+        if (!iso) return null;
+        const date = new Date(iso);
+        return date.toISOString().slice(11, 16); // "HH:mm"
+      };
+
       return {
         status: flight.status ?? null,
         departureGate: flight.gate_origin ?? null,
+        departureTime: parseTime(flight.scheduled_out),
+        arrivalTime: parseTime(flight.scheduled_in),
       };
     } catch (e) {
       console.error("Error fetching flight status:", e);
@@ -116,6 +129,8 @@ export const refreshFlightStatus = action({
         flightId: args.flightId,
         status: statusData.status ?? undefined,
         departureGate: statusData.departureGate ?? undefined,
+        departureTime: statusData.departureTime ?? undefined,
+        arrivalTime: statusData.arrivalTime ?? undefined,
         statusLastUpdated: Date.now(),
       });
     }

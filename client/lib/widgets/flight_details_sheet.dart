@@ -32,6 +32,19 @@ class _FlightDetailsContent extends StatefulWidget {
 
 class _FlightDetailsContentState extends State<_FlightDetailsContent> {
   bool _isRefreshing = false;
+  late String? _status;
+  late String? _gate;
+  late String? _departureTime;
+  late String? _arrivalTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.data['status'] as String?;
+    _gate = widget.data['departureGate'] as String?;
+    _departureTime = widget.data['departureTime'] as String?;
+    _arrivalTime = widget.data['arrivalTime'] as String?;
+  }
 
   Future<void> _refreshStatus() async {
     final flightId = widget.data['_id'] as String?;
@@ -41,8 +54,24 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
 
     try {
       final convexService = await ConvexService.getInstance();
-      await convexService.refreshFlightStatus(flightId: flightId);
+      final result = await convexService.refreshFlightStatus(
+        flightId: flightId,
+      );
       widget.onStatusRefreshed?.call();
+
+      // Update local state with new data
+      if (mounted && result != null) {
+        setState(() {
+          _status = result['status'] as String?;
+          _gate = result['departureGate'] as String?;
+          if (result['departureTime'] != null) {
+            _departureTime = result['departureTime'] as String?;
+          }
+          if (result['arrivalTime'] != null) {
+            _arrivalTime = result['arrivalTime'] as String?;
+          }
+        });
+      }
     } catch (e) {
       debugPrint('Error refreshing flight status: $e');
     } finally {
@@ -92,15 +121,17 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
     final destinationCityName = destinationAirport?.city ?? destination;
     final departureDate = widget.data['departureDate'] as String?;
     final arrivalDate = widget.data['arrivalDate'] as String?;
-    final departureTime = widget.data['departureTime'] as String?;
-    final arrivalTime = widget.data['arrivalTime'] as String?;
+    // Use local state for times (updated by refresh)
+    final departureTime = _departureTime;
+    final arrivalTime = _arrivalTime;
     final flightNumber = widget.data['flightNumber'] as String? ?? '';
     final airline = widget.data['airline'] as String?;
     final terminal = widget.data['departureTerminal'] as String?;
-    final gate = widget.data['departureGate'] as String?;
     final confirmationNumber = widget.data['confirmationNumber'] as String?;
     final seatNumber = widget.data['seatNumber'] as String?;
-    final status = widget.data['status'] as String?;
+    // Use local state for status and gate (updated by refresh)
+    final status = _status;
+    final gate = _gate;
 
     return Container(
       decoration: BoxDecoration(
