@@ -21,7 +21,7 @@ const double _kAppBarIconSize = 20;
 
 class TripDetailScreen extends StatefulWidget {
   final Trip trip;
-  final String? primaryPlace;
+  final List<String>? primaryPlace;
 
   const TripDetailScreen({super.key, required this.trip, this.primaryPlace});
 
@@ -269,7 +269,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   String get _imageUrl {
     if (trip.imageUrl != null) return trip.imageUrl!;
-    return PlacesImages.getImageUrl(_trip.primaryPlace(_selectedDate));
+    final primaryPlace = _trip.primaryPlace(_selectedDate);
+    debugPrint('primaryPlace: $primaryPlace');
+    return PlacesImages.getImageUrl(primaryPlace);
   }
 
   void _onEditTrip() {

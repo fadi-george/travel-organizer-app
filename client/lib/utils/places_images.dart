@@ -123,6 +123,8 @@ class PlacesImages {
         'https://images.unsplash.com/photo-1506966953602-c20cc11f75e3?w=800',
     'san francisco':
         'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800',
+    'san diego':
+        'https://images.unsplash.com/photo-1727203974139-fd59efe90bde?q=800',
     'chicago':
         'https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=800',
     'las vegas':
@@ -186,7 +188,7 @@ class PlacesImages {
     'kyoto':
         'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800',
     'bangkok':
-        'https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800',
+        'https://images.unsplash.com/photo-1528181304800-259b08848526?q=800',
     'phuket':
         'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800',
     'hong kong':
@@ -242,19 +244,30 @@ class PlacesImages {
   static const String _defaultImageUrl =
       'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800';
 
-  /// Get image URL for a place (country or city). Returns default travel image if not found.
-  static String getImageUrl(String? place) {
-    if (place == null || place.isEmpty) return _defaultImageUrl;
-    return _placeImageUrls[place.toLowerCase()] ?? _defaultImageUrl;
+  /// Get image URL for a place. Accepts a list of location parts (e.g. ['San Diego', 'CA', 'USA'])
+  /// and checks from left to right until a match is found. Returns default travel image if not found.
+  static String getImageUrl(List<String>? placeParts) {
+    if (placeParts == null || placeParts.isEmpty) return _defaultImageUrl;
+
+    for (final part in placeParts) {
+      final trimmed = part.trim();
+      if (trimmed.isEmpty) continue;
+
+      final url = _placeImageUrls[trimmed.toLowerCase()];
+      if (url != null) return url;
+    }
+
+    return _defaultImageUrl;
   }
 
   /// Generate a gradient color pair based on place name for placeholders.
-  static List<Color> getGradientColors(String? place) {
-    if (place == null || place.isEmpty) {
+  static List<Color> getGradientColors(List<String>? placeParts) {
+    if (placeParts == null || placeParts.isEmpty) {
       return [const Color(0xFF6366F1), const Color(0xFF8B5CF6)];
     }
 
-    // Generate consistent colors based on place name hash
+    // Generate consistent colors based on first place part hash
+    final place = placeParts.first;
     final hash = place.toLowerCase().hashCode;
     final hue = (hash % 360).abs().toDouble();
 
@@ -265,10 +278,13 @@ class PlacesImages {
   }
 
   /// Get place initials for placeholder display.
-  static String getPlaceInitials(String? place) {
-    if (place == null || place.isEmpty) return '?';
+  static String getPlaceInitials(List<String>? placeParts) {
+    if (placeParts == null || placeParts.isEmpty) return '?';
 
-    final words = place.trim().split(' ');
+    final place = placeParts.first.trim();
+    if (place.isEmpty) return '?';
+
+    final words = place.split(' ');
     if (words.length >= 2) {
       return '${words[0][0]}${words[1][0]}'.toUpperCase();
     }

@@ -408,6 +408,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Text(
@@ -420,7 +421,12 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(child: Container(height: 1, color: Colors.grey.shade200)),
+        Expanded(
+          child: Container(
+            height: 1,
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade400,
+          ),
+        ),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

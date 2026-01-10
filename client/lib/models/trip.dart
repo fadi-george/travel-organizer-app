@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Trip {
   final String id;
   final String name;
@@ -104,34 +106,41 @@ class Trip {
   }
 
   /// Get the primary location from combined accommodations, flights, and activities
-  /// If [selectedDay] is provided, returns the last location on that day
-  /// Otherwise returns the first location in the trip
-  String? primaryPlace([DateTime? selectedDay]) {
-    String? extractLocation(String? address) {
+  /// Returns a list of location parts (e.g. ['San Diego', 'CA', 'USA']) for hierarchical matching.
+  /// If [selectedDay] is provided, returns the last location on that day.
+  /// Otherwise returns the first location in the trip.
+  List<String>? primaryPlace([DateTime? selectedDay]) {
+    List<String>? extractLocationParts(String? address) {
       if (address == null || address.isEmpty) return null;
-      final parts = address.split(',').map((p) => p.trim()).toList();
-      final location = parts.last;
-      return location.isNotEmpty ? location : null;
+      final parts = address
+          .split(',')
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty)
+          .toList();
+      if (parts.isEmpty) return null;
+      // Take last 3 parts (e.g. "San Diego, CA, USA")
+      final start = parts.length > 3 ? parts.length - 3 : 0;
+      return parts.sublist(start);
     }
 
-    // Build unified list of entries with dateTime and location
-    final entries = <({DateTime dateTime, String location})>[];
+    // Build unified list of entries with dateTime and location parts
+    final entries = <({DateTime dateTime, List<String> locationParts})>[];
 
     // Add accommodations as two entries (checkIn and checkOut)
     if (accommodations != null) {
       for (final a in accommodations!) {
         final acc = a as Map<String, dynamic>;
-        final location = extractLocation(acc['address'] as String?);
-        if (location == null) continue;
+        final locationParts = extractLocationParts(acc['address'] as String?);
+        if (locationParts == null) continue;
 
         final checkIn = DateTime.tryParse(acc['checkIn'] as String? ?? '');
         if (checkIn != null) {
-          entries.add((dateTime: checkIn, location: location));
+          entries.add((dateTime: checkIn, locationParts: locationParts));
         }
 
         final checkOut = DateTime.tryParse(acc['checkOut'] as String? ?? '');
         if (checkOut != null) {
-          entries.add((dateTime: checkOut, location: location));
+          entries.add((dateTime: checkOut, locationParts: locationParts));
         }
       }
     }
@@ -147,7 +156,7 @@ class Trip {
           flight['arrivalTime'] as String? ?? '',
         );
         if (arrivalTime != null) {
-          entries.add((dateTime: arrivalTime, location: arrivalCity));
+          entries.add((dateTime: arrivalTime, locationParts: [arrivalCity]));
         }
       }
     }
@@ -156,12 +165,14 @@ class Trip {
     if (activities != null) {
       for (final a in activities!) {
         final activity = a as Map<String, dynamic>;
-        final location = extractLocation(activity['location'] as String?);
-        if (location == null) continue;
+        final locationParts = extractLocationParts(
+          activity['location'] as String?,
+        );
+        if (locationParts == null) continue;
 
         final date = DateTime.tryParse(activity['date'] as String? ?? '');
         if (date != null) {
-          entries.add((dateTime: date, location: location));
+          entries.add((dateTime: date, locationParts: locationParts));
         }
       }
     }
@@ -172,8 +183,8 @@ class Trip {
     entries.sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
     if (selectedDay == null) {
-      // Return first entry's location
-      return entries.first.location;
+      // Return first entry's location parts
+      return entries.first.locationParts;
     }
 
     // Filter entries to those on selectedDay, return last one's location
@@ -192,7 +203,7 @@ class Trip {
     }).toList();
 
     if (onDay.isNotEmpty) {
-      return onDay.last.location;
+      return onDay.last.locationParts;
     }
 
     // Fallback: get last entry before selectedDay
@@ -206,9 +217,9 @@ class Trip {
     }).toList();
 
     if (before.isNotEmpty) {
-      return before.last.location;
+      return before.last.locationParts;
     }
 
-    return entries.first.location;
+    return entries.first.locationParts;
   }
 }

@@ -7,7 +7,7 @@ import 'swipe_action_card.dart';
 
 class TripCard extends StatefulWidget {
   final Trip trip;
-  final String? primaryPlace;
+  final List<String>? primaryPlace;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
