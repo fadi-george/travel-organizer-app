@@ -175,17 +175,9 @@ class FlightCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        '$origin — $destination',
-                        style: TimelineStyles.titleStyle(colorScheme),
-                      ),
-                      if (status != null && status.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        _buildStatusBadge(status, colorScheme),
-                      ],
-                    ],
+                  Text(
+                    '$origin — $destination',
+                    style: TimelineStyles.titleStyle(colorScheme),
                   ),
                   Row(
                     children: [
@@ -199,6 +191,10 @@ class FlightCard extends StatelessWidget {
                           ' · Gate $departureGate',
                           style: TimelineStyles.subtitleStyle(colorScheme),
                         ),
+                      ],
+                      if (status != null && status.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(status, colorScheme),
                       ],
                     ],
                   ),

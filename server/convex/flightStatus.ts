@@ -34,8 +34,6 @@ export const fetchFlightStatusInternal = internalAction({
     const { flightIdent, departureDate } = args;
 
     try {
-      console.log(`Fetching flight status for: ${flightIdent} on ${departureDate}`);
-
       const url = new URL(
         `https://aeroapi.flightaware.com/aeroapi/flights/${encodeURIComponent(flightIdent)}`
       );
@@ -68,7 +66,6 @@ export const fetchFlightStatusInternal = internalAction({
       }>;
 
       if (!flights || flights.length === 0) {
-        console.log(`No flights found for ${flightIdent} on ${departureDate}`);
         return null;
       }
 

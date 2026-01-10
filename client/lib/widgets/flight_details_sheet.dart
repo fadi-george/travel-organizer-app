@@ -181,7 +181,7 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                 ],
               ),
               const SizedBox(height: 4),
-              // City names with status badge and refresh
+              // City names with status badge centered
               Row(
                 children: [
                   Expanded(
@@ -193,8 +193,8 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                       ),
                     ),
                   ),
-                  // Status badge and refresh button
-                  if (status != null && status.isNotEmpty) ...[
+                  // Status badge
+                  if (status != null && status.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -216,8 +216,6 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                  ],
                   Expanded(
                     child: Text(
                       destinationCityName,
@@ -246,15 +244,29 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Departure',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurface.withValues(
-                                alpha: 0.5,
+                          Row(
+                            children: [
+                              Text(
+                                'Departure',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: colorScheme.onSurface.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (gate != null && gate.isNotEmpty) ...[
+                                Text(
+                                  ' · Gate $gate',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _accentColor,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -369,8 +381,6 @@ class _FlightDetailsContentState extends State<_FlightDetailsContent> {
                     _DetailItem(label: 'Flight', value: flightNumber),
                   if (airline != null && airline.isNotEmpty)
                     _DetailItem(label: 'Airline', value: airline),
-                  if (gate != null && gate.isNotEmpty)
-                    _DetailItem(label: 'Gate', value: gate),
                   if (terminal != null && terminal.isNotEmpty)
                     _DetailItem(label: 'Terminal', value: terminal),
                   if (seatNumber != null && seatNumber.isNotEmpty)
