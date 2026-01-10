@@ -28,7 +28,6 @@ class TimelineItem extends StatelessWidget {
       case 'flight':
         return FlightCard(
           data: data,
-          viewType: FlightCardViewType.timeline,
           onTap: () => showFlightDetailsSheet(context, data),
           onEdit: onEdit,
           onDelete: onDelete,

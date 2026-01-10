@@ -51,7 +51,7 @@ Color getFlightStatusColor(String? status) {
   }
   if (s.contains('cancelled') || s.contains('diverted')) return Colors.red;
   if (s.contains('delayed')) return Colors.orange;
-  return Colors.grey.shade600;
+  return Colors.grey;
 }
 
 String formatFlightStatus(String? status) {
