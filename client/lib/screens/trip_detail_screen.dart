@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../widgets/weather_widget.dart';
 import '../widgets/save_trip_sheet.dart';
 import '../widgets/timeline_item.dart';
+import '../widgets/checklist_sheet.dart';
 import 'trip_map_screen.dart';
 
 const double _kAppBarIconSize = 20;
@@ -37,6 +38,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late DateTime _endDate;
   late Trip _trip;
   SubscriptionHandle? _subscription;
+  SubscriptionHandle? _checklistSubscription;
+  List<Map<String, dynamic>> _checklistSections = [];
   final Set<String> _refreshingFlights = {};
 
   Trip get trip => _trip;
@@ -47,6 +50,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _trip = widget.trip;
     _initializeDates();
     _subscribeToTrips();
+    _subscribeToChecklist();
     // Auto-refresh upcoming flights on initial load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoRefreshUpcomingFlights();
@@ -87,6 +91,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _checklistSubscription?.cancel();
     super.dispose();
   }
 
@@ -121,6 +126,24 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       );
     } catch (e) {
       debugPrint('Error subscribing to trips: $e');
+    }
+  }
+
+  Future<void> _subscribeToChecklist() async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      _checklistSubscription = await convexService.subscribeToChecklist(
+        tripId: _trip.id,
+        onUpdate: (sections) {
+          if (!mounted) return;
+          setState(() => _checklistSections = sections);
+        },
+        onError: (message, value) {
+          debugPrint('Checklist subscription error: $message $value');
+        },
+      );
+    } catch (e) {
+      debugPrint('Error subscribing to checklist: $e');
     }
   }
 
@@ -473,10 +496,32 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     );
   }
 
+  void _openChecklistSheet() {
+    ChecklistSheet.show(
+      context,
+      tripId: _trip.id,
+      initialSections: _checklistSections,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: AppFab.map(onPressed: _openMapScreen),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'checklist_fab',
+            onPressed: _openChecklistSheet,
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: const CircleBorder(),
+            child: const Icon(Icons.checklist, size: 24),
+          ),
+          const SizedBox(height: 12),
+          AppFab.map(onPressed: _openMapScreen),
+        ],
+      ),
       body: CustomScrollView(
         slivers: [
           // Hero header with image

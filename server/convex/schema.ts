@@ -72,4 +72,17 @@ export default defineSchema({
   })
     .index("by_trip", ["tripId"])
     .index("by_trip_and_date", ["tripId", "date"]),
+
+  checklistSections: defineTable({
+    tripId: v.id("trips"),
+    name: v.string(),
+    order: v.number(),
+  }).index("by_trip", ["tripId"]),
+
+  checklistItems: defineTable({
+    sectionId: v.id("checklistSections"),
+    text: v.string(),
+    completed: v.boolean(),
+    order: v.number(),
+  }).index("by_section", ["sectionId"]),
 });

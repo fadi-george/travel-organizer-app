@@ -1,0 +1,759 @@
+import 'package:convex_flutter/convex_flutter.dart';
+import 'package:flutter/material.dart';
+import '../services/convex_service.dart';
+import '../theme/app_theme.dart';
+
+/// Bottom sheet displaying the trip checklist with sections and items
+class ChecklistSheet extends StatefulWidget {
+  final String tripId;
+  final List<Map<String, dynamic>>? initialSections;
+
+  const ChecklistSheet({super.key, required this.tripId, this.initialSections});
+
+  static void show(
+    BuildContext context, {
+    required String tripId,
+    List<Map<String, dynamic>>? initialSections,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          ChecklistSheet(tripId: tripId, initialSections: initialSections),
+    );
+  }
+
+  @override
+  State<ChecklistSheet> createState() => _ChecklistSheetState();
+}
+
+class _ChecklistSheetState extends State<ChecklistSheet> {
+  late List<Map<String, dynamic>> _sections;
+  SubscriptionHandle? _subscription;
+  late bool _isLoading;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSections != null) {
+      _sections = widget.initialSections!;
+      _isLoading = false;
+    } else {
+      _sections = [];
+      _isLoading = true;
+    }
+    _subscribeToChecklist();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _subscribeToChecklist() async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      _subscription = await convexService.subscribeToChecklist(
+        tripId: widget.tripId,
+        onUpdate: (sections) {
+          if (!mounted) return;
+          setState(() {
+            _sections = sections;
+            _isLoading = false;
+          });
+        },
+        onError: (message, value) {
+          debugPrint('Checklist subscription error: $message $value');
+          if (mounted) setState(() => _isLoading = false);
+        },
+      );
+    } catch (e) {
+      debugPrint('Error subscribing to checklist: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _addSection() async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.createChecklistSection(
+        tripId: widget.tripId,
+        name: 'New Section',
+      );
+    } catch (e) {
+      _showError('Error creating section: $e');
+    }
+  }
+
+  Future<void> _renameSection(String sectionId, String newName) async {
+    if (newName.trim().isEmpty) return;
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.updateChecklistSection(
+        id: sectionId,
+        name: newName.trim(),
+      );
+    } catch (e) {
+      _showError('Error renaming section: $e');
+    }
+  }
+
+  Future<void> _deleteSection(String sectionId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Section'),
+        content: const Text(
+          'Are you sure you want to delete this section and all its items?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteChecklistSection(sectionId);
+    } catch (e) {
+      _showError('Error deleting section: $e');
+    }
+  }
+
+  Future<void> _addItem(String sectionId, String text) async {
+    if (text.trim().isEmpty) return;
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.createChecklistItem(
+        sectionId: sectionId,
+        text: text.trim(),
+      );
+    } catch (e) {
+      _showError('Error creating item: $e');
+    }
+  }
+
+  Future<void> _toggleItem(String itemId, bool completed) async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.updateChecklistItem(
+        id: itemId,
+        completed: !completed,
+      );
+    } catch (e) {
+      _showError('Error updating item: $e');
+    }
+  }
+
+  Future<void> _updateItemText(String itemId, String newText) async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.updateChecklistItem(id: itemId, text: newText);
+    } catch (e) {
+      _showError('Error updating item: $e');
+    }
+  }
+
+  Future<void> _deleteItem(String itemId) async {
+    try {
+      final convexService = await ConvexService.getInstance();
+      await convexService.deleteChecklistItem(itemId);
+    } catch (e) {
+      _showError('Error deleting item: $e');
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxHeight = screenHeight * 0.85;
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(colorScheme),
+            Flexible(
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 150,
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : _sections.isEmpty
+                    ? _buildEmptyState()
+                    : _buildChecklistContent(),
+              ),
+            ),
+            _buildAddSectionButton(colorScheme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 16, 8),
+      child: Column(
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.onSurface.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.checklist, color: AppColors.primary, size: 28),
+              const SizedBox(width: 12),
+              const Text(
+                'Checklist',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.playlist_add_check_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No checklist yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add a section to get started',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChecklistContent() {
+    return ListView.builder(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _sections.length,
+      itemBuilder: (context, index) {
+        final section = _sections[index];
+        return _ChecklistSectionWidget(
+          key: ValueKey(section['_id']),
+          section: section,
+          onRename: (name) => _renameSection(section['_id'] as String, name),
+          onDelete: () => _deleteSection(section['_id'] as String),
+          onAddItem: (text) => _addItem(section['_id'] as String, text),
+          onToggleItem: _toggleItem,
+          onEditItem: (itemId, newText) => _updateItemText(itemId, newText),
+          onDeleteItem: _deleteItem,
+        );
+      },
+    );
+  }
+
+  Widget _buildAddSectionButton(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _addSection,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Section'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChecklistSectionWidget extends StatefulWidget {
+  final Map<String, dynamic> section;
+  final void Function(String name) onRename;
+  final VoidCallback onDelete;
+  final void Function(String text) onAddItem;
+  final Future<void> Function(String itemId, bool completed) onToggleItem;
+  final Future<void> Function(String itemId, String currentText) onEditItem;
+  final Future<void> Function(String itemId) onDeleteItem;
+
+  const _ChecklistSectionWidget({
+    super.key,
+    required this.section,
+    required this.onRename,
+    required this.onDelete,
+    required this.onAddItem,
+    required this.onToggleItem,
+    required this.onEditItem,
+    required this.onDeleteItem,
+  });
+
+  @override
+  State<_ChecklistSectionWidget> createState() =>
+      _ChecklistSectionWidgetState();
+}
+
+class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
+  final _addItemController = TextEditingController();
+  final _addItemFocusNode = FocusNode();
+  final _titleController = TextEditingController();
+  final _titleFocusNode = FocusNode();
+  bool _isAddingItem = false;
+  bool _isEditingTitle = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleFocusNode.addListener(_onTitleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _addItemController.dispose();
+    _addItemFocusNode.dispose();
+    _titleController.dispose();
+    _titleFocusNode.removeListener(_onTitleFocusChange);
+    _titleFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onTitleFocusChange() {
+    if (!_titleFocusNode.hasFocus && _isEditingTitle) {
+      _submitTitle();
+    }
+  }
+
+  void _startEditingTitle() {
+    setState(() {
+      _isEditingTitle = true;
+      _titleController.text = widget.section['name'] as String;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _titleFocusNode.requestFocus();
+      _titleController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _titleController.text.length,
+      );
+    });
+  }
+
+  void _submitTitle() {
+    final name = _titleController.text.trim();
+    setState(() => _isEditingTitle = false);
+    if (name.isNotEmpty && name != widget.section['name']) {
+      widget.onRename(name);
+    }
+  }
+
+  void _submitItem() {
+    final text = _addItemController.text.trim();
+    if (text.isNotEmpty) {
+      widget.onAddItem(text);
+      _addItemController.clear();
+      // Keep focus for rapid-fire adding
+      _addItemFocusNode.requestFocus();
+    }
+  }
+
+  void _startAddingItem() {
+    setState(() => _isAddingItem = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _addItemFocusNode.requestFocus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = (widget.section['items'] as List<dynamic>?) ?? [];
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Calculate progress
+    final totalItems = items.length;
+    final completedItems = items
+        .where((i) => (i as Map)['completed'] == true)
+        .length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _isEditingTitle
+                      ? TextField(
+                          controller: _titleController,
+                          focusNode: _titleFocusNode,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          onSubmitted: (_) => _submitTitle(),
+                        )
+                      : GestureDetector(
+                          onDoubleTap: _startEditingTitle,
+                          child: Text(
+                            widget.section['name'] as String,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                ),
+                // Progress indicator
+                if (totalItems > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: completedItems == totalItems
+                          ? AppColors.primary.withValues(alpha: 0.15)
+                          : colorScheme.outline.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$completedItems/$totalItems',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: completedItems == totalItems
+                            ? AppColors.primary
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: Colors.grey.shade600,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      widget.onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Items
+          ...items.map((item) {
+            final itemData = item as Map<String, dynamic>;
+            final itemId = itemData['_id'] as String;
+            final text = itemData['text'] as String;
+            final completed = itemData['completed'] as bool? ?? false;
+
+            return _ChecklistItemWidget(
+              key: ValueKey(itemId),
+              itemId: itemId,
+              text: text,
+              completed: completed,
+              onToggle: () => widget.onToggleItem(itemId, completed),
+              onEditItem: (id, newText) => widget.onEditItem(id, newText),
+              onDelete: () => widget.onDeleteItem(itemId),
+            );
+          }),
+
+          // Inline add item
+          if (_isAddingItem)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.radio_button_unchecked,
+                    size: 22,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _addItemController,
+                      focusNode: _addItemFocusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Add item...',
+                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: const TextStyle(fontSize: 15),
+                      onSubmitted: (_) => _submitItem(),
+                      onEditingComplete: _submitItem,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.check, size: 20),
+                    color: AppColors.primary,
+                    onPressed: _submitItem,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            )
+          else
+            InkWell(
+              onTap: _startAddingItem,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 20, color: Colors.grey.shade500),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Add item...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistItemWidget extends StatefulWidget {
+  final String itemId;
+  final String text;
+  final bool completed;
+  final VoidCallback onToggle;
+  final Function(String itemId, String newText) onEditItem;
+  final VoidCallback onDelete;
+
+  const _ChecklistItemWidget({
+    super.key,
+    required this.itemId,
+    required this.text,
+    required this.completed,
+    required this.onToggle,
+    required this.onEditItem,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ChecklistItemWidget> createState() => _ChecklistItemWidgetState();
+}
+
+class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
+  late TextEditingController _editController;
+  late FocusNode _editFocusNode;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _editController = TextEditingController(text: widget.text);
+    _editFocusNode = FocusNode();
+    _editFocusNode.addListener(_onEditFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _editController.dispose();
+    _editFocusNode.removeListener(_onEditFocusChange);
+    _editFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onEditFocusChange() {
+    if (!_editFocusNode.hasFocus && _isEditing) {
+      _submitEdit();
+    }
+  }
+
+  void _startEditing() {
+    setState(() {
+      _isEditing = true;
+      _editController.text = widget.text;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _editFocusNode.requestFocus();
+      _editController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _editController.text.length,
+      );
+    });
+  }
+
+  void _submitEdit() {
+    final newText = _editController.text.trim();
+    setState(() => _isEditing = false);
+    if (newText.isNotEmpty && newText != widget.text) {
+      widget.onEditItem(widget.itemId, newText);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: Key(widget.itemId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: Colors.red.shade100,
+        child: Icon(Icons.delete, color: Colors.red.shade700),
+      ),
+      onDismissed: (_) => widget.onDelete(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: _isEditing ? null : widget.onToggle,
+              child: Icon(
+                widget.completed
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                size: 22,
+                color: widget.completed
+                    ? AppColors.primary
+                    : Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: InkWell(
+                onDoubleTap: _startEditing,
+                child: _isEditing
+                    ? TextField(
+                        controller: _editController,
+                        focusNode: _editFocusNode,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: TextStyle(
+                          fontSize: 15,
+                          decoration: widget.completed
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: widget.completed ? Colors.grey.shade500 : null,
+                        ),
+                        onSubmitted: (_) => _submitEdit(),
+                      )
+                    : Text(
+                        widget.text,
+                        style: TextStyle(
+                          fontSize: 15,
+                          decoration: widget.completed
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: widget.completed ? Colors.grey.shade500 : null,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

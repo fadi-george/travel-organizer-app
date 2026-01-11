@@ -457,4 +457,125 @@ class ConvexService {
 
     return minutesSinceUpdate >= 15;
   }
+
+  // ============ CHECKLIST SECTIONS ============
+
+  /// Get all checklist sections with their items for a trip
+  Future<List<Map<String, dynamic>>> getChecklistByTrip({
+    required String tripId,
+  }) async {
+    try {
+      final result = await client.query('checklists:getChecklistByTrip', {
+        'tripId': tripId,
+      });
+      final decoded = jsonDecode(result);
+      if (decoded == null) return [];
+      final List<dynamic> sections = decoded as List<dynamic>;
+      return sections.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+    } catch (e) {
+      debugPrint('ConvexService.getChecklistByTrip error: $e');
+      return [];
+    }
+  }
+
+  /// Subscribe to checklist updates for real-time sync
+  Future<SubscriptionHandle> subscribeToChecklist({
+    required String tripId,
+    required void Function(List<Map<String, dynamic>> sections) onUpdate,
+    required void Function(String message, String? value) onError,
+  }) async {
+    return client.subscribe(
+      name: 'checklists:getChecklistByTrip',
+      args: {'tripId': tripId},
+      onUpdate: (value) {
+        final decoded = jsonDecode(value);
+        if (decoded == null) {
+          onUpdate([]);
+          return;
+        }
+        final List<dynamic> sections = decoded as List<dynamic>;
+        onUpdate(
+          sections.map((s) => Map<String, dynamic>.from(s as Map)).toList(),
+        );
+      },
+      onError: onError,
+    );
+  }
+
+  /// Create a new checklist section
+  Future<Map<String, dynamic>?> createChecklistSection({
+    required String tripId,
+    required String name,
+  }) async {
+    final result = await client.mutation(
+      name: 'checklists:createSection',
+      args: {'tripId': tripId, 'name': name},
+    );
+    return _decodeAsMap(result);
+  }
+
+  /// Update a checklist section
+  Future<Map<String, dynamic>?> updateChecklistSection({
+    required String id,
+    String? name,
+    int? order,
+  }) async {
+    final result = await client.mutation(
+      name: 'checklists:updateSection',
+      args: {
+        'id': id,
+        if (name != null) 'name': name,
+        if (order != null) 'order': order,
+      },
+    );
+    return _decodeAsMap(result);
+  }
+
+  /// Delete a checklist section and all its items
+  Future<void> deleteChecklistSection(String id) async {
+    await client.mutation(name: 'checklists:deleteSection', args: {'id': id});
+  }
+
+  // ============ CHECKLIST ITEMS ============
+
+  /// Create a new checklist item
+  Future<Map<String, dynamic>?> createChecklistItem({
+    required String sectionId,
+    required String text,
+    bool? completed,
+  }) async {
+    final result = await client.mutation(
+      name: 'checklists:createItem',
+      args: {
+        'sectionId': sectionId,
+        'text': text,
+        if (completed != null) 'completed': completed,
+      },
+    );
+    return _decodeAsMap(result);
+  }
+
+  /// Update a checklist item
+  Future<Map<String, dynamic>?> updateChecklistItem({
+    required String id,
+    String? text,
+    bool? completed,
+    int? order,
+  }) async {
+    final result = await client.mutation(
+      name: 'checklists:updateItem',
+      args: {
+        'id': id,
+        if (text != null) 'text': text,
+        if (completed != null) 'completed': completed,
+        if (order != null) 'order': order,
+      },
+    );
+    return _decodeAsMap(result);
+  }
+
+  /// Delete a checklist item
+  Future<void> deleteChecklistItem(String id) async {
+    await client.mutation(name: 'checklists:deleteItem', args: {'id': id});
+  }
 }

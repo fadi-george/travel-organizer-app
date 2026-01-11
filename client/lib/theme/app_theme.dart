@@ -5,6 +5,11 @@ class AppColors {
   static const primary = Color(0xFFFF7043);
 }
 
+/// Quick access to theme colors via context
+extension AppColorsX on BuildContext {
+  ColorScheme get colors => Theme.of(this).colorScheme;
+}
+
 /// Shared FAB styles
 class AppFab {
   static const backgroundColor = AppColors.primary;
@@ -32,4 +37,3 @@ class AppFab {
     return icon(onPressed: onPressed, icon: Icons.map_outlined);
   }
 }
-
