@@ -199,12 +199,13 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final screenHeight = MediaQuery.of(context).size.height;
     final maxHeight = screenHeight * 0.85;
+    final minHeight = screenHeight * 0.55;
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
       child: Container(
-        constraints: BoxConstraints(maxHeight: maxHeight),
+        constraints: BoxConstraints(minHeight: minHeight, maxHeight: maxHeight),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
