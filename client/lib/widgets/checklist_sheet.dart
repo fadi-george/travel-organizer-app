@@ -1,5 +1,7 @@
 import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:async';
 import '../services/convex_service.dart';
 import '../theme/app_theme.dart';
 
@@ -32,7 +34,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
   late List<Map<String, dynamic>> _sections;
   SubscriptionHandle? _subscription;
   late bool _isLoading;
-  bool _isDragging = false;
+  Timer? _updateIgnoreTimer;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _updateIgnoreTimer?.cancel();
     super.dispose();
   }
 
@@ -60,6 +63,10 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
         tripId: widget.tripId,
         onUpdate: (sections) {
           if (!mounted) return;
+          if (_updateIgnoreTimer?.isActive ?? false) {
+            debugPrint('Ignoring subscription update during reorder');
+            return;
+          }
           setState(() {
             _sections = sections;
             _isLoading = false;
@@ -291,12 +298,18 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     return ReorderableListView(
       shrinkWrap: true,
       padding: const EdgeInsets.symmetric(horizontal: 16),
+      proxyDecorator: (child, index, animation) {
+        return Material(
+          elevation: 3,
+          borderRadius: BorderRadius.circular(12),
+          child: Opacity(opacity: 0.7, child: child),
+        );
+      },
       onReorder: (oldIndex, newIndex) async {
         // Adjust newIndex if item is moved down
         if (newIndex > oldIndex) newIndex -= 1;
 
         if (oldIndex == newIndex) {
-          setState(() => _isDragging = false);
           return;
         }
 
@@ -304,7 +317,6 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
         setState(() {
           final item = _sections.removeAt(oldIndex);
           _sections.insert(newIndex, item);
-          _isDragging = false;
         });
 
         // Update order in backend for all affected sections
@@ -322,6 +334,10 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
               order: i,
             );
           }
+
+          // Ignore subscription updates for 1 second to avoid flashing stale data
+          _updateIgnoreTimer?.cancel();
+          _updateIgnoreTimer = Timer(const Duration(seconds: 1), () {});
         } catch (e) {
           debugPrint('Error reordering section: $e');
           // Revert on error
@@ -331,11 +347,12 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
           });
         }
       },
-      children: _sections.map((section) {
+      children: List.generate(_sections.length, (index) {
+        final section = _sections[index];
         return _ChecklistSectionWidget(
           key: ValueKey(section['_id']),
           section: section,
-          isCollapsed: _isDragging,
+          index: index,
           onRename: (name) => _renameSection(section['_id'] as String, name),
           onDelete: () => _deleteSection(section['_id'] as String),
           onAddItem: (text) => _addItem(section['_id'] as String, text),
@@ -343,7 +360,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
           onEditItem: (itemId, newText) => _updateItemText(itemId, newText),
           onDeleteItem: _deleteItem,
         );
-      }).toList(),
+      }),
     );
   }
 
@@ -368,7 +385,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
 
 class _ChecklistSectionWidget extends StatefulWidget {
   final Map<String, dynamic> section;
-  final bool isCollapsed;
+  final int index;
   final void Function(String name) onRename;
   final VoidCallback onDelete;
   final void Function(String text) onAddItem;
@@ -379,7 +396,7 @@ class _ChecklistSectionWidget extends StatefulWidget {
   const _ChecklistSectionWidget({
     super.key,
     required this.section,
-    required this.isCollapsed,
+    required this.index,
     required this.onRename,
     required this.onDelete,
     required this.onAddItem,
@@ -398,6 +415,8 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
   final _addItemFocusNode = FocusNode();
   final _titleController = TextEditingController();
   final _titleFocusNode = FocusNode();
+  final _titleFocusScope = FocusScopeNode();
+  final _addItemFocusScope = FocusScopeNode();
   bool _isAddingItem = false;
   bool _isEditingTitle = false;
   late String _displayedTitle;
@@ -416,6 +435,8 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
     _titleController.dispose();
     _titleFocusNode.removeListener(_onTitleFocusChange);
     _titleFocusNode.dispose();
+    _titleFocusScope.dispose();
+    _addItemFocusScope.dispose();
     super.dispose();
   }
 
@@ -499,28 +520,43 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.drag_indicator,
-                  size: 20,
-                  color: Colors.grey.shade400,
+                ReorderableDragStartListener(
+                  index: widget.index,
+                  child: Padding(
+                    padding: const EdgeInsets.all(0),
+                    child: Icon(
+                      Icons.drag_indicator,
+                      size: 20,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _isEditingTitle
-                      ? TextField(
-                          controller: _titleController,
-                          focusNode: _titleFocusNode,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
+                      ? Focus(
+                          onKey: (node, event) {
+                            if (event.isKeyPressed(LogicalKeyboardKey.escape)) {
+                              _submitTitle();
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: TextField(
+                            controller: _titleController,
+                            focusNode: _titleFocusNode,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              height: 1.0,
+                            ),
+                            onSubmitted: (_) => _submitTitle(),
                           ),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            height: 1.0,
-                          ),
-                          onSubmitted: (_) => _submitTitle(),
                         )
                       : GestureDetector(
                           onDoubleTap: _startEditingTitle,
@@ -585,92 +621,109 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
               ],
             ),
           ),
-          // Items - only show if not collapsed
-          if (!widget.isCollapsed)
-            ...items.map((item) {
-              final itemData = item as Map<String, dynamic>;
-              final itemId = itemData['_id'] as String;
-              final text = itemData['text'] as String;
-              final completed = itemData['completed'] as bool? ?? false;
+          // Items and add button
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Items
+              ...items.map((item) {
+                final itemData = item as Map<String, dynamic>;
+                final itemId = itemData['_id'] as String;
+                final text = itemData['text'] as String;
+                final completed = itemData['completed'] as bool? ?? false;
 
-              return _ChecklistItemWidget(
-                key: ValueKey(itemId),
-                itemId: itemId,
-                text: text,
-                completed: completed,
-                onToggle: () => widget.onToggleItem(itemId, completed),
-                onEditItem: (id, newText) => widget.onEditItem(id, newText),
-                onDelete: () => widget.onDeleteItem(itemId),
-              );
-            }),
-          // Inline add item - only show if not collapsed
-          if (!widget.isCollapsed)
-            if (_isAddingItem)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.radio_button_unchecked,
-                      size: 22,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _addItemController,
-                        focusNode: _addItemFocusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Add item...',
-                          hintStyle: TextStyle(color: Colors.grey.shade500),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        style: const TextStyle(fontSize: 15),
-                        onSubmitted: (_) => _submitItem(),
-                        onEditingComplete: _submitItem,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.check, size: 20),
-                      color: AppColors.primary,
-                      onPressed: _submitItem,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: GestureDetector(
-                  onTap: _startAddingItem,
+                return _ChecklistItemWidget(
+                  key: ValueKey(itemId),
+                  itemId: itemId,
+                  text: text,
+                  completed: completed,
+                  onToggle: () => widget.onToggleItem(itemId, completed),
+                  onEditItem: (id, newText) => widget.onEditItem(id, newText),
+                  onDelete: () => widget.onDeleteItem(itemId),
+                );
+              }),
+              // Inline add item
+              if (_isAddingItem)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 0,
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.add, size: 20, color: Colors.grey.shade500),
+                      Icon(
+                        Icons.radio_button_unchecked,
+                        size: 22,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(width: 12),
-                      Text(
-                        'Add item...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade500,
+                      Expanded(
+                        child: Focus(
+                          onKey: (node, event) {
+                            if (event.isKeyPressed(LogicalKeyboardKey.escape)) {
+                              _addItemFocusNode.unfocus();
+                              setState(() => _isAddingItem = false);
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: TextField(
+                            controller: _addItemController,
+                            focusNode: _addItemFocusNode,
+                            decoration: InputDecoration(
+                              hintText: 'Add item...',
+                              hintStyle: TextStyle(color: Colors.grey.shade500),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            style: const TextStyle(fontSize: 15),
+                            onSubmitted: (_) => _submitItem(),
+                            onEditingComplete: _submitItem,
+                          ),
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.check, size: 20),
+                        color: AppColors.primary,
+                        onPressed: _submitItem,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
                     ],
                   ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 0,
+                    vertical: 10,
+                  ),
+                  child: GestureDetector(
+                    onTap: _startAddingItem,
+                    child: Row(
+                      children: [
+                        Icon(Icons.add, size: 20, color: Colors.grey.shade500),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Add item...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+              // Divider between sections
+              Divider(
+                height: 1,
+                color: colorScheme.outline.withValues(alpha: 0.15),
               ),
-          // Divider between sections - only show if not collapsed
-          if (!widget.isCollapsed)
-            Divider(
-              height: 1,
-              color: colorScheme.outline.withValues(alpha: 0.15),
-            ),
+            ],
+          ),
         ],
       ),
     );
@@ -797,25 +850,34 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
                 child: InkWell(
                   onDoubleTap: _startEditing,
                   child: _isEditing
-                      ? TextField(
-                          controller: _editController,
-                          focusNode: _editFocusNode,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
+                      ? Focus(
+                          onKey: (node, event) {
+                            if (event.isKeyPressed(LogicalKeyboardKey.escape)) {
+                              _submitEdit();
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: TextField(
+                            controller: _editController,
+                            focusNode: _editFocusNode,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            style: TextStyle(
+                              fontSize: 15,
+                              height: 1.0,
+                              decoration: widget.completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: widget.completed
+                                  ? Colors.grey.shade500
+                                  : null,
+                            ),
+                            onSubmitted: (_) => _submitEdit(),
                           ),
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.0,
-                            decoration: widget.completed
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: widget.completed
-                                ? Colors.grey.shade500
-                                : null,
-                          ),
-                          onSubmitted: (_) => _submitEdit(),
                         )
                       : Text(
                           _displayedText,
