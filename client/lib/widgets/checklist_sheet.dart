@@ -35,6 +35,8 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
   SubscriptionHandle? _subscription;
   late bool _isLoading;
   Timer? _updateIgnoreTimer;
+  final _scrollController = ScrollController();
+  double _lastKeyboardHeight = 0;
 
   @override
   void initState() {
@@ -53,6 +55,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
   void dispose() {
     _subscription?.cancel();
     _updateIgnoreTimer?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -194,12 +197,41 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     );
   }
 
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _scrollToBottomOnKeyboard(double keyboardHeight) {
+    // Only scroll if keyboard height changed and is now open
+    if (keyboardHeight > _lastKeyboardHeight && keyboardHeight > 0) {
+      _scrollToBottom();
+    }
+    _lastKeyboardHeight = keyboardHeight;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    // Scroll when keyboard appears
+    _scrollToBottomOnKeyboard(keyboardHeight);
+
     final maxHeight = screenHeight * 0.85;
-    final minHeight = screenHeight * 0.55;
+    final minHeight =
+        (screenHeight * 0.55 + (keyboardHeight > 0 ? keyboardHeight : 0)).clamp(
+          0.0,
+          maxHeight,
+        );
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),
@@ -226,7 +258,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
                         )
                       : _sections.isEmpty
                       ? _buildEmptyState()
-                      : _buildChecklistContent(),
+                      : _buildChecklistContent(keyboardHeight),
                 ),
               ),
               _buildAddSectionButton(colorScheme),
@@ -304,73 +336,81 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     );
   }
 
-  Widget _buildChecklistContent() {
-    return ReorderableListView(
-      shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      proxyDecorator: (child, index, animation) {
-        return Material(
-          elevation: 3,
-          borderRadius: BorderRadius.circular(12),
-          child: Opacity(opacity: 0.7, child: child),
-        );
-      },
-      onReorder: (oldIndex, newIndex) async {
-        // Adjust newIndex if item is moved down
-        if (newIndex > oldIndex) newIndex -= 1;
+  Widget _buildChecklistContent(double keyboardHeight) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: EdgeInsets.only(
+        bottom: keyboardHeight > 0 ? keyboardHeight * 0.75 : 0,
+      ),
+      child: ReorderableListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        proxyDecorator: (child, index, animation) {
+          return Material(
+            elevation: 3,
+            borderRadius: BorderRadius.circular(12),
+            child: Opacity(opacity: 0.7, child: child),
+          );
+        },
+        onReorder: (oldIndex, newIndex) async {
+          // Adjust newIndex if item is moved down
+          if (newIndex > oldIndex) newIndex -= 1;
 
-        if (oldIndex == newIndex) {
-          return;
-        }
-
-        // Update local state
-        setState(() {
-          final item = _sections.removeAt(oldIndex);
-          _sections.insert(newIndex, item);
-        });
-
-        // Update order in backend for all affected sections
-        try {
-          final convexService = await ConvexService.getInstance();
-
-          // Update orders for all sections that moved
-          final minIndex = oldIndex < newIndex ? oldIndex : newIndex;
-          final maxIndex = oldIndex > newIndex ? oldIndex : newIndex;
-
-          for (int i = minIndex; i <= maxIndex; i++) {
-            final section = _sections[i];
-            await convexService.updateChecklistSection(
-              id: section['_id'] as String,
-              order: i,
-            );
+          if (oldIndex == newIndex) {
+            return;
           }
 
-          // Ignore subscription updates for 1 second to avoid flashing stale data
-          _updateIgnoreTimer?.cancel();
-          _updateIgnoreTimer = Timer(const Duration(seconds: 1), () {});
-        } catch (e) {
-          debugPrint('Error reordering section: $e');
-          // Revert on error
+          // Update local state
           setState(() {
-            final item = _sections.removeAt(newIndex);
-            _sections.insert(oldIndex, item);
+            final item = _sections.removeAt(oldIndex);
+            _sections.insert(newIndex, item);
           });
-        }
-      },
-      children: List.generate(_sections.length, (index) {
-        final section = _sections[index];
-        return _ChecklistSectionWidget(
-          key: ValueKey(section['_id']),
-          section: section,
-          index: index,
-          onRename: (name) => _renameSection(section['_id'] as String, name),
-          onDelete: () => _deleteSection(section['_id'] as String),
-          onAddItem: (text) => _addItem(section['_id'] as String, text),
-          onToggleItem: _toggleItem,
-          onEditItem: (itemId, newText) => _updateItemText(itemId, newText),
-          onDeleteItem: _deleteItem,
-        );
-      }),
+
+          // Update order in backend for all affected sections
+          try {
+            final convexService = await ConvexService.getInstance();
+
+            // Update orders for all sections that moved
+            final minIndex = oldIndex < newIndex ? oldIndex : newIndex;
+            final maxIndex = oldIndex > newIndex ? oldIndex : newIndex;
+
+            for (int i = minIndex; i <= maxIndex; i++) {
+              final section = _sections[i];
+              await convexService.updateChecklistSection(
+                id: section['_id'] as String,
+                order: i,
+              );
+            }
+
+            // Ignore subscription updates for 1 second to avoid flashing stale data
+            _updateIgnoreTimer?.cancel();
+            _updateIgnoreTimer = Timer(const Duration(seconds: 1), () {});
+          } catch (e) {
+            debugPrint('Error reordering section: $e');
+            // Revert on error
+            setState(() {
+              final item = _sections.removeAt(newIndex);
+              _sections.insert(oldIndex, item);
+            });
+          }
+        },
+        children: List.generate(_sections.length, (index) {
+          final section = _sections[index];
+          return _ChecklistSectionWidget(
+            key: ValueKey(section['_id']),
+            section: section,
+            index: index,
+            onRename: (name) => _renameSection(section['_id'] as String, name),
+            onDelete: () => _deleteSection(section['_id'] as String),
+            onAddItem: (text) => _addItem(section['_id'] as String, text),
+            onToggleItem: _toggleItem,
+            onEditItem: (itemId, newText) => _updateItemText(itemId, newText),
+            onDeleteItem: _deleteItem,
+            onRequestScroll: _scrollToBottom,
+          );
+        }),
+      ),
     );
   }
 
@@ -402,6 +442,7 @@ class _ChecklistSectionWidget extends StatefulWidget {
   final Future<void> Function(String itemId, bool completed) onToggleItem;
   final Future<void> Function(String itemId, String currentText) onEditItem;
   final Future<void> Function(String itemId) onDeleteItem;
+  final VoidCallback onRequestScroll;
 
   const _ChecklistSectionWidget({
     super.key,
@@ -413,6 +454,7 @@ class _ChecklistSectionWidget extends StatefulWidget {
     required this.onToggleItem,
     required this.onEditItem,
     required this.onDeleteItem,
+    required this.onRequestScroll,
   });
 
   @override
@@ -436,11 +478,13 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
     super.initState();
     _displayedTitle = widget.section['name'] as String;
     _titleFocusNode.addListener(_onTitleFocusChange);
+    _addItemFocusNode.addListener(_onAddItemFocusChange);
   }
 
   @override
   void dispose() {
     _addItemController.dispose();
+    _addItemFocusNode.removeListener(_onAddItemFocusChange);
     _addItemFocusNode.dispose();
     _titleController.dispose();
     _titleFocusNode.removeListener(_onTitleFocusChange);
@@ -453,6 +497,12 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
   void _onTitleFocusChange() {
     if (!_titleFocusNode.hasFocus && _isEditingTitle) {
       _submitTitle();
+    }
+  }
+
+  void _onAddItemFocusChange() {
+    if (_addItemFocusNode.hasFocus) {
+      widget.onRequestScroll();
     }
   }
 
@@ -559,6 +609,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                           child: TextField(
                             controller: _titleController,
                             focusNode: _titleFocusNode,
+                            textInputAction: TextInputAction.done,
                             decoration: const InputDecoration(
                               border: InputBorder.none,
                               isDense: true,
@@ -658,6 +709,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                   onToggle: () => widget.onToggleItem(itemId, completed),
                   onEditItem: (id, newText) => widget.onEditItem(id, newText),
                   onDelete: () => widget.onDeleteItem(itemId),
+                  onRequestScroll: widget.onRequestScroll,
                 );
               }),
               // Inline add item
@@ -689,6 +741,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                           child: TextField(
                             controller: _addItemController,
                             focusNode: _addItemFocusNode,
+                            textInputAction: TextInputAction.done,
                             decoration: InputDecoration(
                               hintText: 'Add item...',
                               hintStyle: TextStyle(color: Colors.grey.shade500),
@@ -763,6 +816,7 @@ class _ChecklistItemWidget extends StatefulWidget {
   final VoidCallback onToggle;
   final Function(String itemId, String newText) onEditItem;
   final VoidCallback onDelete;
+  final VoidCallback onRequestScroll;
 
   const _ChecklistItemWidget({
     super.key,
@@ -772,6 +826,7 @@ class _ChecklistItemWidget extends StatefulWidget {
     required this.onToggle,
     required this.onEditItem,
     required this.onDelete,
+    required this.onRequestScroll,
   });
 
   @override
@@ -802,6 +857,9 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
   }
 
   void _onEditFocusChange() {
+    if (_editFocusNode.hasFocus) {
+      widget.onRequestScroll();
+    }
     if (!_editFocusNode.hasFocus && _isEditing) {
       _submitEdit();
     }
@@ -887,6 +945,7 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
                           child: TextField(
                             controller: _editController,
                             focusNode: _editFocusNode,
+                            textInputAction: TextInputAction.done,
                             decoration: const InputDecoration(
                               border: InputBorder.none,
                               isDense: true,
