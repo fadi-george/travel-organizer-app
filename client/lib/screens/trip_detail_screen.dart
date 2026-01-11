@@ -39,8 +39,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   late DateTime _endDate;
   late Trip _trip;
   SubscriptionHandle? _subscription;
-  SubscriptionHandle? _checklistSubscription;
-  List<Map<String, dynamic>> _checklistSections = [];
   final Set<String> _refreshingFlights = {};
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
@@ -53,7 +51,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
     _trip = widget.trip;
     _initializeDates();
     _subscribeToTrips();
-    _subscribeToChecklist();
 
     // Initialize FAB animation
     _fabAnimationController = AnimationController(
@@ -118,7 +115,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   @override
   void dispose() {
     _subscription?.cancel();
-    _checklistSubscription?.cancel();
     _fabAnimationController.dispose();
     super.dispose();
   }
@@ -134,7 +130,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
               .map((json) => Trip.fromJson(json))
               .where((t) => t.id == widget.trip.id)
               .firstOrNull;
-          if (updatedTrip != null) {
+          if (updatedTrip != null && updatedTrip != _trip) {
             final datesChanged =
                 updatedTrip.startDate != _trip.startDate ||
                 updatedTrip.endDate != _trip.endDate;
@@ -154,24 +150,6 @@ class _TripDetailScreenState extends State<TripDetailScreen>
       );
     } catch (e) {
       debugPrint('Error subscribing to trips: $e');
-    }
-  }
-
-  Future<void> _subscribeToChecklist() async {
-    try {
-      final convexService = await ConvexService.getInstance();
-      _checklistSubscription = await convexService.subscribeToChecklist(
-        tripId: _trip.id,
-        onUpdate: (sections) {
-          if (!mounted) return;
-          setState(() => _checklistSections = sections);
-        },
-        onError: (message, value) {
-          debugPrint('Checklist subscription error: $message $value');
-        },
-      );
-    } catch (e) {
-      debugPrint('Error subscribing to checklist: $e');
     }
   }
 
@@ -525,11 +503,7 @@ class _TripDetailScreenState extends State<TripDetailScreen>
   }
 
   void _openChecklistSheet() {
-    ChecklistSheet.show(
-      context,
-      tripId: _trip.id,
-      initialSections: _checklistSections,
-    );
+    ChecklistSheet.show(context, tripId: _trip.id);
   }
 
   @override

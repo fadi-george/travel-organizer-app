@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:convex_flutter/convex_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,21 +9,15 @@ import '../theme/app_theme.dart';
 /// Bottom sheet displaying the trip checklist with sections and items
 class ChecklistSheet extends StatefulWidget {
   final String tripId;
-  final List<Map<String, dynamic>>? initialSections;
 
-  const ChecklistSheet({super.key, required this.tripId, this.initialSections});
+  const ChecklistSheet({super.key, required this.tripId});
 
-  static void show(
-    BuildContext context, {
-    required String tripId,
-    List<Map<String, dynamic>>? initialSections,
-  }) {
+  static void show(BuildContext context, {required String tripId}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          ChecklistSheet(tripId: tripId, initialSections: initialSections),
+      builder: (context) => ChecklistSheet(tripId: tripId),
     );
   }
 
@@ -34,27 +29,22 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
   late List<Map<String, dynamic>> _sections;
   SubscriptionHandle? _subscription;
   late bool _isLoading;
-  Timer? _updateIgnoreTimer;
   final _scrollController = ScrollController();
   double _lastKeyboardHeight = 0;
+  String? _newSectionId;
+  bool _isReordering = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialSections != null) {
-      _sections = widget.initialSections!;
-      _isLoading = false;
-    } else {
-      _sections = [];
-      _isLoading = true;
-    }
+    _sections = [];
+    _isLoading = true;
     _subscribeToChecklist();
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
-    _updateIgnoreTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -66,10 +56,11 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
         tripId: widget.tripId,
         onUpdate: (sections) {
           if (!mounted) return;
-          if (_updateIgnoreTimer?.isActive ?? false) {
-            debugPrint('Ignoring subscription update during reorder');
-            return;
-          }
+          // Skip updates during reordering to prevent flash
+          if (_isReordering) return;
+          // Skip update if data hasn't changed
+          if (_sectionsEqual(_sections, sections)) return;
+          debugPrint('Applying subscription update');
           setState(() {
             _sections = sections;
             _isLoading = false;
@@ -86,13 +77,26 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     }
   }
 
+  bool _sectionsEqual(
+    List<Map<String, dynamic>> a,
+    List<Map<String, dynamic>> b,
+  ) {
+    if (a.length != b.length) return false;
+    // Fast comparison using JSON encoding
+    return jsonEncode(a) == jsonEncode(b);
+  }
+
   Future<void> _addSection() async {
     try {
       final convexService = await ConvexService.getInstance();
-      await convexService.createChecklistSection(
+      final result = await convexService.createChecklistSection(
         tripId: widget.tripId,
         name: 'New Section',
       );
+      // Store the new section ID so we can autofocus it
+      if (result is Map<String, dynamic>) {
+        _newSectionId = result['_id'] as String?;
+      }
     } catch (e) {
       _showError('Error creating section: $e');
     }
@@ -345,7 +349,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
       child: ReorderableListView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.zero,
         proxyDecorator: (child, index, animation) {
           return Material(
             elevation: 3,
@@ -353,6 +357,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
             child: Opacity(opacity: 0.7, child: child),
           );
         },
+        // FOR REORDERING SECTIONS
         onReorder: (oldIndex, newIndex) async {
           // Adjust newIndex if item is moved down
           if (newIndex > oldIndex) newIndex -= 1;
@@ -361,53 +366,55 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
             return;
           }
 
-          // Update local state
+          // Block subscription updates during reorder
+          _isReordering = true;
+
+          // Capture IDs before reordering
+          final oldSectionId = (_sections[oldIndex])['_id'] as String;
+          final newSectionId = (_sections[newIndex])['_id'] as String;
+
+          // Optimistic update
           setState(() {
-            final item = _sections.removeAt(oldIndex);
-            _sections.insert(newIndex, item);
+            _sections[oldIndex]['order'] = newIndex;
+            _sections[newIndex]['order'] = oldIndex;
+            final section = _sections.removeAt(oldIndex);
+            _sections.insert(newIndex, section);
           });
 
-          // Update order in backend for all affected sections
+          // Update backend atomically in a single mutation
           try {
             final convexService = await ConvexService.getInstance();
-
-            // Update orders for all sections that moved
-            final minIndex = oldIndex < newIndex ? oldIndex : newIndex;
-            final maxIndex = oldIndex > newIndex ? oldIndex : newIndex;
-
-            for (int i = minIndex; i <= maxIndex; i++) {
-              final section = _sections[i];
-              await convexService.updateChecklistSection(
-                id: section['_id'] as String,
-                order: i,
-              );
-            }
-
-            // Ignore subscription updates for 1 second to avoid flashing stale data
-            _updateIgnoreTimer?.cancel();
-            _updateIgnoreTimer = Timer(const Duration(seconds: 1), () {});
+            await convexService.reorderChecklistSections([
+              {'id': oldSectionId, 'order': newIndex},
+              {'id': newSectionId, 'order': oldIndex},
+            ]);
           } catch (e) {
             debugPrint('Error reordering section: $e');
-            // Revert on error
-            setState(() {
-              final item = _sections.removeAt(newIndex);
-              _sections.insert(oldIndex, item);
-            });
+          } finally {
+            _isReordering = false;
           }
         },
         children: List.generate(_sections.length, (index) {
           final section = _sections[index];
+          final sectionId = section['_id'] as String;
+          final shouldAutoFocus = _newSectionId == sectionId;
+          if (shouldAutoFocus) {
+            _newSectionId = null; // Clear after using
+          }
           return _ChecklistSectionWidget(
-            key: ValueKey(section['_id']),
+            key: ValueKey(sectionId),
             section: section,
             index: index,
-            onRename: (name) => _renameSection(section['_id'] as String, name),
-            onDelete: () => _deleteSection(section['_id'] as String),
-            onAddItem: (text) => _addItem(section['_id'] as String, text),
+            onRename: (name) => _renameSection(sectionId, name),
+            onDelete: () => _deleteSection(sectionId),
+            onAddItem: (text) => _addItem(sectionId, text),
             onToggleItem: _toggleItem,
             onEditItem: (itemId, newText) => _updateItemText(itemId, newText),
             onDeleteItem: _deleteItem,
             onRequestScroll: _scrollToBottom,
+            onReorderStart: () => _isReordering = true,
+            onReorderEnd: () => _isReordering = false,
+            autoFocusTitle: shouldAutoFocus,
           );
         }),
       ),
@@ -443,6 +450,9 @@ class _ChecklistSectionWidget extends StatefulWidget {
   final Future<void> Function(String itemId, String currentText) onEditItem;
   final Future<void> Function(String itemId) onDeleteItem;
   final VoidCallback onRequestScroll;
+  final bool autoFocusTitle;
+  final VoidCallback onReorderStart;
+  final VoidCallback onReorderEnd;
 
   const _ChecklistSectionWidget({
     super.key,
@@ -455,6 +465,9 @@ class _ChecklistSectionWidget extends StatefulWidget {
     required this.onEditItem,
     required this.onDeleteItem,
     required this.onRequestScroll,
+    required this.onReorderStart,
+    required this.onReorderEnd,
+    this.autoFocusTitle = false,
   });
 
   @override
@@ -472,6 +485,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
   bool _isAddingItem = false;
   bool _isEditingTitle = false;
   late String _displayedTitle;
+  List<dynamic>? _localItems;
 
   @override
   void initState() {
@@ -479,6 +493,13 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
     _displayedTitle = widget.section['name'] as String;
     _titleFocusNode.addListener(_onTitleFocusChange);
     _addItemFocusNode.addListener(_onAddItemFocusChange);
+
+    // Auto-focus title editing for new sections
+    if (widget.autoFocusTitle) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _startEditingTitle();
+      });
+    }
   }
 
   @override
@@ -552,7 +573,9 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final items = (widget.section['items'] as List<dynamic>?) ?? [];
+    final items =
+        _localItems ?? (widget.section['items'] as List<dynamic>? ?? []);
+
     final colorScheme = Theme.of(context).colorScheme;
 
     // Calculate progress
@@ -580,7 +603,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
         children: [
           // Section header
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -695,28 +718,84 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Items
-              ...items.map((item) {
-                final itemData = item as Map<String, dynamic>;
-                final itemId = itemData['_id'] as String;
-                final text = itemData['text'] as String;
-                final completed = itemData['completed'] as bool? ?? false;
+              if (items.isNotEmpty)
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  proxyDecorator: (child, index, animation) {
+                    return Material(
+                      elevation: 3,
+                      child: Opacity(
+                        opacity: 0.7,
+                        child: SizedBox(width: double.infinity, child: child),
+                      ),
+                    );
+                  },
+                  // FOR REORDERING CHECKLIST ITEMS
+                  onReorder: (oldIndex, newIndex) async {
+                    if (newIndex > oldIndex) newIndex -= 1;
+                    if (oldIndex == newIndex) return;
 
-                return _ChecklistItemWidget(
-                  key: ValueKey(itemId),
-                  itemId: itemId,
-                  text: text,
-                  completed: completed,
-                  onToggle: () => widget.onToggleItem(itemId, completed),
-                  onEditItem: (id, newText) => widget.onEditItem(id, newText),
-                  onDelete: () => widget.onDeleteItem(itemId),
-                  onRequestScroll: widget.onRequestScroll,
-                );
-              }),
+                    // Capture IDs before reordering
+                    final oldItemId =
+                        (items[oldIndex] as Map<String, dynamic>)['_id']
+                            as String;
+                    final newItemId =
+                        (items[newIndex] as Map<String, dynamic>)['_id']
+                            as String;
+
+                    // Optimistic update
+                    widget.onReorderStart();
+                    setState(() {
+                      // Initialize local items if needed
+                      _localItems ??= List<dynamic>.from(items);
+                      _localItems![oldIndex]['order'] = newIndex;
+                      _localItems![newIndex]['order'] = oldIndex;
+                      final item = _localItems!.removeAt(oldIndex);
+                      _localItems!.insert(newIndex, item);
+                    });
+
+                    // Update backend atomically in a single mutation
+                    try {
+                      final convexService = await ConvexService.getInstance();
+                      await convexService.reorderChecklistItems([
+                        {'id': oldItemId, 'order': newIndex},
+                        {'id': newItemId, 'order': oldIndex},
+                      ]);
+                    } catch (e) {
+                      debugPrint('Error reordering items: $e');
+                    } finally {
+                      widget.onReorderEnd();
+                    }
+                  },
+                  children: List.generate(items.length, (index) {
+                    final item = items[index] as Map<String, dynamic>;
+                    final itemId = item['_id'] as String;
+                    final text = item['text'] as String;
+                    final completed = item['completed'] as bool? ?? false;
+
+                    return ReorderableDragStartListener(
+                      key: ValueKey(itemId),
+                      index: index,
+                      child: _ChecklistItemWidget(
+                        itemId: itemId,
+                        text: text,
+                        completed: completed,
+                        onToggle: () => widget.onToggleItem(itemId, completed),
+                        onEditItem: (id, newText) =>
+                            widget.onEditItem(id, newText),
+                        onDelete: () => widget.onDeleteItem(itemId),
+                        onRequestScroll: widget.onRequestScroll,
+                      ),
+                    );
+                  }),
+                ),
               // Inline add item
               if (_isAddingItem)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 0,
+                    horizontal: 16,
                     vertical: 8,
                   ),
                   child: Row(
@@ -775,7 +854,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
               else
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 0,
+                    horizontal: 16,
                     vertical: 8,
                   ),
                   child: GestureDetector(
@@ -819,7 +898,6 @@ class _ChecklistItemWidget extends StatefulWidget {
   final VoidCallback onRequestScroll;
 
   const _ChecklistItemWidget({
-    super.key,
     required this.itemId,
     required this.text,
     required this.completed,
@@ -913,7 +991,7 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
         ),
         onDismissed: (_) => widget.onDelete(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

@@ -250,3 +250,69 @@ export const deleteItem = mutation({
     return { message: "Item deleted" };
   },
 });
+
+// Reorder items in a single atomic mutation
+export const reorderItems = mutation({
+  args: {
+    updates: v.array(
+      v.object({
+        id: v.id("checklistItems"),
+        order: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+
+    // Verify all items exist and user has access
+    for (const update of args.updates) {
+      const item = await ctx.db.get(update.id);
+      if (!item) {
+        throw new Error("Item not found");
+      }
+      const section = await ctx.db.get(item.sectionId);
+      if (!section) {
+        throw new Error("Section not found");
+      }
+      await verifyTripOwnership(ctx, section.tripId, userId);
+    }
+
+    // Apply all order updates
+    for (const update of args.updates) {
+      await ctx.db.patch(update.id, { order: update.order });
+    }
+
+    return { message: "Items reordered" };
+  },
+});
+
+// Reorder sections in a single atomic mutation
+export const reorderSections = mutation({
+  args: {
+    updates: v.array(
+      v.object({
+        id: v.id("checklistSections"),
+        order: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+
+    // Verify all sections exist and user has access
+    for (const update of args.updates) {
+      const section = await ctx.db.get(update.id);
+      if (!section) {
+        throw new Error("Section not found");
+      }
+      await verifyTripOwnership(ctx, section.tripId, userId);
+    }
+
+    // Apply all order updates
+    for (const update of args.updates) {
+      await ctx.db.patch(update.id, { order: update.order });
+    }
+
+    return { message: "Sections reordered" };
+  },
+});

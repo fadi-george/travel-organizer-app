@@ -578,4 +578,22 @@ class ConvexService {
   Future<void> deleteChecklistItem(String id) async {
     await client.mutation(name: 'checklists:deleteItem', args: {'id': id});
   }
+
+  /// Reorder checklist items in a single atomic mutation
+  Future<void> reorderChecklistItems(List<Map<String, dynamic>> updates) async {
+    await client.mutation(
+      name: 'checklists:reorderItems',
+      args: {'updates': updates},
+    );
+  }
+
+  /// Reorder checklist sections in a single atomic mutation
+  Future<void> reorderChecklistSections(
+    List<Map<String, dynamic>> updates,
+  ) async {
+    await client.mutation(
+      name: 'checklists:reorderSections',
+      args: {'updates': updates},
+    );
+  }
 }

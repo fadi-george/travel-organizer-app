@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class Trip {
   final String id;
   final String name;
@@ -35,6 +33,56 @@ class Trip {
       flights: json['flights'] as List<dynamic>?,
       activities: json['activities'] as List<dynamic>?,
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Trip) return false;
+    return id == other.id &&
+        name == other.name &&
+        startDate == other.startDate &&
+        endDate == other.endDate &&
+        notes == other.notes &&
+        imageUrl == other.imageUrl &&
+        _listEquals(accommodations, other.accommodations) &&
+        _listEquals(flights, other.flights) &&
+        _listEquals(activities, other.activities);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        name,
+        startDate,
+        endDate,
+        notes,
+        imageUrl,
+        accommodations?.length,
+        flights?.length,
+        activities?.length,
+      );
+
+  static bool _listEquals(List<dynamic>? a, List<dynamic>? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] is Map && b[i] is Map) {
+        if (!_mapEquals(a[i] as Map, b[i] as Map)) return false;
+      } else if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static bool _mapEquals(Map a, Map b) {
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      if (!b.containsKey(key) || a[key] != b[key]) return false;
+    }
+    return true;
   }
 
   String get formattedDateRange {
