@@ -32,7 +32,8 @@ class TripDetailScreen extends StatefulWidget {
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
-class _TripDetailScreenState extends State<TripDetailScreen> {
+class _TripDetailScreenState extends State<TripDetailScreen>
+    with TickerProviderStateMixin {
   late DateTime _selectedDate;
   late DateTime _startDate;
   late DateTime _endDate;
@@ -41,6 +42,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   SubscriptionHandle? _checklistSubscription;
   List<Map<String, dynamic>> _checklistSections = [];
   final Set<String> _refreshingFlights = {};
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabScaleAnimation;
 
   Trip get trip => _trip;
 
@@ -51,9 +54,33 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     _initializeDates();
     _subscribeToTrips();
     _subscribeToChecklist();
+
+    // Initialize FAB animation
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fabScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fabAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
     // Auto-refresh upcoming flights on initial load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoRefreshUpcomingFlights();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Delay FAB animation until after screen transition ends (approximately 400-500ms)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _fabAnimationController.forward();
+      }
     });
   }
 
@@ -92,6 +119,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   void dispose() {
     _subscription?.cancel();
     _checklistSubscription?.cancel();
+    _fabAnimationController.dispose();
     super.dispose();
   }
 
@@ -510,13 +538,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton(
-            heroTag: 'checklist_fab',
-            onPressed: _openChecklistSheet,
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            shape: const CircleBorder(),
-            child: const Icon(Icons.checklist, size: 24),
+          ScaleTransition(
+            scale: _fabScaleAnimation,
+            child: FloatingActionButton(
+              heroTag: 'checklist_fab',
+              onPressed: _openChecklistSheet,
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.checklist, size: 24),
+            ),
           ),
           const SizedBox(height: 12),
           AppFab.map(onPressed: _openMapScreen),
