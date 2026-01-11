@@ -60,7 +60,7 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
           if (_isReordering) return;
           // Skip update if data hasn't changed
           if (_sectionsEqual(_sections, sections)) return;
-          debugPrint('Applying subscription update');
+          // debugPrint('Applying subscription update');
           setState(() {
             _sections = sections;
             _isLoading = false;
@@ -775,19 +775,16 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                     final text = item['text'] as String;
                     final completed = item['completed'] as bool? ?? false;
 
-                    return ReorderableDragStartListener(
+                    return _ChecklistItemWidget(
                       key: ValueKey(itemId),
-                      index: index,
-                      child: _ChecklistItemWidget(
-                        itemId: itemId,
-                        text: text,
-                        completed: completed,
-                        onToggle: () => widget.onToggleItem(itemId, completed),
-                        onEditItem: (id, newText) =>
-                            widget.onEditItem(id, newText),
-                        onDelete: () => widget.onDeleteItem(itemId),
-                        onRequestScroll: widget.onRequestScroll,
-                      ),
+                      itemId: itemId,
+                      text: text,
+                      completed: completed,
+                      onToggle: () => widget.onToggleItem(itemId, completed),
+                      onEditItem: (id, newText) =>
+                          widget.onEditItem(id, newText),
+                      onDelete: () => widget.onDeleteItem(itemId),
+                      onRequestScroll: widget.onRequestScroll,
                     );
                   }),
                 ),
@@ -898,6 +895,7 @@ class _ChecklistItemWidget extends StatefulWidget {
   final VoidCallback onRequestScroll;
 
   const _ChecklistItemWidget({
+    super.key,
     required this.itemId,
     required this.text,
     required this.completed,
