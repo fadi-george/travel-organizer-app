@@ -52,6 +52,7 @@ dependencies:
   flutter_svg: ^2.2.3
   timezone: ^0.11.0
   hugeicons: ^1.1.4
+  skeletonizer: ^2.1.2
 
 dev_dependencies:
   flutter_test:

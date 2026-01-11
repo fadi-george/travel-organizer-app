@@ -252,9 +252,12 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
             children: [
               const Icon(Icons.checklist, color: AppColors.primary, size: 28),
               const SizedBox(width: 12),
-              const Text(
-                'Checklist',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              const Expanded(
+                child: Text(
+                  'Checklist',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const Spacer(),
             ],
@@ -283,11 +286,13 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Text(
             'Add a section to get started',
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -555,6 +560,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                               fontWeight: FontWeight.w600,
                               height: 1.0,
                             ),
+                            maxLines: 1,
                             onSubmitted: (_) => _submitTitle(),
                           ),
                         )
@@ -567,6 +573,8 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                               fontWeight: FontWeight.w600,
                               height: 1.0,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                 ),
@@ -679,6 +687,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                               contentPadding: EdgeInsets.zero,
                             ),
                             style: const TextStyle(fontSize: 15),
+                            maxLines: 1,
                             onSubmitted: (_) => _submitItem(),
                             onEditingComplete: _submitItem,
                           ),
@@ -876,6 +885,7 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
                                   ? Colors.grey.shade500
                                   : null,
                             ),
+                            maxLines: 1,
                             onSubmitted: (_) => _submitEdit(),
                           ),
                         )
@@ -891,6 +901,8 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
                                 ? Colors.grey.shade500
                                 : null,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../models/trip.dart';
 import '../services/weather_service.dart';
 import 'fading_scroll_view.dart';
@@ -287,12 +288,11 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     // Determine which message to show when no data
     final showNoDataMessage = !hasWeatherData && !_isLoading;
     final isTooFarAhead = daysAhead > 8;
+    final isToday = _isSameDay(widget.selectedDate, DateTime.now());
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
-      child: _isLoading
-          ? _buildLoadingState()
-          : hasWeatherData
+      child: hasWeatherData
           ? isDailyFallback
                 ? _buildDailyFallback()
                 : _buildHourlyRow()
@@ -300,7 +300,9 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           ? isTooFarAhead
                 ? _buildFarFutureMessage()
                 : _buildUnavailableMessage()
-          : const SizedBox.shrink(),
+          : isToday
+          ? _buildHourlyRow(skeleton: true)
+          : _buildDailyFallback(skeleton: true),
     );
   }
 
@@ -350,14 +352,10 @@ class _WeatherWidgetState extends State<WeatherWidget> {
     );
   }
 
-  Widget _buildDailyFallback() {
-    final weather = _weather!.first;
-    final temp = weather.temperature.round();
-    final precipChance = weather.precipitationChance;
+  Widget _buildDailyFallback({bool skeleton = false}) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hasHighLow = weather.tempHigh != null && weather.tempLow != null;
 
-    return Container(
+    final content = Container(
       key: const ValueKey('daily'),
       height: _kWeatherRowHeight,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -366,142 +364,137 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          // Weather icon
-          _buildWeatherIcon(weather.weatherCondition, size: 28),
-          const SizedBox(width: 12),
-          // Temperature and condition
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$temp° · ${weather.condition}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                if (precipChance > 0)
-                  Text(
-                    '$precipChance% chance of rain',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: const Color(0xFF3B8BBD),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // High/Low temps on the right with gradient bar
-          if (hasHighLow)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${weather.tempLow!.round()}°',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    color: const Color(0xFFFF8A65),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${weather.tempHigh!.round()}°',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
+      child: _buildActualDailyContent(skeleton: skeleton),
     );
+
+    return Skeletonizer(enabled: skeleton, child: content);
   }
 
-  Widget _buildWeatherIcon(WeatherCondition condition, {double size = 28}) {
-    return getWeatherIcon(condition, size: size);
-  }
+  Widget _buildActualDailyContent({bool skeleton = false}) {
+    if (_weather == null || (_weather!.isEmpty && !skeleton)) {
+      return const SizedBox.shrink();
+    }
 
-  Widget _buildLoadingState() {
+    final weather = _weather?.first;
+    final temp = weather?.temperature.round() ?? 0;
+    final precipChance = weather?.precipitationChance ?? 0;
     final colorScheme = Theme.of(context).colorScheme;
+    final hasHighLow = weather?.tempHigh != null && weather?.tempLow != null;
 
-    return Container(
-      key: const ValueKey('loading'),
-      height: _kWeatherRowHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: colorScheme.onSurface.withValues(alpha: 0.4),
-            ),
+    return Row(
+      children: [
+        // Weather icon
+        _DailyWeatherIcon(
+          condition: weather?.weatherCondition ?? WeatherCondition.cloudy,
+          skeleton: skeleton,
+        ),
+        const SizedBox(width: 12),
+        // Temperature and condition
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$temp° · ${weather?.condition ?? "Unknown"}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              if (precipChance > 0)
+                Text(
+                  '$precipChance% chance of rain',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: const Color(0xFF3B8BBD),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Text(
-            'Loading weather...',
-            style: TextStyle(
-              fontSize: 14,
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
+        ),
+        // High/Low temps on the right with gradient bar
+        if (hasHighLow)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${weather?.tempLow?.round() ?? "--"}°',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 44,
+                height: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF8A65),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${weather?.tempHigh?.round() ?? "--"}°',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+      ],
     );
   }
 
-  Widget _buildHourlyRow() {
+  Widget _buildHourlyRow({bool skeleton = false}) {
     final now = DateTime.now();
     final isToday = _isSameDay(widget.selectedDate, now);
 
-    final items = _weather!.asMap().entries.map((entry) {
-      final index = entry.key;
-      final hour = entry.value;
-      final isNow =
-          isToday &&
-          (now.hour - hour.time.hour).abs() <= 1 &&
-          now.hour >= hour.time.hour;
+    final items = (_weather == null || _weather!.isEmpty)
+        ? <Widget>[]
+        : _weather!.asMap().entries.map((entry) {
+            final index = entry.key;
+            final hour = entry.value;
+            final isNow =
+                isToday &&
+                (now.hour - hour.time.hour).abs() <= 1 &&
+                now.hour >= hour.time.hour;
+            return Padding(
+              padding: EdgeInsets.only(left: index == 0 ? 0 : 16),
+              child: _WeatherHourItem(
+                weather: hour,
+                isNow: isNow && index == _findCurrentIndex(),
+              ),
+            );
+          }).toList();
+
+    final skeletonItems = List.generate(5, (index) {
       return Padding(
         padding: EdgeInsets.only(left: index == 0 ? 0 : 16),
-        child: _WeatherHourItem(
-          weather: hour,
-          isNow: isNow && index == _findCurrentIndex(),
-        ),
+        child: _WeatherHourItem(skeleton: true),
       );
-    }).toList();
+    });
 
-    return SizedBox(
-      key: const ValueKey('weather'),
-      height: _kWeatherRowHeight,
-      child: FadingScrollView(
-        fadeWidth: 0.16,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: items,
+    return Skeletonizer(
+      enabled: skeleton,
+      child: SizedBox(
+        key: const ValueKey('weather'),
+        height: _kWeatherRowHeight,
+        child: FadingScrollView(
+          fadeWidth: 0.16,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: skeleton ? skeletonItems : items,
+          ),
         ),
       ),
     );
@@ -524,10 +517,15 @@ class _WeatherWidgetState extends State<WeatherWidget> {
 }
 
 class _WeatherHourItem extends StatelessWidget {
-  final HourlyWeather weather;
+  final HourlyWeather? weather;
   final bool isNow;
+  final bool skeleton;
 
-  const _WeatherHourItem({required this.weather, this.isNow = false});
+  const _WeatherHourItem({
+    this.weather,
+    this.isNow = false,
+    this.skeleton = false,
+  });
 
   String _formatTime(DateTime time) {
     final hour = time.hour;
@@ -539,103 +537,89 @@ class _WeatherHourItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final temp = weather.temperature.round();
-    final precipChance = weather.precipitationChance;
-    final label = isNow ? 'Now' : _formatTime(weather.time);
+    if (weather == null && !skeleton) {
+      return const SizedBox.shrink();
+    }
+
+    final temp = weather?.temperature.round() ?? 0;
+    final precipChance = weather?.precipitationChance ?? 0;
+    final weatherCondition =
+        weather?.weatherCondition ?? WeatherCondition.cloudy;
+    final label = skeleton
+        ? 'Now'
+        : (isNow ? 'Now' : _formatTime(weather!.time));
     final colorScheme = Theme.of(context).colorScheme;
 
-    return SizedBox(
-      width: 50,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Time label
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
-              color: colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          // Temperature
-          Text(
-            '$temp°',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          // Icon + Precipitation row
-          Row(
+    return Skeletonizer(
+      enabled: skeleton,
+      child: SizedBox(
+        width: 50,
+        child: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              getWeatherIcon(weather.weatherCondition, size: 20),
-              if (precipChance > 0) ...[
-                const SizedBox(width: 2),
-                Text(
-                  '$precipChance%',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF42A5F5),
-                  ),
+              // Time label
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isNow ? FontWeight.w700 : FontWeight.w500,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-              ],
+              ),
+              // const SizedBox(height: 2),
+              // Temperature
+              Text(
+                '$temp°',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              // const SizedBox(height: 2),
+              // Icon + Precipitation row
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  skeleton
+                      ? Icon(Icons.cloud, size: 16)
+                      : getWeatherIcon(weatherCondition, size: 20),
+                  if (precipChance > 0) ...[
+                    const SizedBox(width: 2),
+                    Text(
+                      '$precipChance%',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF42A5F5),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
             ],
           ),
-          const SizedBox(height: 6),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Debug widget that displays all weather condition icons with their colors
-class WeatherIconsDebug extends StatelessWidget {
-  const WeatherIconsDebug({super.key});
+class _DailyWeatherIcon extends StatelessWidget {
+  final WeatherCondition condition;
+  final bool skeleton;
+
+  const _DailyWeatherIcon({required this.condition, this.skeleton = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Weather Icons Debug',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 16,
-            runSpacing: 12,
-            children: WeatherCondition.values.map((condition) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  getWeatherIcon(condition, size: 32),
-                  const SizedBox(height: 4),
-                  Text(
-                    condition.name,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
+    if (skeleton) {
+      return Icon(Icons.cloud, size: 28);
+    }
+    return getWeatherIcon(condition, size: 28);
   }
 }
