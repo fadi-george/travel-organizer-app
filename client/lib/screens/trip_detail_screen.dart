@@ -726,6 +726,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     ),
                   ),
                 ),
+                // For debugging weather icons
+                // const WeatherIconsDebug(),
                 const Divider(height: 1),
               ],
             ),

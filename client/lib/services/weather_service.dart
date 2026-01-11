@@ -13,49 +13,65 @@ export 'openweathermap_service.dart' show DailyWeather, HourlyWeather;
 
 /// Unified weather condition codes
 enum WeatherCondition {
-  clear, // Clear sky
-  fewClouds, // Few clouds (11-25%)
+  // Day conditions
+  clear, // Clear sky (day)
+  fewClouds, // Few clouds (day)
   cloudy, // Scattered/broken/overcast clouds
   mist, // Mist, fog, haze
-  drizzle, // Light rain, drizzle
-  rain, // Rain, heavy rain
-  thunderstorm, // Thunderstorm
-  snow, // Snow, sleet, ice
+  drizzle, // Light rain, drizzle (day)
+  rain, // Rain, heavy rain (day)
+  thunderstorm, // Thunderstorm (day)
+  snow, // Snow, sleet, ice (day)
   unknown, // Unknown condition
+  // Night conditions
+  clearNight, // Clear sky (night)
+  fewCloudsNight, // Few clouds (night)
+  drizzleNight, // Light rain (night)
+  rainNight, // Rain (night)
+  thunderstormNight, // Thunderstorm (night)
+  snowNight, // Snow (night)
 }
 
 /// Extension to get display name and icon for weather conditions
 extension WeatherConditionExtension on WeatherCondition {
   String get displayName => switch (this) {
-    WeatherCondition.clear => 'Clear',
-    WeatherCondition.fewClouds => 'Partly Cloudy',
+    WeatherCondition.clear || WeatherCondition.clearNight => 'Clear',
+    WeatherCondition.fewClouds ||
+    WeatherCondition.fewCloudsNight => 'Partly Cloudy',
     WeatherCondition.cloudy => 'Cloudy',
     WeatherCondition.mist => 'Mist',
-    WeatherCondition.drizzle => 'Drizzle',
-    WeatherCondition.rain => 'Rain',
-    WeatherCondition.thunderstorm => 'Thunderstorm',
-    WeatherCondition.snow => 'Snow',
+    WeatherCondition.drizzle || WeatherCondition.drizzleNight => 'Drizzle',
+    WeatherCondition.rain || WeatherCondition.rainNight => 'Rain',
+    WeatherCondition.thunderstorm ||
+    WeatherCondition.thunderstormNight => 'Thunderstorm',
+    WeatherCondition.snow || WeatherCondition.snowNight => 'Snow',
     WeatherCondition.unknown => 'Unknown',
   };
 
   /// Map OpenWeatherMap icon codes (e.g., "01d", "10n") to WeatherCondition
   static WeatherCondition fromOpenWeatherCode(String iconCode) {
-    if (iconCode.startsWith('01') || iconCode.startsWith('02')) {
-      return iconCode.startsWith('01')
-          ? WeatherCondition.clear
+    final isNight = iconCode.endsWith('n');
+
+    if (iconCode.startsWith('01')) {
+      return isNight ? WeatherCondition.clearNight : WeatherCondition.clear;
+    } else if (iconCode.startsWith('02')) {
+      return isNight
+          ? WeatherCondition.fewCloudsNight
           : WeatherCondition.fewClouds;
     } else if (iconCode.startsWith('03') || iconCode.startsWith('04')) {
-      return WeatherCondition.cloudy;
+      return WeatherCondition.cloudy; // Clouds look the same day/night
     } else if (iconCode.startsWith('09')) {
-      return WeatherCondition.drizzle;
+      return isNight ? WeatherCondition.drizzleNight : WeatherCondition.drizzle;
     } else if (iconCode.startsWith('10')) {
-      return WeatherCondition.rain;
+      return isNight ? WeatherCondition.rainNight : WeatherCondition.rain;
     } else if (iconCode.startsWith('11')) {
-      return WeatherCondition.thunderstorm;
+      return isNight
+          ? WeatherCondition.thunderstormNight
+          : WeatherCondition.thunderstorm;
     } else if (iconCode.startsWith('13')) {
-      return WeatherCondition.snow;
+      return isNight ? WeatherCondition.snowNight : WeatherCondition.snow;
     } else if (iconCode.startsWith('50')) {
-      return WeatherCondition.mist;
+      return WeatherCondition.mist; // Mist looks the same day/night
     }
     return WeatherCondition.unknown;
   }

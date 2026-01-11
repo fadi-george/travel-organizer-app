@@ -1,46 +1,92 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:hugeicons/styles/stroke_rounded.dart';
 import '../models/trip.dart';
 import '../services/weather_service.dart';
 import 'fading_scroll_view.dart';
 
-/// Returns icon and color for a weather condition
-({IconData icon, Color color}) getWeatherIconData(WeatherCondition condition) {
+/// Returns HugeIcon widget for a weather condition
+Widget getWeatherIcon(WeatherCondition condition, {double size = 24}) {
+  final dayColor = Colors.orange.shade800;
+  final nightColor = Colors.blue.shade800;
+  final neutralColor = Colors.grey.shade800;
   return switch (condition) {
-    WeatherCondition.clear => (
-      icon: Icons.wb_sunny,
-      color: const Color(0xFFFFA726),
+    // Day conditions
+    WeatherCondition.clear => HugeIcon(
+      icon: HugeIconsStrokeRounded.sun01,
+      color: dayColor,
+      size: size,
     ),
-    WeatherCondition.fewClouds => (
-      icon: Icons.wb_sunny,
-      color: const Color(0xFFFFA726),
+    WeatherCondition.fewClouds => HugeIcon(
+      icon: HugeIconsStrokeRounded.sunCloud01,
+      color: dayColor,
+      size: size,
     ),
-    WeatherCondition.cloudy => (
-      icon: Icons.cloud,
-      color: const Color(0xFF78909C),
+    WeatherCondition.cloudy => HugeIcon(
+      icon: HugeIconsStrokeRounded.cloud,
+      color: neutralColor,
+      size: size,
     ),
-    WeatherCondition.mist => (
-      icon: Icons.foggy,
-      color: const Color(0xFFB0BEC5),
+    WeatherCondition.mist => HugeIcon(
+      icon: HugeIconsStrokeRounded.slowWinds,
+      color: neutralColor,
+      size: size,
     ),
-    WeatherCondition.drizzle => (
-      icon: Icons.water_drop,
-      color: const Color(0xFF42A5F5),
+    WeatherCondition.drizzle => HugeIcon(
+      icon: HugeIconsStrokeRounded.sunCloudLittleRain01,
+      color: dayColor,
+      size: size,
     ),
-    WeatherCondition.rain => (
-      icon: Icons.water_drop,
-      color: const Color(0xFF42A5F5),
+    WeatherCondition.rain => HugeIcon(
+      icon: HugeIconsStrokeRounded.cloudSlowWind,
+      color: dayColor,
+      size: size,
     ),
-    WeatherCondition.thunderstorm => (
-      icon: Icons.thunderstorm,
-      color: const Color(0xFF5C6BC0),
+    WeatherCondition.thunderstorm => HugeIcon(
+      icon: HugeIconsStrokeRounded.sunCloudAngledZap01,
+      color: neutralColor,
+      size: size,
     ),
-    WeatherCondition.snow => (
-      icon: Icons.ac_unit,
-      color: const Color(0xFF90CAF9),
+    WeatherCondition.snow => HugeIcon(
+      icon: HugeIconsStrokeRounded.cloudSnow,
+      color: neutralColor,
+      size: size,
     ),
-    WeatherCondition.unknown => (
-      icon: Icons.cloud,
-      color: const Color(0xFF78909C),
+    WeatherCondition.unknown => HugeIcon(
+      icon: HugeIconsStrokeRounded.cloud,
+      color: neutralColor,
+      size: size,
+    ),
+    // Night conditions
+    WeatherCondition.clearNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moon02,
+      color: nightColor,
+      size: size,
+    ),
+    WeatherCondition.fewCloudsNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moonCloud,
+      color: nightColor,
+      size: size,
+    ),
+    WeatherCondition.drizzleNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moonCloudLittleRain,
+      color: nightColor,
+      size: size,
+    ),
+    WeatherCondition.rainNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moonCloudMidRain,
+      color: nightColor,
+      size: size,
+    ),
+    WeatherCondition.thunderstormNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moonCloudAngledZap,
+      color: nightColor,
+      size: size,
+    ),
+    WeatherCondition.snowNight => HugeIcon(
+      icon: HugeIconsStrokeRounded.moonCloudSnow,
+      color: nightColor,
+      size: size,
     ),
   };
 }
@@ -390,8 +436,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
   }
 
   Widget _buildWeatherIcon(WeatherCondition condition, {double size = 28}) {
-    final (:icon, :color) = getWeatherIconData(condition);
-    return Icon(icon, size: size, color: color);
+    return getWeatherIcon(condition, size: size);
   }
 
   Widget _buildLoadingState() {
@@ -497,7 +542,6 @@ class _WeatherHourItem extends StatelessWidget {
     final temp = weather.temperature.round();
     final precipChance = weather.precipitationChance;
     final label = isNow ? 'Now' : _formatTime(weather.time);
-    final (:icon, :color) = getWeatherIconData(weather.weatherCondition);
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
@@ -529,7 +573,7 @@ class _WeatherHourItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: color),
+              getWeatherIcon(weather.weatherCondition, size: 20),
               if (precipChance > 0) ...[
                 const SizedBox(width: 2),
                 Text(
@@ -544,6 +588,52 @@ class _WeatherHourItem extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+}
+
+/// Debug widget that displays all weather condition icons with their colors
+class WeatherIconsDebug extends StatelessWidget {
+  const WeatherIconsDebug({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Weather Icons Debug',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            children: WeatherCondition.values.map((condition) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  getWeatherIcon(condition, size: 32),
+                  const SizedBox(height: 4),
+                  Text(
+                    condition.name,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
         ],
       ),
     );

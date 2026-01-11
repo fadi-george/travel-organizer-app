@@ -72,6 +72,65 @@ const historicalWeatherCache = new ActionCache(components.actionCache, {
   ttl: 1000 * 60 * 60 * 24, // 24 hours
 });
 
+// Helper to fetch a single hour from Time Machine API
+async function fetchTimeMachineHour(
+  apiKey: string,
+  lat: number,
+  lng: number,
+  targetTime: Date
+): Promise<HourlyWeatherData | null> {
+  const timestamp = Math.floor(targetTime.getTime() / 1000);
+
+  try {
+    const url = new URL("https://api.openweathermap.org/data/3.0/onecall/timemachine");
+    url.searchParams.set("lat", lat.toString());
+    url.searchParams.set("lon", lng.toString());
+    url.searchParams.set("dt", timestamp.toString());
+    url.searchParams.set("units", "imperial");
+    url.searchParams.set("appid", apiKey);
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const hourlyData = data.data as Array<{
+      dt: number;
+      temp: number;
+      pop?: number;
+      weather: Array<{ main: string; icon: string }>;
+    }>;
+
+    if (!hourlyData || hourlyData.length === 0) return null;
+
+    // Find closest hour in response
+    let closest: HourlyWeatherData | null = null;
+    let minDiff = 999999;
+
+    for (const hourData of hourlyData) {
+      const weatherTime = new Date(hourData.dt * 1000);
+      const diff = Math.abs(weatherTime.getTime() - targetTime.getTime()) / (1000 * 60);
+
+      if (diff < minDiff) {
+        minDiff = diff;
+        const iconCode = hourData.weather[0]?.icon ?? "01d";
+        closest = {
+          time: hourData.dt * 1000,
+          temperature: hourData.temp,
+          condition: hourData.weather[0]?.main ?? "Unknown",
+          weatherCondition: mapIconToCondition(iconCode),
+          precipitationChance: Math.round((hourData.pop ?? 0) * 100),
+        };
+      }
+    }
+
+    return closest && minDiff <= 90 ? closest : null;
+  } catch {
+    return null;
+  }
+}
+
 // Internal action to fetch hourly weather from OpenWeatherMap
 export const fetchHourlyWeatherInternal = internalAction({
   args: {
@@ -98,8 +157,37 @@ export const fetchHourlyWeatherInternal = internalAction({
     // Target hours: 8am through midnight
     const targetHours = [8, 10, 12, 14, 16, 18, 20, 22, 0];
 
+    // Check if this is today - need to fetch past hours from Time Machine API
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const isToday = targetDate.getTime() === today.getTime();
+
+    const pastHours: HourlyWeatherData[] = [];
+
+    // Fetch past hours for today using Time Machine API
+    if (isToday) {
+      const currentHour = now.getHours();
+      const pastTargetHours = targetHours.filter((h) => h !== 0 && h < currentHour);
+
+      // Fetch past hours in parallel
+      const pastPromises = pastTargetHours.map((hour) => {
+        const targetTime = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth(),
+          targetDate.getDate(),
+          hour
+        );
+        return fetchTimeMachineHour(apiKey, lat, lng, targetTime);
+      });
+
+      const pastResults = await Promise.all(pastPromises);
+      for (const result of pastResults) {
+        if (result) pastHours.push(result);
+      }
+    }
+
     try {
-      // Use One Call API 3.0 for hourly forecast
+      // Use One Call API 3.0 for hourly forecast (current and future hours)
       const url = new URL("https://api.openweathermap.org/data/3.0/onecall");
       url.searchParams.set("lat", lat.toString());
       url.searchParams.set("lon", lng.toString());
@@ -110,7 +198,8 @@ export const fetchHourlyWeatherInternal = internalAction({
       const response = await fetch(url.toString());
       if (!response.ok) {
         console.error(`OpenWeatherMap API error: ${response.status}`);
-        return null;
+        // If One Call fails but we have past hours, return those
+        return pastHours.length > 0 ? pastHours : null;
       }
 
       const data = await response.json();
@@ -121,12 +210,18 @@ export const fetchHourlyWeatherInternal = internalAction({
         weather: Array<{ main: string; icon: string }>;
       }>;
 
-      if (!hourlyData) return null;
+      if (!hourlyData) {
+        return pastHours.length > 0 ? pastHours : null;
+      }
 
-      // Parse and filter to target hours
-      const results: HourlyWeatherData[] = [];
+      // For today, only get current and future hours from One Call
+      const futureTargetHours = isToday
+        ? targetHours.filter((h) => h === 0 || h >= now.getHours())
+        : targetHours;
 
-      for (const hour of targetHours) {
+      const futureHours: HourlyWeatherData[] = [];
+
+      for (const hour of futureTargetHours) {
         const targetTime =
           hour === 0
             ? new Date(nextDay.getFullYear(), nextDay.getMonth(), nextDay.getDate(), 0)
@@ -154,14 +249,17 @@ export const fetchHourlyWeatherInternal = internalAction({
         }
 
         if (closest && minDiff <= 90) {
-          results.push(closest);
+          futureHours.push(closest);
         }
       }
 
-      return results;
+      // Combine past and future hours, sorted by time
+      const combined = [...pastHours, ...futureHours];
+      combined.sort((a, b) => a.time - b.time);
+      return combined;
     } catch (e) {
       console.error("Error fetching hourly weather:", e);
-      return null;
+      return pastHours.length > 0 ? pastHours : null;
     }
   },
 });

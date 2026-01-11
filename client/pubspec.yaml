@@ -51,6 +51,7 @@ dependencies:
   clerk_auth: ^0.0.13-beta
   flutter_svg: ^2.2.3
   timezone: ^0.11.0
+  hugeicons: ^1.1.4
 
 dev_dependencies:
   flutter_test:
