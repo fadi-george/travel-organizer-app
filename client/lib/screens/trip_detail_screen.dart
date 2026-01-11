@@ -595,8 +595,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             letterSpacing: -0.5,
                             shadows: [
                               Shadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 8,
+                                color: Colors.black.withValues(alpha: .5),
+                                blurRadius: 12,
                               ),
                             ],
                           ),
@@ -609,6 +609,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                 color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: .4),
+                                    blurRadius: 12,
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 10),

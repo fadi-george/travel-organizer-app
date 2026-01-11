@@ -105,10 +105,11 @@ class FlightCard extends StatelessWidget {
                           ' · Gate $departureGate',
                           style: TimelineStyles.subtitleStyle(colorScheme),
                         ),
-                      if (status != null && status.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        FlightStatusBadge(status: status, small: true),
-                      ],
+                      // hide status for now
+                      // if (status != null && status.isNotEmpty) ...[
+                      //   const SizedBox(width: 8),
+                      //   FlightStatusBadge(status: status, small: true),
+                      // ],
                     ],
                   ),
                 ],
