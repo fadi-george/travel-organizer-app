@@ -200,33 +200,37 @@ class _ChecklistSheetState extends State<ChecklistSheet> {
     final screenHeight = MediaQuery.of(context).size.height;
     final maxHeight = screenHeight * 0.85;
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(colorScheme),
-            Flexible(
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 150,
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : _sections.isEmpty
-                    ? _buildEmptyState()
-                    : _buildChecklistContent(),
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(colorScheme),
+              Flexible(
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 150,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : _sections.isEmpty
+                      ? _buildEmptyState()
+                      : _buildChecklistContent(),
+                ),
               ),
-            ),
-            _buildAddSectionButton(colorScheme),
-          ],
+              _buildAddSectionButton(colorScheme),
+            ],
+          ),
         ),
       ),
     );
@@ -514,6 +518,10 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
         }
         if (_addItemFocusNode.hasFocus) {
           _addItemFocusNode.unfocus();
+          setState(() {
+            _isAddingItem = false;
+            _addItemController.clear();
+          });
         }
       },
       child: Column(
@@ -605,7 +613,7 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                 PopupMenuButton<String>(
                   icon: Icon(
                     Icons.more_vert,
-                    size: 20,
+                    size: 22,
                     color: Colors.grey.shade600,
                   ),
                   onSelected: (value) {
@@ -656,9 +664,10 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 0,
-                    vertical: 0,
+                    vertical: 8,
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.radio_button_unchecked,
@@ -684,21 +693,27 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                               hintStyle: TextStyle(color: Colors.grey.shade500),
                               border: InputBorder.none,
                               isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 0,
+                              ),
                             ),
-                            style: const TextStyle(fontSize: 15),
+                            style: const TextStyle(fontSize: 15, height: 1.0),
                             maxLines: 1,
                             onSubmitted: (_) => _submitItem(),
                             onEditingComplete: _submitItem,
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.check, size: 20),
-                        color: AppColors.primary,
-                        onPressed: _submitItem,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      GestureDetector(
+                        onTap: _submitItem,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8, right: 12),
+                          child: Icon(
+                            Icons.check,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -707,18 +722,19 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 0,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   child: GestureDetector(
                     onTap: _startAddingItem,
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(Icons.add, size: 20, color: Colors.grey.shade500),
+                        Icon(Icons.add, size: 22, color: Colors.grey.shade500),
                         const SizedBox(width: 12),
                         Text(
                           'Add item...',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             color: Colors.grey.shade500,
                           ),
                         ),
