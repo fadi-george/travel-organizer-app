@@ -480,11 +480,15 @@ class _ChecklistSectionWidgetState extends State<_ChecklistSectionWidget> {
         .where((i) => (i as Map)['completed'] == true)
         .length;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        // Unfocus any focused field when tapping outside
-        FocusScope.of(context).unfocus();
+    return TapRegion(
+      onTapOutside: (event) {
+        // Unfocus both fields when tapping outside
+        if (_titleFocusNode.hasFocus) {
+          _titleFocusNode.unfocus();
+        }
+        if (_addItemFocusNode.hasFocus) {
+          _addItemFocusNode.unfocus();
+        }
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -754,70 +758,82 @@ class _ChecklistItemWidgetState extends State<_ChecklistItemWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: Key(widget.itemId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        color: Colors.red.shade100,
-        child: Icon(Icons.delete, color: Colors.red.shade700),
-      ),
-      onDismissed: (_) => widget.onDelete(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: _isEditing ? null : widget.onToggle,
-              child: Icon(
-                widget.completed
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                size: 22,
-                color: widget.completed
-                    ? AppColors.primary
-                    : Colors.grey.shade400,
+    return TapRegion(
+      onTapOutside: (event) {
+        // Unfocus edit field when tapping outside
+        if (_editFocusNode.hasFocus) {
+          _editFocusNode.unfocus();
+        }
+      },
+      child: Dismissible(
+        key: Key(widget.itemId),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 16),
+          color: Colors.red.shade100,
+          child: Icon(Icons.delete, color: Colors.red.shade700),
+        ),
+        onDismissed: (_) => widget.onDelete(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: _isEditing ? null : widget.onToggle,
+                child: Icon(
+                  widget.completed
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  size: 22,
+                  color: widget.completed
+                      ? AppColors.primary
+                      : Colors.grey.shade400,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: InkWell(
-                onDoubleTap: _startEditing,
-                child: _isEditing
-                    ? TextField(
-                        controller: _editController,
-                        focusNode: _editFocusNode,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+              const SizedBox(width: 12),
+              Expanded(
+                child: InkWell(
+                  onDoubleTap: _startEditing,
+                  child: _isEditing
+                      ? TextField(
+                          controller: _editController,
+                          focusNode: _editFocusNode,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.0,
+                            decoration: widget.completed
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: widget.completed
+                                ? Colors.grey.shade500
+                                : null,
+                          ),
+                          onSubmitted: (_) => _submitEdit(),
+                        )
+                      : Text(
+                          _displayedText,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.0,
+                            decoration: widget.completed
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: widget.completed
+                                ? Colors.grey.shade500
+                                : null,
+                          ),
                         ),
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.0,
-                          decoration: widget.completed
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: widget.completed ? Colors.grey.shade500 : null,
-                        ),
-                        onSubmitted: (_) => _submitEdit(),
-                      )
-                    : Text(
-                        _displayedText,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.0,
-                          decoration: widget.completed
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: widget.completed ? Colors.grey.shade500 : null,
-                        ),
-                      ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
