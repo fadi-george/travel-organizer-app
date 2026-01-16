@@ -476,7 +476,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
             );
           }).toList();
 
-    final skeletonItems = List.generate(5, (index) {
+    final skeletonItems = List.generate(6, (index) {
       return Padding(
         padding: EdgeInsets.only(left: index == 0 ? 0 : 16),
         child: _WeatherHourItem(skeleton: true),
